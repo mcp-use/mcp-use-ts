@@ -28,6 +28,11 @@
 
 ## 🚀 Quick Start
 
+### Requirements
+
+- Node.js 22.0.0 or higher
+- npm, yarn, or pnpm (examples use pnpm)
+
 ### Installation
 
 ```bash
@@ -124,6 +129,10 @@ const agent = new MCPAgent({
   disallowedTools: ['file_system', 'network']
 })
 ```
+
+## 👥 Contributors
+
+<!-- Contributors section will be automatically generated here -->
 
 ## 📜 License
 

@@ -1,4 +1,3 @@
-import type { RequestOptions } from '@modelcontextprotocol/sdk/shared/protocol.js'
 import type {
   CallToolResult,
   Tool,
@@ -93,7 +92,7 @@ export class WebSocketConnector extends BaseConnector {
         data = JSON.parse(msg.data ?? msg)
       }
       catch (e) {
-        logger.warn('Received non‑JSON frame')
+        logger.warn('Received non‑JSON frame', e)
         return
       }
       const id = data.id
@@ -142,21 +141,21 @@ export class WebSocketConnector extends BaseConnector {
     return res.tools ?? []
   }
 
-  async callTool(name: string, args: Record<string, any>, options?: RequestOptions): Promise<CallToolResult> {
+  async callTool(name: string, args: Record<string, any>): Promise<CallToolResult> {
     return await this.sendRequest('tools/call', { name, arguments: args })
   }
 
-  async listResources(options?: RequestOptions): Promise<any> {
+  async listResources(): Promise<any> {
     const resources = await this.sendRequest('resources/list')
     return { resources: Array.isArray(resources) ? resources : [] }
   }
 
-  async readResource(uri: string, options?: RequestOptions): Promise<{ content: ArrayBuffer, mimeType: string }> {
+  async readResource(uri: string): Promise<{ content: ArrayBuffer, mimeType: string }> {
     const res = await this.sendRequest('resources/read', { uri })
     return { content: res.content, mimeType: res.mimeType }
   }
 
-  async request(method: string, params: Record<string, any> | null = null, options?: RequestOptions): Promise<any> {
+  async request(method: string, params: Record<string, any> | null = null): Promise<any> {
     return await this.sendRequest(method, params)
   }
 
