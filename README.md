@@ -1,7 +1,7 @@
 <h1 align="center">Unified MCP Client Library</h1>
 
-[![](https://img.shields.io/npm/dw/@modelcontextprotocol/mcp-client.svg)](https://www.npmjs.com/package/@modelcontextprotocol/mcp-client)
-[![npm version](https://img.shields.io/npm/v/@modelcontextprotocol/mcp-client.svg)](https://www.npmjs.com/package/@modelcontextprotocol/mcp-client)
+[![](https://img.shields.io/npm/dw/mcp-use.svg)](https://www.npmjs.com/package/mcp-use)
+[![npm version](https://img.shields.io/npm/v/mcp-use.svg)](https://www.npmjs.com/package/mcp-use)
 [![License](https://img.shields.io/github/license/zandko/mcp-use)](https://github.com/zandko/mcp-use/blob/main/LICENSE)
 [![Code style: ESLint](https://img.shields.io/badge/code%20style-eslint-4B32C3.svg)](https://eslint.org)
 [![GitHub stars](https://img.shields.io/github/stars/zandko/mcp-use?style=social)](https://github.com/zandko/mcp-use/stargazers)
