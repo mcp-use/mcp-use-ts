@@ -2,7 +2,7 @@
   "name": "mcp-use",
   "type": "module",
   "version": "0.0.1",
-  "description": "MCP Use",
+  "description": "A utility library for integrating Model Context Protocol (MCP) with LangChain, Zod, and related tools. Provides helpers for schema conversion, event streaming, and SDK usage.",
   "author": "Zane",
   "license": "MIT",
   "homepage": "https://github.com/zandko/mcp-use#readme",
@@ -13,6 +13,18 @@
   "bugs": {
     "url": "https://github.com/zandko/mcp-use/issues"
   },
+  "keywords": [
+    "MCP",
+    "Model Context Protocol",
+    "LangChain",
+    "Zod",
+    "schema",
+    "SDK",
+    "eventsource",
+    "AI",
+    "utility",
+    "typescript"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -26,7 +38,7 @@
     "dist"
   ],
   "publishConfig": {
-    "access": "public"
+    "registry": "https://registry.npmjs.org"
   },
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
