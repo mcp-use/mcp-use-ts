@@ -1,0 +1,63 @@
+{
+  "name": "mcp-use",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "MCP Use",
+  "author": "Zane",
+  "license": "MIT",
+  "homepage": "https://github.com/zandko/mcp-use#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zandko/mcp-use.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zandko/mcp-use/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "watch": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "pnpm run build",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "release": "npm version patch && git push --follow-tags",
+    "release:minor": "npm version minor && git push --follow-tags",
+    "release:major": "npm version major && git push --follow-tags"
+  },
+  "dependencies": {
+    "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
+    "@langchain/community": "0.3.41",
+    "@langchain/core": "0.3.45",
+    "@modelcontextprotocol/sdk": "1.10.1",
+    "eventsource": "^3.0.6",
+    "langchain": "^0.3.23",
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0",
+    "ws": "^8.18.1",
+    "zod": "^3.24.3",
+    "zod-to-json-schema": "^3.24.5"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^4.12.0",
+    "@types/ws": "^8.18.1",
+    "eslint": "^9.24.0",
+    "eslint-plugin-format": "^1.0.1",
+    "shx": "^0.4.0",
+    "typescript": "^5.8.3"
+  }
+}
