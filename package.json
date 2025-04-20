@@ -41,7 +41,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "tsc && shx chmod +x dist/*.js",
+    "build": "rm -rf dist && tsc && shx chmod +x dist/*.js",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
     "prepublishOnly": "pnpm run build",
