@@ -3,85 +3,91 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createLogger, format, transports } from 'winston'
 
-const { combine, timestamp, label, printf } = format
+const { combine, timestamp, label, printf, colorize, splat } = format
 
-let MCP_USE_DEBUG = 0
+export type LogLevel = 'error' | 'warn' | 'info' | 'http' | 'verbose' | 'debug' | 'silly'
 
-const debugEnv = process.env.DEBUG?.toLowerCase()
-if (debugEnv === '2') {
-  MCP_USE_DEBUG = 2
-}
-else if (debugEnv === '1') {
-  MCP_USE_DEBUG = 1
+interface LoggerOptions {
+  level?: LogLevel
+  console?: boolean
+  file?: string
 }
 
-const defaultFormat = printf(({ level, message, label, timestamp }) =>
-  `${timestamp} [${label}] ${level.toUpperCase()}: ${message}`,
-)
+const DEFAULT_LOGGER_NAME = 'mcp-use'
+
+function resolveLevel(env: string | undefined): LogLevel {
+  switch (env?.trim()) {
+    case '2':
+      return 'debug'
+    case '1':
+      return 'info'
+    default:
+      return 'warn'
+  }
+}
+
+const defaultFormatter = printf(({ level, message, label, timestamp }) => {
+  return `${timestamp} [${label}] ${level.toUpperCase()}: ${message}`
+})
 
 export class Logger {
-  private static loggers: Record<string, WinstonLogger> = {}
+  private static instances: Record<string, WinstonLogger> = {}
 
-  public static getLogger(name: string = 'mcp_use'): WinstonLogger {
-    if (!this.loggers[name]) {
-      this.loggers[name] = createLogger({
-        level: 'warn',
+  public static get(name: string = DEFAULT_LOGGER_NAME): WinstonLogger {
+    if (!this.instances[name]) {
+      this.instances[name] = createLogger({
+        level: resolveLevel(process.env.DEBUG),
         format: combine(
+          colorize(),
+          splat(),
           label({ label: name }),
           timestamp(),
-          defaultFormat,
+          defaultFormatter,
         ),
         transports: [],
       })
     }
-    return this.loggers[name]
+
+    return this.instances[name]
   }
 
-  public static configure(
-    level?: string,
-    toConsole: boolean = true,
-    toFile?: string,
-  ): void {
-    const root = this.getLogger()
+  public static configure(options: LoggerOptions = {}): void {
+    const { level, console = true, file } = options
+    const resolvedLevel = level ?? resolveLevel(process.env.DEBUG)
 
-    if (!level) {
-      level
-        = MCP_USE_DEBUG === 2
-          ? 'debug'
-          : MCP_USE_DEBUG === 1 ? 'info' : 'warn'
-    }
-    root.level = level
+    const root = this.get()
+
+    root.level = resolvedLevel
 
     root.clear()
 
-    if (toConsole) {
+    if (console) {
       root.add(new transports.Console())
     }
 
-    if (toFile) {
-      const dir = path.dirname(toFile)
-      if (dir && !fs.existsSync(dir)) {
+    if (file) {
+      const dir = path.dirname(path.resolve(file))
+      if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true })
       }
-      root.add(new transports.File({ filename: toFile }))
+      root.add(new transports.File({ filename: file }))
     }
   }
 
-  public static setDebug(debugLevel: number = 2): void {
-    MCP_USE_DEBUG = debugLevel
+  public static setDebug(enabled: boolean | 0 | 1 | 2): void {
+    let level: LogLevel
+    if (enabled === 2 || enabled === true)
+      level = 'debug'
+    else if (enabled === 1)
+      level = 'info'
+    else level = 'warn'
 
-    process.env.LANGCHAIN_VERBOSE = debugLevel >= 1 ? 'true' : 'false'
-
-    const newLevel
-      = debugLevel === 2
-        ? 'debug'
-        : debugLevel === 1 ? 'info' : 'warn'
-    Object.values(this.loggers).forEach((log) => {
-      log.level = newLevel
+    Object.values(this.instances).forEach((logger) => {
+      logger.level = level
     })
+    process.env.DEBUG = enabled ? (enabled === true ? '2' : String(enabled)) : '0'
   }
 }
 
 Logger.configure()
-
-export const logger = Logger.getLogger()
+export const logger = Logger.get()
