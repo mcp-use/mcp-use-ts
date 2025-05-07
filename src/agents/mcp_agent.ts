@@ -2,7 +2,7 @@ import type { BaseLanguageModelInterface, LanguageModelLike } from '@langchain/c
 import type {
   BaseMessage,
 } from '@langchain/core/messages'
-import type { StructuredToolInterface } from '@langchain/core/tools'
+import type { StructuredToolInterface, ToolInterface } from '@langchain/core/tools'
 import type { AgentFinish, AgentStep } from 'langchain/agents'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
@@ -54,7 +54,6 @@ export class MCPAgent {
     llm: BaseLanguageModelInterface
     client?: MCPClient
     connectors?: BaseConnector[]
-    serverName?: string
     maxSteps?: number
     autoInitialize?: boolean
     memoryEnabled?: boolean
@@ -328,7 +327,7 @@ export class MCPAgent {
         try {
           logger.debug('Starting agent step execution')
           const nextStepOutput = await this.agentExecutor._takeNextStep(
-            nameToToolMap,
+            nameToToolMap as Record<string, ToolInterface>,
             inputs,
             intermediateSteps,
           )

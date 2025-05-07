@@ -4,7 +4,7 @@ import type {
   CallToolResult,
   EmbeddedResource,
   ImageContent,
-  Tool as McpTool,
+  Tool as MCPTool,
   TextContent,
 } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodTypeAny } from 'zod'
@@ -78,7 +78,7 @@ export class LangChainAdapter extends BaseAdapter<StructuredToolInterface> {
    * Convert a single MCP tool specification into a LangChainJS structured tool.
    */
   protected convertTool(
-    mcpTool: McpTool,
+    mcpTool: MCPTool,
     connector: BaseConnector,
   ): StructuredToolInterface | null {
     // Filter out disallowed tools early.

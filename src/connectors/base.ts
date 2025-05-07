@@ -117,6 +117,24 @@ export abstract class BaseConnector {
     return { content: res.content, mimeType: res.mimeType }
   }
 
+  async listPrompts() {
+    if (!this.client) {
+      throw new Error('MCP client is not connected')
+    }
+
+    logger.debug('Listing prompt')
+    return await this.client.listPrompts()
+  }
+
+  async getPrompt(name: string, args: Record<string, any>) {
+    if (!this.client) {
+      throw new Error('MCP client is not connected')
+    }
+
+    logger.debug(`Getting prompt ${name}`)
+    return await this.client.getPrompt({ name, arguments: args })
+  }
+
   /** Send a raw request through the client. */
   async request(method: string, params: Record<string, any> | null = null, options?: RequestOptions) {
     if (!this.client) {
