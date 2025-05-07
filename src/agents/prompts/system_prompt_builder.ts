@@ -1,8 +1,8 @@
-import type { DynamicStructuredTool } from '@langchain/core/tools'
+import type { StructuredToolInterface } from '@langchain/core/tools'
 import { SystemMessage } from '@langchain/core/messages'
 
 export function generateToolDescriptions(
-  tools: DynamicStructuredTool[],
+  tools: StructuredToolInterface[],
   disallowedTools?: string[],
 ): string[] {
   const disallowedSet = new Set(disallowedTools ?? [])
@@ -44,7 +44,7 @@ export function buildSystemPromptContent(
 }
 
 export function createSystemMessage(
-  tools: DynamicStructuredTool[],
+  tools: StructuredToolInterface[],
   systemPromptTemplate: string,
   serverManagerTemplate: string,
   useServerManager: boolean,

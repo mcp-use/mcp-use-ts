@@ -25,7 +25,6 @@ export class SseConnectionManager extends ConnectionManager<SSEClientTransport> 
    */
   protected async establishConnection(): Promise<SSEClientTransport> {
     this._transport = new SSEClientTransport(this.url, this.opts)
-    // await this._transport.start()
 
     logger.debug(`${this.constructor.name} connected successfully`)
     return this._transport

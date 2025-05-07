@@ -1,8 +1,8 @@
-import type { BaseLanguageModel, LanguageModelLike } from '@langchain/core/language_models/base'
+import type { BaseLanguageModelInterface, LanguageModelLike } from '@langchain/core/language_models/base'
 import type {
   BaseMessage,
 } from '@langchain/core/messages'
-import type { DynamicStructuredTool } from '@langchain/core/tools'
+import type { StructuredToolInterface } from '@langchain/core/tools'
 import type { AgentFinish, AgentStep } from 'langchain/agents'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
@@ -28,7 +28,7 @@ import { createSystemMessage } from './prompts/system_prompt_builder.js'
 import { DEFAULT_SYSTEM_PROMPT_TEMPLATE, SERVER_MANAGER_SYSTEM_PROMPT_TEMPLATE } from './prompts/templates.js'
 
 export class MCPAgent {
-  private llm: LanguageModelLike
+  private llm: BaseLanguageModelInterface
   private client?: MCPClient
   private connectors: BaseConnector[]
   private maxSteps: number
@@ -46,12 +46,12 @@ export class MCPAgent {
   private agentExecutor: AgentExecutor | null = null
   private sessions: Record<string, MCPSession> = {}
   private systemMessage: SystemMessage | null = null
-  private tools: DynamicStructuredTool[] = []
+  private tools: StructuredToolInterface[] = []
   private adapter: LangChainAdapter
   private serverManager: ServerManager | null = null
 
   constructor(options: {
-    llm: BaseLanguageModel
+    llm: BaseLanguageModelInterface
     client?: MCPClient
     connectors?: BaseConnector[]
     serverName?: string
@@ -162,7 +162,7 @@ export class MCPAgent {
     logger.info('✨ Agent initialization complete')
   }
 
-  private async createSystemMessageFromTools(tools: DynamicStructuredTool[]): Promise<void> {
+  private async createSystemMessageFromTools(tools: StructuredToolInterface[]): Promise<void> {
     const systemPromptTemplate
       = this.systemPromptTemplateOverride
         ?? DEFAULT_SYSTEM_PROMPT_TEMPLATE
@@ -196,7 +196,7 @@ export class MCPAgent {
     ])
 
     const agent = createToolCallingAgent({
-      llm: this.llm,
+      llm: this.llm as unknown as LanguageModelLike,
       tools: this.tools,
       prompt,
     })
@@ -298,7 +298,7 @@ export class MCPAgent {
       const intermediateSteps: AgentStep[] = []
       const inputs = { input: query, chat_history: langchainHistory } as Record<string, unknown>
 
-      let nameToToolMap: Record<string, DynamicStructuredTool> = Object.fromEntries(this.tools.map(t => [t.name, t]))
+      let nameToToolMap: Record<string, StructuredToolInterface> = Object.fromEntries(this.tools.map(t => [t.name, t]))
       logger.info(`🏁 Starting agent execution with max_steps=${steps}`)
 
       for (let stepNum = 0; stepNum < steps; stepNum++) {

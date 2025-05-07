@@ -29,7 +29,6 @@ export class StdioConnectionManager extends ConnectionManager<StdioClientTranspo
   protected async establishConnection(): Promise<StdioClientTransport> {
     // Instantiate and start the transport
     this._transport = new StdioClientTransport(this.serverParams)
-    // await this._transport.start()
 
     // If stderr was piped, forward it to `errlog` for visibility
     if (this._transport.stderr && typeof (this._transport.stderr as any).pipe === 'function') {

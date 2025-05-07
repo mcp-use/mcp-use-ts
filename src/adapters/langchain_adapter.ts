@@ -1,4 +1,5 @@
 import type { JSONSchema } from '@dmitryrechkin/json-schema-to-zod'
+import type { StructuredToolInterface } from '@langchain/core/tools'
 import type {
   CallToolResult,
   EmbeddedResource,
@@ -6,34 +7,18 @@ import type {
   Tool as McpTool,
   TextContent,
 } from '@modelcontextprotocol/sdk/types.js'
-import type { ZodObject, ZodTypeAny } from 'zod'
+import type { ZodTypeAny } from 'zod'
 import type { BaseConnector } from '../connectors/base.js'
-import { JSONSchemaToZod } from '@dmitryrechkin/json-schema-to-zod'
 
+import { JSONSchemaToZod } from '@dmitryrechkin/json-schema-to-zod'
 import { DynamicStructuredTool } from '@langchain/core/tools'
 import { z } from 'zod'
 import { logger } from '../logging.js'
 import { BaseAdapter } from './base.js'
 
 function schemaToZod(schema: unknown): ZodTypeAny {
-  /** Recursively normalise `type: [T, U]` → `anyOf: [{type:T},{type:U}]`. */
-  // const fixSchema = (s: any): any => {
-  //   if (s && typeof s === 'object') {
-  //     if (Array.isArray(s.type)) {
-  //       s.anyOf = s.type.map((t: any) => ({ type: t }))
-  //       delete s.type
-  //     }
-  //     for (const [k, v] of Object.entries(s)) {
-  //       s[k] = fixSchema(v)
-  //     }
-  //   }
-  //   return s
-  // }
-
   try {
-    // const normalised = fixSchema(structuredClone(schema))
-    const zodSchema = JSONSchemaToZod.convert(schema as JSONSchema)
-    return zodSchema
+    return JSONSchemaToZod.convert(schema as JSONSchema)
   }
   catch (err) {
     logger.warn(`Failed to convert JSON schema to Zod: ${err}`)
@@ -84,7 +69,7 @@ function parseMcpToolResult(toolResult: CallToolResult): string {
   return decoded
 }
 
-export class LangChainAdapter extends BaseAdapter<DynamicStructuredTool> {
+export class LangChainAdapter extends BaseAdapter<StructuredToolInterface> {
   constructor(disallowedTools: string[] = []) {
     super(disallowedTools)
   }
@@ -95,7 +80,7 @@ export class LangChainAdapter extends BaseAdapter<DynamicStructuredTool> {
   protected convertTool(
     mcpTool: McpTool,
     connector: BaseConnector,
-  ): DynamicStructuredTool | null {
+  ): StructuredToolInterface | null {
     // Filter out disallowed tools early.
     if (this.disallowedTools.includes(mcpTool.name)) {
       return null
@@ -121,7 +106,7 @@ export class LangChainAdapter extends BaseAdapter<DynamicStructuredTool> {
           return `Error executing MCP tool: ${String(err)}`
         }
       },
-    }) as DynamicStructuredTool<ZodObject<any>, any>
+    })
 
     return tool
   }
