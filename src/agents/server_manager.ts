@@ -1,3 +1,4 @@
+import type { StructuredToolInterface } from '@langchain/core/tools'
 import type { LangChainAdapter } from '../adapters/langchain_adapter.js'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
@@ -16,7 +17,7 @@ const CurrentServerInputSchema = z.object({})
 export class ServerManager {
   private activeServer: string | null = null
   private readonly initializedServers: Record<string, boolean> = {}
-  private readonly serverTools: Record<string, DynamicStructuredTool[]> = {}
+  private readonly serverTools: Record<string, StructuredToolInterface[]> = {}
 
   constructor(
     private readonly client: MCPClient,
@@ -29,7 +30,7 @@ export class ServerManager {
     }
   }
 
-  async getServerManagementTools(): Promise<DynamicStructuredTool[]> {
+  async getServerManagementTools(): Promise<StructuredToolInterface[]> {
     const listServersTool = new DynamicStructuredTool({
       name: 'list_mcp_servers',
       description:
@@ -142,11 +143,11 @@ export class ServerManager {
     return `Successfully disconnected from MCP server '${was}'.`
   }
 
-  async getActiveServerTools(): Promise<DynamicStructuredTool[]> {
+  async getActiveServerTools(): Promise<StructuredToolInterface[]> {
     return this.activeServer ? this.serverTools[this.activeServer] ?? [] : []
   }
 
-  async getAllTools(): Promise<DynamicStructuredTool[]> {
+  async getAllTools(): Promise<StructuredToolInterface[]> {
     return [...(await this.getServerManagementTools()), ...(await this.getActiveServerTools())]
   }
 
@@ -161,7 +162,7 @@ export class ServerManager {
     }
   }
 
-  private async ensureToolsFetched(serverName: string, connector?: BaseConnector): Promise<DynamicStructuredTool[]> {
+  private async ensureToolsFetched(serverName: string, connector?: BaseConnector): Promise<StructuredToolInterface[]> {
     if (this.serverTools[serverName])
       return this.serverTools[serverName]
 
