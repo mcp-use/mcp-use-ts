@@ -5,13 +5,13 @@
   "description": "A utility library for integrating Model Context Protocol (MCP) with LangChain, Zod, and related tools. Provides helpers for schema conversion, event streaming, and SDK usage.",
   "author": "Zane",
   "license": "MIT",
-  "homepage": "https://github.com/zandko/mcp-use#readme",
+  "homepage": "https://github.com/mcp-use/mcp-use-ts#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zandko/mcp-use.git"
+    "url": "git+https://github.com/mcp-use/mcp-use-ts.git"
   },
   "bugs": {
-    "url": "https://github.com/zandko/mcp-use/issues"
+    "url": "https://github.com/mcp-use/mcp-use-ts/issues"
   },
   "keywords": [
     "MCP",
