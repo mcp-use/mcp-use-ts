@@ -11,6 +11,7 @@ interface LoggerOptions {
   level?: LogLevel
   console?: boolean
   file?: string
+  format?: 'minimal' | 'detailed' | 'emoji'
 }
 
 const DEFAULT_LOGGER_NAME = 'mcp-use'
@@ -26,12 +27,21 @@ function resolveLevel(env: string | undefined): LogLevel {
   }
 }
 
-const defaultFormatter = printf(({ level, message, label, timestamp }) => {
+const minimalFormatter = printf(({ level, message, label, timestamp }) => {
+  return `${timestamp} [${label}] ${level}: ${message}`
+})
+
+const detailedFormatter = printf(({ level, message, label, timestamp }) => {
+  return `${timestamp} [${label}] ${level.toUpperCase()}: ${message}`
+})
+
+const emojiFormatter = printf(({ level, message, label, timestamp }) => {
   return `${timestamp} [${label}] ${level.toUpperCase()}: ${message}`
 })
 
 export class Logger {
   private static instances: Record<string, WinstonLogger> = {}
+  private static currentFormat: 'minimal' | 'detailed' | 'emoji' = 'minimal'
 
   public static get(name: string = DEFAULT_LOGGER_NAME): WinstonLogger {
     if (!this.instances[name]) {
@@ -41,8 +51,8 @@ export class Logger {
           colorize(),
           splat(),
           label({ label: name }),
-          timestamp(),
-          defaultFormatter,
+          timestamp({ format: 'HH:mm:ss' }),
+          this.getFormatter(),
         ),
         transports: [],
       })
@@ -51,10 +61,24 @@ export class Logger {
     return this.instances[name]
   }
 
+  private static getFormatter() {
+    switch (this.currentFormat) {
+      case 'minimal':
+        return minimalFormatter
+      case 'detailed':
+        return detailedFormatter
+      case 'emoji':
+        return emojiFormatter
+      default:
+        return minimalFormatter
+    }
+  }
+
   public static configure(options: LoggerOptions = {}): void {
-    const { level, console = true, file } = options
+    const { level, console = true, file, format = 'minimal' } = options
     const resolvedLevel = level ?? resolveLevel(process.env.DEBUG)
 
+    this.currentFormat = format
     const root = this.get()
 
     root.level = resolvedLevel
@@ -72,6 +96,18 @@ export class Logger {
       }
       root.add(new transports.File({ filename: file }))
     }
+
+    // Update all existing loggers with new format
+    Object.values(this.instances).forEach((logger) => {
+      logger.level = resolvedLevel
+      logger.format = combine(
+        colorize(),
+        splat(),
+        label({ label: DEFAULT_LOGGER_NAME }),
+        timestamp({ format: 'HH:mm:ss' }),
+        this.getFormatter(),
+      )
+    })
   }
 
   public static setDebug(enabled: boolean | 0 | 1 | 2): void {
@@ -86,6 +122,11 @@ export class Logger {
       logger.level = level
     })
     process.env.DEBUG = enabled ? (enabled === true ? '2' : String(enabled)) : '0'
+  }
+
+  public static setFormat(format: 'minimal' | 'detailed' | 'emoji'): void {
+    this.currentFormat = format
+    this.configure({ format })
   }
 }
 

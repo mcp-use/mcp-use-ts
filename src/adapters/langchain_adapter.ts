@@ -102,7 +102,7 @@ export class LangChainAdapter extends BaseAdapter<StructuredToolInterface> {
           return parseMcpToolResult(result)
         }
         catch (err: any) {
-          logger.error(`Error executing MCP tool: ${err}`)
+          logger.error(`Error executing MCP tool: ${err.message}`)
           return `Error executing MCP tool: ${String(err)}`
         }
       },

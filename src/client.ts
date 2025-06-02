@@ -95,10 +95,13 @@ export class MCPClient {
     return this.sessions
   }
 
-  public getSession(serverName: string): MCPSession {
+  public getSession(serverName: string): MCPSession | null {
     const session = this.sessions[serverName]
+    // if (!session) {
+    //   throw new Error(`No session exists for server '${serverName}'`)
+    // }
     if (!session) {
-      throw new Error(`No session exists for server '${serverName}'`)
+      return null
     }
     return session
   }
