@@ -6,8 +6,8 @@ import type { StructuredToolInterface, ToolInterface } from '@langchain/core/too
 import type { AgentFinish, AgentStep } from 'langchain/agents'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
+import type { ServerManager } from '../managers/server_manager.js'
 import type { MCPSession } from '../session.js'
-import type { ServerManager } from './server_manager.js'
 import {
   AIMessage,
   HumanMessage,
@@ -107,7 +107,7 @@ export class MCPAgent {
       await this.serverManager.initialize()
 
       // Get server management tools
-      const managementTools = await this.serverManager.getServerManagementTools()
+      const managementTools = this.serverManager.tools
       this.tools = managementTools
       logger.info(
         `🔧 Server manager mode active with ${managementTools.length} management tools`,
@@ -302,7 +302,7 @@ export class MCPAgent {
 
       for (let stepNum = 0; stepNum < steps; stepNum++) {
         if (this.useServerManager && this.serverManager) {
-          const currentTools = await this.serverManager.getAllTools()
+          const currentTools = this.serverManager.tools
           const currentToolNames = new Set(currentTools.map(t => t.name))
           const existingToolNames = new Set(this.tools.map(t => t.name))
 
@@ -322,7 +322,7 @@ export class MCPAgent {
           }
         }
 
-        logger.info(`🔍 Step ${stepNum + 1}/${steps}`)
+        logger.info(`👣 Step ${stepNum + 1}/${steps}`)
 
         try {
           logger.debug('Starting agent step execution')
