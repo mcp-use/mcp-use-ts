@@ -1,10 +1,31 @@
+<div align="center" style="margin: 0 auto; max-width: 80%;">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./static/logo_white.svg">
+    <source media="(prefers-color-scheme: light)" srcset="./static/logo_black.svg">
+    <img alt="mcp use logo" src="./static/logo_white.svg" width="80%" style="margin: 20px auto;">
+  </picture>
+</div>
+
 <h1 align="center">Unified MCP Client Library</h1>
 
-[![](https://img.shields.io/npm/dw/mcp-use.svg)](https://www.npmjs.com/package/mcp-use)
-[![npm version](https://img.shields.io/npm/v/mcp-use.svg)](https://www.npmjs.com/package/mcp-use)
-[![License](https://img.shields.io/github/license/zandko/mcp-use)](https://github.com/zandko/mcp-use/blob/main/LICENSE)
-[![Code style: ESLint](https://img.shields.io/badge/code%20style-eslint-4B32C3.svg)](https://eslint.org)
-[![GitHub stars](https://img.shields.io/github/stars/zandko/mcp-use?style=social)](https://github.com/zandko/mcp-use/stargazers)
+<p align="center">
+    <a href="https://www.npmjs.com/package/mcp-use" alt="NPM Downloads">
+        <img src="https://img.shields.io/npm/dw/mcp-use.svg"/></a>
+    <a href="https://www.npmjs.com/package/mcp-use" alt="NPM Version">
+        <img src="https://img.shields.io/npm/v/mcp-use.svg"/></a>
+    <a href="https://docs.mcp-use.io" alt="Documentation">
+        <img src="https://img.shields.io/badge/docs-mcp--use.io-blue" /></a>
+    <a href="https://mcp-use.io" alt="Website">
+        <img src="https://img.shields.io/badge/website-mcp--use.io-blue" /></a>
+    <a href="https://github.com/mcp-use/mcp-use-ts/blob/main/LICENSE" alt="License">
+        <img src="https://img.shields.io/github/license/mcp-use/mcp-use-ts" /></a>
+    <a href="https://eslint.org" alt="Code style: ESLint">
+        <img src="https://img.shields.io/badge/code%20style-eslint-4B32C3.svg" /></a>
+    <a href="https://github.com/mcp-use/mcp-use-ts/stargazers" alt="GitHub stars">
+        <img src="https://img.shields.io/github/stars/mcp-use/mcp-use-ts?style=social" /></a>
+    <a href="https://discord.gg/XkNkSkMz3V" alt="Discord">
+        <img src="https://dcbadge.limes.pink/api/server/XkNkSkMz3V?style=flat" /></a>
+</p>
 
 🌐 **MCP Client** is the open-source way to connect **any LLM to any MCP server** in TypeScript/Node.js, letting you build custom agents with tool access without closed-source dependencies.
 
