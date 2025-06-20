@@ -48,17 +48,19 @@
     "build": "rm -rf dist && tsc",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
-    "prepublishOnly": "pnpm run build",
+    "prepublishOnly": "npm run build",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
+    "fmt": "eslint --fix",
     "release": "npm version patch && git push --follow-tags",
     "release:minor": "npm version minor && git push --follow-tags",
-    "release:major": "npm version major && git push --follow-tags"
+    "release:major": "npm version major && git push --follow-tags",
+    "prepare": "husky"
   },
   "dependencies": {
     "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
     "@langchain/community": "0.3.45",
-    "@langchain/core": "0.3.57",
+    "@langchain/core": "0.3.58",
     "@modelcontextprotocol/sdk": "1.12.1",
     "eventsource": "^3.0.6",
     "fastembed": "^1.14.4",
@@ -76,7 +78,15 @@
     "@types/ws": "^8.18.1",
     "eslint": "^9.28.0",
     "eslint-plugin-format": "^1.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
     "shx": "^0.4.0",
     "typescript": "^5.8.3"
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "eslint --fix",
+      "git add"
+    ]
   }
 }

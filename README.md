@@ -120,6 +120,7 @@ Load it:
 
 ```ts
 import { MCPClient } from 'mcp-use'
+
 const client = MCPClient.fromConfigFile('./mcp-config.json')
 ```
 
