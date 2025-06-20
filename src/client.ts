@@ -59,7 +59,7 @@ export class MCPClient {
     const servers = this.config.mcpServers ?? {}
 
     if (Object.keys(servers).length === 0) {
-      throw new Error('No MCP servers defined in config')
+      logger.warn('No MCP servers defined in config')
     }
 
     if (!servers[serverName]) {
@@ -85,7 +85,7 @@ export class MCPClient {
     const servers = this.config.mcpServers ?? {}
 
     if (Object.keys(servers).length === 0) {
-      throw new Error('No MCP servers defined in config')
+      logger.warn('No MCP servers defined in config')
     }
 
     for (const name of Object.keys(servers)) {
