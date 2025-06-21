@@ -52,9 +52,9 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "fmt": "eslint --fix",
-    "release": "npm version patch && git push --follow-tags",
-    "release:minor": "npm version minor && git push --follow-tags",
-    "release:major": "npm version major && git push --follow-tags",
+    "release": "npm version patch --tag-version-prefix=v && git push --follow-tags",
+    "release:minor": "npm version minor --tag-version-prefix=v && git push --follow-tags",
+    "release:major": "npm version major --tag-version-prefix=v && git push --follow-tags",
     "prepare": "husky"
   },
   "dependencies": {

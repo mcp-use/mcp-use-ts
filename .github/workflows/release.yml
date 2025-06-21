@@ -1,8 +1,9 @@
 name: Release
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
@@ -16,10 +17,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 8
-
       - name: Get package info
         id: package
         uses: codex-team/action-nodejs-package-info@v1
@@ -44,35 +41,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 8
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v4
-        name: Setup pnpm cache
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
 
       - name: Lint
-        run: pnpm lint
+        run: npm run lint
 
       - name: Build
-        run: pnpm build
+        run: npm run build
 
       - name: Run tests
-        run: pnpm test || echo "No tests found, skipping test step"
+        run: npm test || echo "No tests found, skipping test step"
 
   publish:
     runs-on: ubuntu-latest
@@ -87,29 +67,11 @@ jobs:
           node-version: 22.x
           registry-url: 'https://registry.npmjs.org'
 
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 8
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v4
-        name: Setup pnpm cache
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
 
       - name: Build
-        run: pnpm build
+        run: npm run build
 
       - name: Generate changelog
         id: changelog
@@ -117,21 +79,21 @@ jobs:
         with:
           myToken: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update release with changelog
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.event.release.tag_name }}
+          tag_name: ${{ github.ref_name }}
           body: |
             ${{ steps.changelog.outputs.changelog }}
 
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ github.event.release.tag_name }}...HEAD
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ github.ref_name }}...HEAD
           draft: false
           prerelease: false
 
       - name: Publish to NPM
-        run: pnpm publish --no-git-checks
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
 
@@ -141,7 +103,7 @@ jobs:
         with:
           severity: info
           details: |
-            Version ${{ github.event.release.tag_name }} has been successfully published to NPM! 🎉
-            See the release here: ${{ github.event.release.html_url }}
+            Version ${{ github.ref_name }} has been successfully published to NPM! 🎉
+            See the release here: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
         continue-on-error: true
