@@ -19,7 +19,7 @@ export interface MCPServerToolOptions extends ToolParams {
   sandboxId?: string
 }
 
-export class MCPServerTool<SchemaT extends ToolSchemaBase> extends StructuredTool<SchemaT> {
+export class MCPServerTool<SchemaT extends ToolSchemaBase> extends StructuredTool<SchemaT, SchemaOutputT<SchemaT>> {
   override name: string = 'mcp_server_tool'
   override description: string = 'Base tool for MCP server operations.'
   override schema!: SchemaT
@@ -32,7 +32,7 @@ export class MCPServerTool<SchemaT extends ToolSchemaBase> extends StructuredToo
   }
 
   protected async _call(
-    _arg: any,
+    _arg: SchemaOutputT<SchemaT>,
     _runManager?: CallbackManagerForToolRun,
     _parentConfig?: ToolRunnableConfig,
   ): Promise<ToolOutputT> {
