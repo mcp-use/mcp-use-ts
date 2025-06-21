@@ -32,7 +32,7 @@ export class MCPServerTool<SchemaT extends ToolSchemaBase> extends StructuredToo
   }
 
   protected async _call(
-    _arg: SchemaOutputT<SchemaT>,
+    _arg: any,
     _runManager?: CallbackManagerForToolRun,
     _parentConfig?: ToolRunnableConfig,
   ): Promise<ToolOutputT> {
