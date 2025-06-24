@@ -6,4 +6,9 @@ export default antfu({
   rules: {
     'node/prefer-global/process': 'off',
   },
+}, {
+  files: ['examples/**/*.ts'],
+  rules: {
+    'no-console': 'off',
+  },
 })

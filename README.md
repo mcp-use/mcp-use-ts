@@ -126,6 +126,38 @@ const client = MCPClient.fromConfigFile('./mcp-config.json')
 
 ---
 
+## 📚 Examples
+
+We provide a comprehensive set of examples demonstrating various use cases. All examples are located in the `examples/` directory with a dedicated README.
+
+### Running Examples
+
+```bash
+# Install dependencies
+npm install
+
+# Run any example
+npm run example:airbnb      # Search accommodations with Airbnb
+npm run example:browser     # Browser automation with Playwright
+npm run example:chat        # Interactive chat with memory
+npm run example:filesystem  # File system operations
+npm run example:http        # HTTP server connection
+npm run example:everything  # Test MCP functionalities
+npm run example:multi       # Multiple servers in one session
+```
+
+### Example Highlights
+
+- **Browser Automation**: Control browsers to navigate websites and extract information
+- **File Operations**: Read, write, and manipulate files through MCP
+- **Multi-Server**: Combine multiple MCP servers (Airbnb + Browser) in a single task
+- **Sandboxed Execution**: Run MCP servers in isolated E2B containers
+- **OAuth Flows**: Authenticate with services like Linear using OAuth2
+
+See the [examples README](./examples/README.md) for detailed documentation and prerequisites.
+
+---
+
 ## 🔄 Multi-Server Example
 
 ```ts
