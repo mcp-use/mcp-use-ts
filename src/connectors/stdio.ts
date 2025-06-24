@@ -51,13 +51,27 @@ export class StdioConnector extends BaseConnector {
     }
 
     logger.debug(`Connecting to MCP implementation via stdio: ${this.command}`)
-
     try {
       // 1. Build server parameters for the transport
+
+      // Merge env with process.env, filtering out undefined values
+      let mergedEnv: Record<string, string> | undefined
+      if (this.env) {
+        mergedEnv = {}
+        // First add process.env values (excluding undefined)
+        for (const [key, value] of Object.entries(process.env)) {
+          if (value !== undefined) {
+            mergedEnv[key] = value
+          }
+        }
+        // Then override with provided env
+        Object.assign(mergedEnv, this.env)
+      }
+
       const serverParams: StdioServerParameters = {
         command: this.command,
         args: this.args,
-        env: this.env,
+        env: mergedEnv,
       }
 
       // 2. Start the connection manager -> returns a live transport
