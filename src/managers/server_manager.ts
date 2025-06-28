@@ -6,6 +6,7 @@ import type { MCPSession } from '../session.js'
 import { isEqual } from 'lodash-es'
 import { logger } from '../logging.js'
 import { AcquireActiveMCPServerTool } from './tools/acquire_active_mcp_server.js'
+import { AddMCPServerTool } from './tools/add_server.js'
 import { ConnectMCPServerTool } from './tools/connect_mcp_server.js'
 import { ListMCPServersTool } from './tools/list_mcp_servers.js'
 import { ReleaseMCPServerConnectionTool } from './tools/release_mcp_server_connection.js'
@@ -23,10 +24,31 @@ export class ServerManager {
     this.adapter = adapter
   }
 
+  public logState(context: string): void {
+    const allServerNames = this.client.getServerNames()
+    const activeSessionNames = Object.keys(this.client.getAllActiveSessions())
+
+    if (allServerNames.length === 0) {
+      logger.info('Server Manager State: No servers configured.')
+      return
+    }
+
+    const tableData = allServerNames.map(name => ({
+      'Server Name': name,
+      'Connected': activeSessionNames.includes(name) ? '✅' : '❌',
+      'Initialized': this.initializedServers[name] ? '✅' : '❌',
+      'Tool Count': this.serverTools[name]?.length ?? 0,
+      'Active': this.activeServer === name ? '✅' : '❌',
+    }))
+
+    logger.info(`Server Manager State: [${context}]`)
+    console.table(tableData) // eslint-disable-line no-console
+  }
+
   initialize(): void {
     const serverNames = this.client.getServerNames?.()
     if (serverNames.length === 0) {
-      logger.warning('No MCP servers defined in client configuration')
+      logger.warn('No MCP servers defined in client configuration')
     }
   }
 
@@ -83,11 +105,26 @@ export class ServerManager {
   }
 
   get tools(): StructuredToolInterface[] {
-    return [
+    if (logger.level === 'debug') {
+      this.logState('Providing tools to agent')
+    }
+
+    const managementTools = [
+      new AddMCPServerTool(this),
       new ListMCPServersTool(this),
       new ConnectMCPServerTool(this),
       new AcquireActiveMCPServerTool(this),
       new ReleaseMCPServerConnectionTool(this),
     ]
+
+    if (this.activeServer && this.serverTools[this.activeServer]) {
+      const activeTools = this.serverTools[this.activeServer]
+      logger.debug(
+        `Adding ${activeTools.length} tools from active server '${this.activeServer}'`,
+      )
+      return [...managementTools, ...activeTools]
+    }
+
+    return managementTools
   }
 }

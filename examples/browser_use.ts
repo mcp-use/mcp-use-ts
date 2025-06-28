@@ -33,7 +33,6 @@ async function main() {
   }
   // Create MCPClient from config file
   const client = new MCPClient(config)
-
   // Create LLM
   const llm = new ChatOpenAI({ model: 'gpt-4o' })
   // const llm = init_chat_model({ model: "llama-3.1-8b-instant", model_provider: "groq" })

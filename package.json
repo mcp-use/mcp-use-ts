@@ -65,7 +65,8 @@
     "example:multi": "npm run build && node dist/examples/multi_server_example.js",
     "example:sandbox": "npm run build && node dist/examples/sandbox_everything.js",
     "example:oauth": "npm run build && node dist/examples/simple_oauth_example.js",
-    "example:blender": "npm run build && node dist/examples/blender_use.js"
+    "example:blender": "npm run build && node dist/examples/blender_use.js",
+    "example:add_server": "npm run build && node dist/examples/add_server_tool.js"
   },
   "dependencies": {
     "@dmitryrechkin/json-schema-to-zod": "^1.0.1",

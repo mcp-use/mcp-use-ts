@@ -1,0 +1,76 @@
+/**
+ * Dynamic server management example for mcp-use.
+ *
+ * This example demonstrates how to equip an MCPAgent with a tool
+ * to dynamically add and connect to MCP servers during a run.
+ */
+
+import { ChatOpenAI } from '@langchain/openai'
+import { config } from 'dotenv'
+import { MCPAgent, MCPClient } from '../index.js'
+import { LangChainAdapter } from '../src/adapters/langchain_adapter.js'
+import { ServerManager } from '../src/managers/server_manager.js'
+
+// Load environment variables from .env file
+config()
+
+async function main() {
+  // Create an empty MCPClient. It has no servers to start with.
+  const client = new MCPClient()
+
+  // The LLM to power the agent
+  const llm = new ChatOpenAI({ model: 'gpt-4o', temperature: 0 })
+
+  // Create the agent, enabling the ServerManager
+  const agent = new MCPAgent({
+    llm,
+    client,
+    maxSteps: 30,
+    useServerManager: true,
+    serverManagerFactory: client => new ServerManager(client, new LangChainAdapter()),
+    autoInitialize: true,
+  })
+
+  // Define the server configuration that the agent will be asked to add.
+  const serverConfigA = {
+    command: 'npx',
+    args: ['@playwright/mcp@latest'],
+    env: {
+      DISPLAY: ':1',
+    },
+  }
+  const serverConfigB = {
+    command: 'npx',
+    args: ['-y', '@openbnb/mcp-server-airbnb', '--ignore-robots-txt'],
+  }
+  // We'll pass the config as a JSON string in the prompt.
+  const serverConfigStringA = JSON.stringify(serverConfigA, null, 2)
+  const serverConfigStringB = JSON.stringify(serverConfigB, null, 2)
+
+  const query = `I need to browse the web. To do this, please add and connect to a new MCP server for Playwright.
+    The server name is 'playwright' and its configuration is:
+    \`\`\`json
+    ${serverConfigStringA}
+    \`\`\`
+    Once the server is ready, navigate to https://github.com/mcp-use/mcp-use, give a star to the project, and then provide a concise summary of the project's README.
+
+    Then, please add and connect to a new MCP server for Airbnb.
+    The server name is 'airbnb' and its configuration is:
+    \`\`\`json
+    ${serverConfigStringB}
+    \`\`\`
+    and give me a house in the location of the company mcp-use.
+    `
+
+  // Run the agent. It will first use the AddMCPServerTool, then the tools from the new server.
+  const result = await agent.run(query)
+
+  console.log(`\n✅ Final Result:\n${result}`)
+
+  // Clean up the session created by the agent
+  await client.closeAllSessions()
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(console.error)
+}
