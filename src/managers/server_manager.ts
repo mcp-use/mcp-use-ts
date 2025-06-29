@@ -6,7 +6,7 @@ import type { MCPSession } from '../session.js'
 import { isEqual } from 'lodash-es'
 import { logger } from '../logging.js'
 import { AcquireActiveMCPServerTool } from './tools/acquire_active_mcp_server.js'
-import { AddMCPServerTool } from './tools/add_server.js'
+import { AddMCPServerFromConfigTool } from './tools/add_server_from_config.js'
 import { ConnectMCPServerTool } from './tools/connect_mcp_server.js'
 import { ListMCPServersTool } from './tools/list_mcp_servers.js'
 import { ReleaseMCPServerConnectionTool } from './tools/release_mcp_server_connection.js'
@@ -18,10 +18,23 @@ export class ServerManager {
   public readonly client: MCPClient
   public readonly adapter: LangChainAdapter
   public activeServer: string | null = null
+  private overrideManagementTools?: StructuredToolInterface[]
 
-  constructor(client: MCPClient, adapter: LangChainAdapter) {
+  constructor(
+    client: MCPClient,
+    adapter: LangChainAdapter,
+    managementTools?: StructuredToolInterface[],
+  ) {
     this.client = client
     this.adapter = adapter
+    this.overrideManagementTools = managementTools
+  }
+
+  public setManagementTools(tools: StructuredToolInterface[]): void {
+    this.overrideManagementTools = tools
+    logger.info(
+      `Overriding default management tools with a new set of ${tools.length} tools.`,
+    )
   }
 
   public logState(context: string): void {
@@ -109,8 +122,8 @@ export class ServerManager {
       this.logState('Providing tools to agent')
     }
 
-    const managementTools = [
-      new AddMCPServerTool(this),
+    const managementTools = this.overrideManagementTools ?? [
+      new AddMCPServerFromConfigTool(this),
       new ListMCPServersTool(this),
       new ConnectMCPServerTool(this),
       new AcquireActiveMCPServerTool(this),

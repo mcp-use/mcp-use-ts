@@ -66,6 +66,7 @@ export class MCPAgent {
     useServerManager?: boolean
     verbose?: boolean
     adapter?: LangChainAdapter
+    serverManagerFactory?: (client: MCPClient) => ServerManager
   }) {
     this.llm = options.llm
 
@@ -91,7 +92,7 @@ export class MCPAgent {
         throw new Error('\'client\' must be provided when \'useServerManager\' is true.')
       }
       this.adapter = options.adapter ?? new LangChainAdapter(this.disallowedTools)
-      this.serverManager = new ServerManager(this.client, this.adapter)
+      this.serverManager = options.serverManagerFactory?.(this.client) ?? new ServerManager(this.client, this.adapter)
     }
     // Let consumers swap allowed tools dynamically
     else {

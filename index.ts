@@ -11,5 +11,6 @@ import { MCPSession } from './src/session.js'
 
 export { BaseAdapter, LangChainAdapter } from './src/adapters/index.js'
 export { ServerManager } from './src/managers/server_manager.js'
+export * from './src/managers/tools/index.js'
 
 export { BaseConnector, HttpConnector, loadConfigFile, Logger, logger, MCPAgent, MCPClient, MCPSession, StdioConnector, WebSocketConnector }

@@ -8,7 +8,9 @@
 import { ChatOpenAI } from '@langchain/openai'
 import { config } from 'dotenv'
 import { MCPAgent, MCPClient } from '../index.js'
-
+import { LangChainAdapter } from '../src/adapters/langchain_adapter.js'
+import { ServerManager } from '../src/managers/server_manager.js'
+import { AddMCPServerFromConfigTool } from '../src/managers/tools/add_server_from_config.js'
 // Load environment variables from .env file
 config()
 
@@ -19,13 +21,17 @@ async function main() {
   // The LLM to power the agent
   const llm = new ChatOpenAI({ model: 'gpt-4o', temperature: 0 })
 
+  const serverManager = new ServerManager(client, new LangChainAdapter())
+  serverManager.setManagementTools([new AddMCPServerFromConfigTool(serverManager)])
+
   // Create the agent, enabling the ServerManager
   const agent = new MCPAgent({
     llm,
     client,
     maxSteps: 30,
-    useServerManager: true,
     autoInitialize: true,
+    useServerManager: true,
+    serverManagerFactory: () => serverManager,
   })
 
   // Define the server configuration that the agent will be asked to add.

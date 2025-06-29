@@ -4,10 +4,10 @@ import { StructuredTool } from 'langchain/tools'
 import { z } from 'zod'
 import { logger } from '../../logging.js'
 
-export class AddMCPServerTool extends StructuredTool {
-  name = 'add_mcp_server'
+export class AddMCPServerFromConfigTool extends StructuredTool {
+  name = 'add_mcp_server_from_config'
   description
-    = 'Adds a new MCP server to the client and connects to it, making its tools available.'
+    = 'Adds a new MCP server to the client from a configuration object and connects to it, making its tools available.'
 
   schema = z.object({
     serverName: z.string().describe('The name for the new MCP server.'),
