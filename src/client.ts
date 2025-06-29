@@ -44,6 +44,14 @@ export class MCPClient {
     return Object.keys(this.config.mcpServers ?? {})
   }
 
+  public getServerConfig(name: string): Record<string, any> {
+    return this.config.mcpServers?.[name]
+  }
+
+  public getConfig(): Record<string, any> {
+    return this.config ?? {}
+  }
+
   public saveConfig(filepath: string): void {
     const dir = path.dirname(filepath)
     if (!fs.existsSync(dir)) {
