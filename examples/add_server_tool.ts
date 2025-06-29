@@ -8,8 +8,6 @@
 import { ChatOpenAI } from '@langchain/openai'
 import { config } from 'dotenv'
 import { MCPAgent, MCPClient } from '../index.js'
-import { LangChainAdapter } from '../src/adapters/langchain_adapter.js'
-import { ServerManager } from '../src/managers/server_manager.js'
 
 // Load environment variables from .env file
 config()
@@ -27,14 +25,13 @@ async function main() {
     client,
     maxSteps: 30,
     useServerManager: true,
-    serverManagerFactory: client => new ServerManager(client, new LangChainAdapter()),
     autoInitialize: true,
   })
 
   // Define the server configuration that the agent will be asked to add.
   const serverConfigA = {
     command: 'npx',
-    args: ['@playwright/mcp@latest'],
+    args: ['@playwright/mcp@latest', '--headless'],
     env: {
       DISPLAY: ':1',
     },
@@ -62,8 +59,19 @@ async function main() {
     and give me a house in the location of the company mcp-use.
     `
 
-  // Run the agent. It will first use the AddMCPServerTool, then the tools from the new server.
-  const result = await agent.run(query)
+  // Run the agent. We call `stream()` to get the async generator.
+  const stepIterator = agent.stream(query)
+  let result: string
+  while (true) {
+    const { done, value } = await stepIterator.next()
+    if (done) {
+      result = value
+      break
+    }
+    // You can inspect the intermediate steps here.
+    console.log('--- Agent Step ---')
+    console.dir(value, { depth: 4 })
+  }
 
   console.log(`\n✅ Final Result:\n${result}`)
 

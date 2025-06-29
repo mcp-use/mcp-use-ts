@@ -6,7 +6,6 @@ import type { StructuredToolInterface, ToolInterface } from '@langchain/core/too
 import type { AgentFinish, AgentStep } from 'langchain/agents'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
-import type { ServerManager } from '../managers/server_manager.js'
 import type { MCPSession } from '../session.js'
 import {
   AIMessage,
@@ -24,6 +23,7 @@ import {
 } from 'langchain/agents'
 import { LangChainAdapter } from '../adapters/langchain_adapter.js'
 import { logger } from '../logging.js'
+import { ServerManager } from '../managers/server_manager.js'
 import { createSystemMessage } from './prompts/system_prompt_builder.js'
 import { DEFAULT_SYSTEM_PROMPT_TEMPLATE, SERVER_MANAGER_SYSTEM_PROMPT_TEMPLATE } from './prompts/templates.js'
 
@@ -35,6 +35,7 @@ export class MCPAgent {
   private autoInitialize: boolean
   private memoryEnabled: boolean
   private disallowedTools: string[]
+  private additionalTools: StructuredToolInterface[]
   private useServerManager: boolean
   private verbose: boolean
   private systemPrompt?: string | null
@@ -61,10 +62,10 @@ export class MCPAgent {
     systemPromptTemplate?: string | null
     additionalInstructions?: string | null
     disallowedTools?: string[]
+    additionalTools?: StructuredToolInterface[]
     useServerManager?: boolean
     verbose?: boolean
     adapter?: LangChainAdapter
-    serverManagerFactory?: (client: MCPClient) => ServerManager
   }) {
     this.llm = options.llm
 
@@ -77,6 +78,7 @@ export class MCPAgent {
     this.systemPromptTemplateOverride = options.systemPromptTemplate ?? null
     this.additionalInstructions = options.additionalInstructions ?? null
     this.disallowedTools = options.disallowedTools ?? []
+    this.additionalTools = options.additionalTools ?? []
     this.useServerManager = options.useServerManager ?? false
     this.verbose = options.verbose ?? false
 
@@ -88,15 +90,13 @@ export class MCPAgent {
       if (!this.client) {
         throw new Error('\'client\' must be provided when \'useServerManager\' is true.')
       }
-      if (options.serverManagerFactory) {
-        this.serverManager = options.serverManagerFactory(this.client)
-      }
-      else {
-        throw new Error('No serverManagerFactory passed to MCPAgent constructor.')
-      }
+      this.adapter = options.adapter ?? new LangChainAdapter(this.disallowedTools)
+      this.serverManager = new ServerManager(this.client, this.adapter)
     }
     // Let consumers swap allowed tools dynamically
-    this.adapter = options.adapter ?? new LangChainAdapter(this.disallowedTools)
+    else {
+      this.adapter = options.adapter ?? new LangChainAdapter(this.disallowedTools)
+    }
   }
 
   public async initialize(): Promise<void> {
@@ -109,6 +109,7 @@ export class MCPAgent {
       // Get server management tools
       const managementTools = this.serverManager.tools
       this.tools = managementTools
+      this.tools.push(...this.additionalTools)
       logger.info(
         `🔧 Server manager mode active with ${managementTools.length} management tools`,
       )
@@ -132,6 +133,7 @@ export class MCPAgent {
 
         // Create LangChain tools directly from the client using the adapter
         this.tools = await LangChainAdapter.createTools(this.client)
+        this.tools.push(...this.additionalTools)
         logger.info(`🛠️ Created ${this.tools.length} LangChain tools from client`)
       }
       else {
@@ -145,6 +147,7 @@ export class MCPAgent {
 
         // Create LangChain tools using the adapter with connectors
         this.tools = await this.adapter.createToolsFromConnectors(this.connectors)
+        this.tools.push(...this.additionalTools)
         logger.info(`🛠️ Created ${this.tools.length} LangChain tools from connectors`)
       }
 
@@ -251,12 +254,47 @@ export class MCPAgent {
     return this.disallowedTools
   }
 
+  private async _consumeAndReturn(
+    generator: AsyncGenerator<AgentStep, string, void>,
+  ): Promise<string> {
+    // Manually iterate through the generator to consume the steps.
+    // The for-await-of loop is not used because it discards the generator's
+    // final return value. We need to capture that value when `done` is true.
+    while (true) {
+      const { done, value } = await generator.next()
+      if (done) {
+        return value
+      }
+    }
+  }
+
+  /**
+   * Runs the agent and returns a promise for the final result.
+   */
   public async run(
+    query: string,
+    maxSteps?: number,
+    manageConnector?: boolean,
+    externalHistory?: BaseMessage[],
+  ): Promise<string> {
+    const generator = this.stream(
+      query,
+      maxSteps,
+      manageConnector,
+      externalHistory,
+    )
+    return this._consumeAndReturn(generator)
+  }
+
+  /**
+   * Runs the agent and yields intermediate steps as an async generator.
+   */
+  public async* stream(
     query: string,
     maxSteps?: number,
     manageConnector = true,
     externalHistory?: BaseMessage[],
-  ): Promise<string> {
+  ): AsyncGenerator<AgentStep, string, void> {
     let result = ''
     let initializedHere = false
 
@@ -315,6 +353,7 @@ export class MCPAgent {
               `🔄 Tools changed before step ${stepNum + 1}, updating agent. New tools: ${[...currentToolNames].join(', ')}`,
             )
             this.tools = currentTools
+            this.tools.push(...this.additionalTools)
             await this.createSystemMessageFromTools(this.tools)
             this.agentExecutor = this.createAgent()
             this.agentExecutor.maxIterations = steps
@@ -342,6 +381,7 @@ export class MCPAgent {
           intermediateSteps.push(...stepArray)
 
           for (const step of stepArray) {
+            yield step
             const { action, observation } = step
             const toolName = action.tool
             let toolInputStr = String(action.toolInput)
