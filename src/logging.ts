@@ -23,7 +23,7 @@ function resolveLevel(env: string | undefined): LogLevel {
     case '1':
       return 'info'
     default:
-      return 'warn'
+      return 'info'
   }
 }
 
@@ -116,7 +116,7 @@ export class Logger {
       level = 'debug'
     else if (enabled === 1)
       level = 'info'
-    else level = 'warn'
+    else level = 'info'
 
     Object.values(this.instances).forEach((logger) => {
       logger.level = level
