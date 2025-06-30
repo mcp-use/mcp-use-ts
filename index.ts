@@ -13,4 +13,7 @@ export { BaseAdapter, LangChainAdapter } from './src/adapters/index.js'
 export { ServerManager } from './src/managers/server_manager.js'
 export * from './src/managers/tools/index.js'
 
+// Export telemetry utilities
+export { setTelemetrySource, Telemetry } from './src/telemetry/index.js'
+
 export { BaseConnector, HttpConnector, loadConfigFile, Logger, logger, MCPAgent, MCPClient, MCPSession, StdioConnector, WebSocketConnector }

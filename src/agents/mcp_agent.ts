@@ -24,6 +24,7 @@ import {
 import { LangChainAdapter } from '../adapters/langchain_adapter.js'
 import { logger } from '../logging.js'
 import { ServerManager } from '../managers/server_manager.js'
+import { extractModelInfo, Telemetry } from '../telemetry/index.js'
 import { createSystemMessage } from './prompts/system_prompt_builder.js'
 import { DEFAULT_SYSTEM_PROMPT_TEMPLATE, SERVER_MANAGER_SYSTEM_PROMPT_TEMPLATE } from './prompts/templates.js'
 
@@ -50,6 +51,9 @@ export class MCPAgent {
   private tools: StructuredToolInterface[] = []
   private adapter: LangChainAdapter
   private serverManager: ServerManager | null = null
+  private telemetry: Telemetry
+  private modelProvider: string
+  private modelName: string
 
   constructor(options: {
     llm: BaseLanguageModelInterface
@@ -98,6 +102,13 @@ export class MCPAgent {
     else {
       this.adapter = options.adapter ?? new LangChainAdapter(this.disallowedTools)
     }
+
+    // Initialize telemetry
+    this.telemetry = Telemetry.getInstance()
+    // Track model info for telemetry
+    const [provider, name] = extractModelInfo(this.llm as any)
+    this.modelProvider = provider
+    this.modelName = name
   }
 
   public async initialize(): Promise<void> {
@@ -298,6 +309,10 @@ export class MCPAgent {
   ): AsyncGenerator<AgentStep, string, void> {
     let result = ''
     let initializedHere = false
+    const startTime = Date.now()
+    const toolsUsedNames: string[] = []
+    let stepsTaken = 0
+    let success = false
 
     try {
       if (manageConnector && !this.initialized) {
@@ -340,6 +355,7 @@ export class MCPAgent {
       logger.info(`🏁 Starting agent execution with max_steps=${steps}`)
 
       for (let stepNum = 0; stepNum < steps; stepNum++) {
+        stepsTaken = stepNum + 1
         if (this.useServerManager && this.serverManager) {
           const currentTools = this.serverManager.tools
           const currentToolNames = new Set(currentTools.map(t => t.name))
@@ -385,6 +401,7 @@ export class MCPAgent {
             yield step
             const { action, observation } = step
             const toolName = action.tool
+            toolsUsedNames.push(toolName)
             let toolInputStr = String(action.toolInput)
             if (toolInputStr.length > 100)
               toolInputStr = `${toolInputStr.slice(0, 97)}...`
@@ -432,6 +449,7 @@ export class MCPAgent {
       }
 
       logger.info('🎉 Agent execution complete')
+      success = true
       return result
     }
     catch (e) {
@@ -443,6 +461,44 @@ export class MCPAgent {
       throw e
     }
     finally {
+      // Track comprehensive execution data
+      const executionTimeMs = Date.now() - startTime
+
+      let serverCount = 0
+      if (this.client) {
+        serverCount = Object.keys(await this.client.getAllActiveSessions()).length
+      }
+      else if (this.connectors) {
+        serverCount = this.connectors.length
+      }
+
+      const conversationHistoryLength = this.memoryEnabled ? this.conversationHistory.length : 0
+
+      await this.telemetry.trackAgentExecution({
+        executionMethod: 'stream',
+        query,
+        success,
+        modelProvider: this.modelProvider,
+        modelName: this.modelName,
+        serverCount,
+        serverIdentifiers: this.connectors.map(connector => connector.publicIdentifier),
+        totalToolsAvailable: this.tools.length,
+        toolsAvailableNames: this.tools.map(t => t.name),
+        maxStepsConfigured: this.maxSteps,
+        memoryEnabled: this.memoryEnabled,
+        useServerManager: this.useServerManager,
+        maxStepsUsed: maxSteps ?? null,
+        manageConnector,
+        externalHistoryUsed: externalHistory !== undefined,
+        stepsTaken,
+        toolsUsedCount: toolsUsedNames.length,
+        toolsUsedNames,
+        response: result,
+        executionTimeMs,
+        errorType: success ? null : 'execution_error',
+        conversationHistoryLength,
+      })
+
       if (manageConnector && !this.client && initializedHere) {
         logger.info('🧹 Closing agent after query completion')
         await this.close()

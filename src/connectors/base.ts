@@ -33,6 +33,9 @@ export abstract class BaseConnector {
   /** Establish the connection and create the SDK client. */
   abstract connect(): Promise<void>
 
+  /** Get the identifier for the connector. */
+  abstract get publicIdentifier(): Record<string, string>
+
   /** Disconnect and release resources. */
   async disconnect(): Promise<void> {
     if (!this.connected) {

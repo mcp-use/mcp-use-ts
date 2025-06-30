@@ -91,4 +91,11 @@ export class StdioConnector extends BaseConnector {
       throw err
     }
   }
+
+  get publicIdentifier(): Record<string, string> {
+    return {
+      'type': 'stdio',
+      'command&args': `${this.command} ${this.args.join(' ')}`,
+    }
+  }
 }

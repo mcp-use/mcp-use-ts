@@ -183,4 +183,11 @@ export class WebSocketConnector extends BaseConnector {
 
     this.toolsCache = null
   }
+
+  get publicIdentifier(): Record<string, string> {
+    return {
+      type: 'websocket',
+      url: this.url,
+    }
+  }
 }

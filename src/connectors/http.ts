@@ -70,4 +70,11 @@ export class HttpConnector extends BaseConnector {
       throw err
     }
   }
+
+  get publicIdentifier(): Record<string, string> {
+    return {
+      type: 'http',
+      url: this.baseUrl,
+    }
+  }
 }
