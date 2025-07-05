@@ -23,7 +23,7 @@ import { MCPAgent, MCPClient } from '../index.js'
 config()
 
 async function main() {
-  const config = { mcpServers: { http: { url: 'https://hf.com/mcp' } } }
+  const config = { mcpServers: { http: { url: 'https://gitmcp.io/docs' } } }
 
   // Create MCPClient from config
   const client = MCPClient.fromDict(config)
@@ -36,10 +36,12 @@ async function main() {
 
   // Run the query
   const result = await agent.run(
-    'Find the best restaurant in San Francisco USING GOOGLE SEARCH',
+    'Which tools are available and what can they do?',
     30,
   )
   console.log(`\nResult: ${result}`)
+
+  await agent.close()
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
