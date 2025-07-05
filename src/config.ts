@@ -21,9 +21,14 @@ export function createConnectorFromConfig(
   }
 
   if ('url' in serverConfig) {
+    // HttpConnector automatically handles streamable HTTP with SSE fallback
+    const transport = serverConfig.transport || 'http'
+
     return new HttpConnector(serverConfig.url, {
       headers: serverConfig.headers,
-      authToken: serverConfig.auth_token,
+      authToken: serverConfig.auth_token || serverConfig.authToken,
+      // Only force SSE if explicitly requested
+      preferSse: serverConfig.preferSse || transport === 'sse',
     })
   }
 
