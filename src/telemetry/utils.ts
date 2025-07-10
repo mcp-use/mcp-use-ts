@@ -4,6 +4,11 @@ import * as path from 'node:path'
 
 export function getPackageVersion(): string {
   try {
+    // Check if we're in a Node.js environment with file system access
+    if (typeof __dirname === 'undefined' || typeof fs === 'undefined') {
+      return 'unknown'
+    }
+
     const packagePath = path.join(__dirname, '../../package.json')
     const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf-8'))
     return packageJson.version || 'unknown'

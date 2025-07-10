@@ -8,6 +8,40 @@ import { logger } from '../logging.js'
 import { MCPAgentExecutionEvent } from './events.js'
 import { getPackageVersion } from './utils.js'
 
+// Environment detection function
+function isNodeJSEnvironment(): boolean {
+  try {
+    // Check for Cloudflare Workers specifically
+    if (typeof navigator !== 'undefined' && navigator.userAgent?.includes('Cloudflare-Workers')) {
+      return false
+    }
+
+    // Check for other edge runtime indicators
+    if (typeof (globalThis as any).EdgeRuntime !== 'undefined' || typeof (globalThis as any).Deno !== 'undefined') {
+      return false
+    }
+
+    // Check for Node.js specific globals that are not available in edge environments
+    const hasNodeGlobals = (
+      typeof process !== 'undefined'
+      && typeof process.platform !== 'undefined'
+      && typeof __dirname !== 'undefined'
+    )
+
+    // Check for Node.js modules
+    const hasNodeModules = (
+      typeof fs !== 'undefined'
+      && typeof os !== 'undefined'
+      && typeof fs.existsSync === 'function'
+    )
+
+    return hasNodeGlobals && hasNodeModules
+  }
+  catch {
+    return false
+  }
+}
+
 // Simple Scarf event logger implementation
 class ScarfEventLogger {
   private endpoint: string
@@ -46,6 +80,11 @@ class ScarfEventLogger {
 }
 
 function getCacheHome(): string {
+  // Return a safe fallback for non-Node.js environments
+  if (!isNodeJSEnvironment()) {
+    return '/tmp/mcp_use_cache'
+  }
+
   // XDG_CACHE_HOME for Linux and manually set envs
   const envVar = process.env.XDG_CACHE_HOME
   if (envVar && path.isAbsolute(envVar)) {
@@ -88,15 +127,24 @@ export class Telemetry {
   private _source: string = 'typescript'
 
   private constructor() {
-    const telemetryDisabled = process.env.MCP_USE_ANONYMIZED_TELEMETRY?.toLowerCase() === 'false'
+    // Check if we're in a Node.js environment first
+    const isNodeJS = isNodeJSEnvironment()
+
+    // Safely access environment variables
+    const telemetryDisabled = (typeof process !== 'undefined' && process.env?.MCP_USE_ANONYMIZED_TELEMETRY?.toLowerCase() === 'false') || false
 
     // Check for source from environment variable, default to 'typescript'
-    this._source = process.env.MCP_USE_TELEMETRY_SOURCE || 'typescript'
+    this._source = (typeof process !== 'undefined' && process.env?.MCP_USE_TELEMETRY_SOURCE) || 'typescript'
 
     if (telemetryDisabled) {
       this._posthogClient = null
       this._scarfClient = null
-      logger.debug('Telemetry disabled')
+      logger.debug('Telemetry disabled via environment variable')
+    }
+    else if (!isNodeJS) {
+      this._posthogClient = null
+      this._scarfClient = null
+      logger.debug('Telemetry disabled - non-Node.js environment detected (e.g., Cloudflare Workers)')
     }
     else {
       logger.info('Anonymized telemetry enabled. Set MCP_USE_ANONYMIZED_TELEMETRY=false to disable.')
@@ -153,6 +201,12 @@ export class Telemetry {
 
   get userId(): string {
     if (this._currUserId) {
+      return this._currUserId
+    }
+
+    // If we're not in a Node.js environment, just return a static user ID
+    if (!isNodeJSEnvironment()) {
+      this._currUserId = this.UNKNOWN_USER_ID
       return this._currUserId
     }
 
@@ -231,6 +285,11 @@ export class Telemetry {
 
   async trackPackageDownload(properties?: Record<string, any>): Promise<void> {
     if (!this._scarfClient) {
+      return
+    }
+
+    // Skip tracking in non-Node.js environments
+    if (!isNodeJSEnvironment()) {
       return
     }
 
