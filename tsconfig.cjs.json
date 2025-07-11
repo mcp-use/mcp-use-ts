@@ -4,9 +4,9 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "outDir": "./dist-cjs",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
   },
   "include": ["index.ts", "src/**/*.ts"],
   "exclude": ["examples", "node_modules", "dist", "dist-cjs"]
-} 
+}

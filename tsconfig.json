@@ -7,9 +7,9 @@
     "resolveJsonModule": true,
     "strict": true,
     "declaration": true,
+    "declarationDir": "./dist",
     "declarationMap": true,
     "outDir": "./dist",
-    "declarationDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
