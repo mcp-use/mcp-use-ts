@@ -29,14 +29,16 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist-cjs/index.js"
     }
   },
-  "main": "./dist/index.js",
+  "main": "./dist-cjs/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "dist-cjs"
   ],
   "engines": {
     "node": ">=22.0.0"
@@ -46,6 +48,8 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc",
+    "build:cjs": "rm -rf dist-cjs && tsc --project tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist-cjs/package.json",
+    "build:all": "npm run build && npm run build:cjs",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
     "prepublishOnly": "npm run build",
@@ -79,6 +83,7 @@
     "eventsource": "^3.0.6",
     "fastembed": "^1.14.4",
     "langchain": "^0.3.27",
+    "lodash": "^4.17.21",
     "lodash-es": "^4.17.21",
     "posthog-node": "^5.1.1",
     "uuid": "^11.1.0",
