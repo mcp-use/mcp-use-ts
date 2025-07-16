@@ -10,10 +10,16 @@ import { Logger, logger } from './src/logging.js'
 import { MCPSession } from './src/session.js'
 
 export { BaseAdapter, LangChainAdapter } from './src/adapters/index.js'
+// Export AI SDK utilities
+export * from './src/agents/utils/index.js'
 export { ServerManager } from './src/managers/server_manager.js'
+
 export * from './src/managers/tools/index.js'
 
 // Export telemetry utilities
 export { setTelemetrySource, Telemetry } from './src/telemetry/index.js'
+
+// Re-export StreamEvent type from LangChain for convenience
+export type { StreamEvent } from '@langchain/core/tracers/log_stream'
 
 export { BaseConnector, HttpConnector, loadConfigFile, Logger, logger, MCPAgent, MCPClient, MCPSession, StdioConnector, WebSocketConnector }
