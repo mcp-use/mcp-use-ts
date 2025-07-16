@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs')
+const path = require('node:path')
 
-const distCjsDir = path.join(__dirname, '..', 'dist-cjs');
+const distCjsDir = path.join(__dirname, '..', 'dist-cjs')
 if (!fs.existsSync(distCjsDir)) {
-  fs.mkdirSync(distCjsDir, { recursive: true });
+  fs.mkdirSync(distCjsDir, { recursive: true })
 }
 
 const packageJsonContent = {
-  type: 'commonjs'
-};
+  type: 'commonjs',
+}
 
-const packageJsonPath = path.join(distCjsDir, 'package.json');
-fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonContent, null, 2));
+const packageJsonPath = path.join(distCjsDir, 'package.json')
+fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonContent, null, 2))
