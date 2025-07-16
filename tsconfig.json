@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "rootDir": "src",
+    "rootDir": ".",
     "module": "Node16",
     "moduleResolution": "Node16",
     "resolveJsonModule": true,

@@ -47,8 +47,8 @@
     "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc",
-    "build:cjs": "rm -rf dist-cjs && tsc --project tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist-cjs/package.json",
+    "build": "shx rm -rf dist && tsc",
+    "build:cjs": "shx rm -rf dist-cjs && tsc --project tsconfig.cjs.json && node scripts/create-cjs-package.cjs",
     "build:all": "npm run build && npm run build:cjs",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
