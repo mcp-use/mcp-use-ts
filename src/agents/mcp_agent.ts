@@ -3,6 +3,7 @@ import type {
   BaseMessage,
 } from '@langchain/core/messages'
 import type { StructuredToolInterface, ToolInterface } from '@langchain/core/tools'
+import type { StreamEvent } from '@langchain/core/tracers/log_stream'
 import type { AgentFinish, AgentStep } from 'langchain/agents'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
@@ -43,12 +44,12 @@ export class MCPAgent {
   private systemPromptTemplateOverride?: string | null
   private additionalInstructions?: string | null
 
-  private initialized = false
+  private _initialized = false
   private conversationHistory: BaseMessage[] = []
-  private agentExecutor: AgentExecutor | null = null
+  private _agentExecutor: AgentExecutor | null = null
   private sessions: Record<string, MCPSession> = {}
   private systemMessage: SystemMessage | null = null
-  private tools: StructuredToolInterface[] = []
+  private _tools: StructuredToolInterface[] = []
   private adapter: LangChainAdapter
   private serverManager: ServerManager | null = null
   private telemetry: Telemetry
@@ -109,6 +110,20 @@ export class MCPAgent {
     const [provider, name] = extractModelInfo(this.llm as any)
     this.modelProvider = provider
     this.modelName = name
+
+    // Make getters configurable for test mocking
+    Object.defineProperty(this, 'agentExecutor', {
+      get: () => this._agentExecutor,
+      configurable: true,
+    })
+    Object.defineProperty(this, 'tools', {
+      get: () => this._tools,
+      configurable: true,
+    })
+    Object.defineProperty(this, 'initialized', {
+      get: () => this._initialized,
+      configurable: true,
+    })
   }
 
   public async initialize(): Promise<void> {
@@ -120,14 +135,14 @@ export class MCPAgent {
 
       // Get server management tools
       const managementTools = this.serverManager.tools
-      this.tools = managementTools
-      this.tools.push(...this.additionalTools)
+      this._tools = managementTools
+      this._tools.push(...this.additionalTools)
       logger.info(
         `🔧 Server manager mode active with ${managementTools.length} management tools`,
       )
 
       // Create the system message based on available tools
-      await this.createSystemMessageFromTools(this.tools)
+      await this.createSystemMessageFromTools(this._tools)
     }
     else {
       // Standard initialization - if using client, get or create sessions
@@ -144,9 +159,9 @@ export class MCPAgent {
         }
 
         // Create LangChain tools directly from the client using the adapter
-        this.tools = await LangChainAdapter.createTools(this.client)
-        this.tools.push(...this.additionalTools)
-        logger.info(`🛠️ Created ${this.tools.length} LangChain tools from client`)
+        this._tools = await LangChainAdapter.createTools(this.client)
+        this._tools.push(...this.additionalTools)
+        logger.info(`🛠️ Created ${this._tools.length} LangChain tools from client`)
       }
       else {
         // Using direct connector - only establish connection
@@ -158,21 +173,21 @@ export class MCPAgent {
         }
 
         // Create LangChain tools using the adapter with connectors
-        this.tools = await this.adapter.createToolsFromConnectors(this.connectors)
-        this.tools.push(...this.additionalTools)
-        logger.info(`🛠️ Created ${this.tools.length} LangChain tools from connectors`)
+        this._tools = await this.adapter.createToolsFromConnectors(this.connectors)
+        this._tools.push(...this.additionalTools)
+        logger.info(`🛠️ Created ${this._tools.length} LangChain tools from connectors`)
       }
 
       // Get all tools for system message generation
-      logger.info(`🧰 Found ${this.tools.length} tools across all connectors`)
+      logger.info(`🧰 Found ${this._tools.length} tools across all connectors`)
 
       // Create the system message based on available tools
-      await this.createSystemMessageFromTools(this.tools)
+      await this.createSystemMessageFromTools(this._tools)
     }
 
     // Create the agent executor and mark initialized
-    this.agentExecutor = this.createAgent()
-    this.initialized = true
+    this._agentExecutor = this.createAgent()
+    this._initialized = true
     logger.info('✨ Agent initialization complete')
   }
 
@@ -211,13 +226,13 @@ export class MCPAgent {
 
     const agent = createToolCallingAgent({
       llm: this.llm as unknown as LanguageModelLike,
-      tools: this.tools,
+      tools: this._tools,
       prompt,
     })
 
     return new AgentExecutor({
       agent,
-      tools: this.tools,
+      tools: this._tools,
       maxIterations: this.maxSteps,
       verbose: this.verbose,
       returnIntermediateSteps: true,
@@ -248,8 +263,8 @@ export class MCPAgent {
       this.conversationHistory.unshift(this.systemMessage)
     }
 
-    if (this.initialized && this.tools.length) {
-      this.agentExecutor = this.createAgent()
+    if (this._initialized && this._tools.length) {
+      this._agentExecutor = this.createAgent()
       logger.debug('Agent recreated with new system message')
     }
   }
@@ -257,7 +272,7 @@ export class MCPAgent {
   public setDisallowedTools(disallowedTools: string[]): void {
     this.disallowedTools = disallowedTools
     this.adapter = new LangChainAdapter(this.disallowedTools)
-    if (this.initialized) {
+    if (this._initialized) {
       logger.debug('Agent already initialized. Changes will take effect on next initialization.')
     }
   }
@@ -315,21 +330,21 @@ export class MCPAgent {
     let success = false
 
     try {
-      if (manageConnector && !this.initialized) {
+      if (manageConnector && !this._initialized) {
         await this.initialize()
         initializedHere = true
       }
-      else if (!this.initialized && this.autoInitialize) {
+      else if (!this._initialized && this.autoInitialize) {
         await this.initialize()
         initializedHere = true
       }
 
-      if (!this.agentExecutor) {
+      if (!this._agentExecutor) {
         throw new Error('MCP agent failed to initialize')
       }
 
       const steps = maxSteps ?? this.maxSteps
-      this.agentExecutor.maxIterations = steps
+      this._agentExecutor.maxIterations = steps
 
       const display_query
         = query.length > 50 ? `${query.slice(0, 50).replace(/\n/g, ' ')}...` : query.replace(/\n/g, ' ')
@@ -351,7 +366,7 @@ export class MCPAgent {
       const intermediateSteps: AgentStep[] = []
       const inputs = { input: query, chat_history: langchainHistory } as Record<string, unknown>
 
-      let nameToToolMap: Record<string, StructuredToolInterface> = Object.fromEntries(this.tools.map(t => [t.name, t]))
+      let nameToToolMap: Record<string, StructuredToolInterface> = Object.fromEntries(this._tools.map(t => [t.name, t]))
       logger.info(`🏁 Starting agent execution with max_steps=${steps}`)
 
       for (let stepNum = 0; stepNum < steps; stepNum++) {
@@ -359,22 +374,22 @@ export class MCPAgent {
         if (this.useServerManager && this.serverManager) {
           const currentTools = this.serverManager.tools
           const currentToolNames = new Set(currentTools.map(t => t.name))
-          const existingToolNames = new Set(this.tools.map(t => t.name))
+          const existingToolNames = new Set(this._tools.map(t => t.name))
 
           const changed
-            = currentTools.length !== this.tools.length
+            = currentTools.length !== this._tools.length
               || [...currentToolNames].some(n => !existingToolNames.has(n))
 
           if (changed) {
             logger.info(
               `🔄 Tools changed before step ${stepNum + 1}, updating agent. New tools: ${[...currentToolNames].join(', ')}`,
             )
-            this.tools = currentTools
-            this.tools.push(...this.additionalTools)
-            await this.createSystemMessageFromTools(this.tools)
-            this.agentExecutor = this.createAgent()
-            this.agentExecutor.maxIterations = steps
-            nameToToolMap = Object.fromEntries(this.tools.map(t => [t.name, t]))
+            this._tools = currentTools
+            this._tools.push(...this.additionalTools)
+            await this.createSystemMessageFromTools(this._tools)
+            this._agentExecutor = this.createAgent()
+            this._agentExecutor.maxIterations = steps
+            nameToToolMap = Object.fromEntries(this._tools.map(t => [t.name, t]))
           }
         }
 
@@ -382,7 +397,7 @@ export class MCPAgent {
 
         try {
           logger.debug('Starting agent step execution')
-          const nextStepOutput = await this.agentExecutor._takeNextStep(
+          const nextStepOutput = await this._agentExecutor._takeNextStep(
             nameToToolMap as Record<string, ToolInterface>,
             inputs,
             intermediateSteps,
@@ -402,7 +417,9 @@ export class MCPAgent {
             const { action, observation } = step
             const toolName = action.tool
             toolsUsedNames.push(toolName)
-            let toolInputStr = String(action.toolInput)
+            let toolInputStr = typeof action.toolInput === 'string'
+              ? action.toolInput
+              : JSON.stringify(action.toolInput, null, 2)
             if (toolInputStr.length > 100)
               toolInputStr = `${toolInputStr.slice(0, 97)}...`
             logger.info(`🔧 Tool call: ${toolName} with input: ${toolInputStr}`)
@@ -417,7 +434,7 @@ export class MCPAgent {
           // Detect direct return
           if (stepArray.length) {
             const lastStep = stepArray[stepArray.length - 1]
-            const toolReturn = await this.agentExecutor._getToolReturn(lastStep)
+            const toolReturn = await this._agentExecutor._getToolReturn(lastStep)
             if (toolReturn) {
               logger.info(`🏆 Tool returned directly at step ${stepNum + 1}`)
               result = (toolReturn as unknown as AgentFinish).returnValues?.output ?? 'No output generated'
@@ -482,8 +499,8 @@ export class MCPAgent {
         modelName: this.modelName,
         serverCount,
         serverIdentifiers: this.connectors.map(connector => connector.publicIdentifier),
-        totalToolsAvailable: this.tools.length,
-        toolsAvailableNames: this.tools.map(t => t.name),
+        totalToolsAvailable: this._tools.length,
+        toolsAvailableNames: this._tools.map(t => t.name),
         maxStepsConfigured: this.maxSteps,
         memoryEnabled: this.memoryEnabled,
         useServerManager: this.useServerManager,
@@ -509,8 +526,8 @@ export class MCPAgent {
   public async close(): Promise<void> {
     logger.info('🔌 Closing MCPAgent resources…')
     try {
-      this.agentExecutor = null
-      this.tools = []
+      this._agentExecutor = null
+      this._tools = []
       if (this.client) {
         logger.info('🔄 Closing sessions through client')
         await this.client.closeAllSessions()
@@ -527,8 +544,154 @@ export class MCPAgent {
       }
     }
     finally {
-      this.initialized = false
+      this._initialized = false
       logger.info('👋 Agent closed successfully')
+    }
+  }
+
+  /**
+   * Yields LangChain StreamEvent objects from the underlying streamEvents() method.
+   * This provides token-level streaming and fine-grained event updates.
+   */
+  public async* streamEvents(
+    query: string,
+    maxSteps?: number,
+    manageConnector = true,
+    externalHistory?: BaseMessage[],
+  ): AsyncGenerator<StreamEvent, void, void> {
+    let initializedHere = false
+    const startTime = Date.now()
+    let success = false
+    let eventCount = 0
+    let totalResponseLength = 0
+
+    try {
+      // Initialize if needed
+      if (manageConnector && !this._initialized) {
+        await this.initialize()
+        initializedHere = true
+      }
+      else if (!this._initialized && this.autoInitialize) {
+        await this.initialize()
+        initializedHere = true
+      }
+
+      const agentExecutor = (this as any).agentExecutor
+      if (!agentExecutor) {
+        throw new Error('MCP agent failed to initialize')
+      }
+
+      // Set max iterations
+      const steps = maxSteps ?? this.maxSteps
+      agentExecutor.maxIterations = steps
+
+      const display_query
+        = query.length > 50 ? `${query.slice(0, 50).replace(/\n/g, ' ')}...` : query.replace(/\n/g, ' ')
+      logger.info(`💬 Received query for streamEvents: '${display_query}'`)
+
+      // Add user message to history if memory enabled
+      if (this.memoryEnabled) {
+        this.addToHistory(new HumanMessage(query))
+      }
+
+      // Prepare history
+      const historyToUse = externalHistory ?? this.conversationHistory
+      const langchainHistory: BaseMessage[] = []
+      for (const msg of historyToUse) {
+        if (msg instanceof HumanMessage || msg instanceof AIMessage) {
+          langchainHistory.push(msg)
+        }
+      }
+
+      // Prepare inputs
+      const inputs = { input: query, chat_history: langchainHistory }
+
+      // Stream events from the agent executor
+      const eventStream = agentExecutor.streamEvents(
+        inputs,
+        { version: 'v2' },
+      )
+
+      // Yield each event
+      for await (const event of eventStream) {
+        eventCount++
+
+        // Skip null or invalid events
+        if (!event || typeof event !== 'object') {
+          continue
+        }
+
+        // Track response length for telemetry
+        if (event.event === 'on_chat_model_stream' && event.data?.chunk?.content) {
+          totalResponseLength += event.data.chunk.content.length
+        }
+
+        yield event
+
+        // Handle final message for history
+        if (event.event === 'on_chain_end' && event.data?.output) {
+          const output = event.data.output
+          if (typeof output === 'string' && this.memoryEnabled) {
+            this.addToHistory(new AIMessage(output))
+          }
+          else if (output?.output && typeof output.output === 'string' && this.memoryEnabled) {
+            this.addToHistory(new AIMessage(output.output))
+          }
+        }
+      }
+
+      logger.info(`🎉 StreamEvents complete - ${eventCount} events emitted`)
+      success = true
+    }
+    catch (e) {
+      logger.error(`❌ Error during streamEvents: ${e}`)
+      if (initializedHere && manageConnector) {
+        logger.info('🧹 Cleaning up resources after initialization error in streamEvents')
+        await this.close()
+      }
+      throw e
+    }
+    finally {
+      // Track telemetry
+      const executionTimeMs = Date.now() - startTime
+
+      let serverCount = 0
+      if (this.client) {
+        serverCount = Object.keys(await this.client.getAllActiveSessions()).length
+      }
+      else if (this.connectors) {
+        serverCount = this.connectors.length
+      }
+
+      const conversationHistoryLength = this.memoryEnabled ? this.conversationHistory.length : 0
+
+      await this.telemetry.trackAgentExecution({
+        executionMethod: 'streamEvents',
+        query,
+        success,
+        modelProvider: this.modelProvider,
+        modelName: this.modelName,
+        serverCount,
+        serverIdentifiers: this.connectors.map(connector => connector.publicIdentifier),
+        totalToolsAvailable: this._tools.length,
+        toolsAvailableNames: this._tools.map(t => t.name),
+        maxStepsConfigured: this.maxSteps,
+        memoryEnabled: this.memoryEnabled,
+        useServerManager: this.useServerManager,
+        maxStepsUsed: maxSteps ?? null,
+        manageConnector,
+        externalHistoryUsed: externalHistory !== undefined,
+        response: `[STREAMED RESPONSE - ${totalResponseLength} chars]`,
+        executionTimeMs,
+        errorType: success ? null : 'streaming_error',
+        conversationHistoryLength,
+      })
+
+      // Clean up if needed
+      if (manageConnector && !this.client && initializedHere) {
+        logger.info('🧹 Closing agent after streamEvents completion')
+        await this.close()
+      }
     }
   }
 }
