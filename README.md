@@ -101,6 +101,197 @@ main().catch(console.error)
 
 ---
 
+## 🔧 API Methods
+
+### MCPAgent Methods
+
+The `MCPAgent` class provides several methods for executing queries with different output formats:
+
+#### `run(query: string, maxSteps?: number): Promise<string>`
+
+Executes a query and returns the final result as a string.
+
+```ts
+const result = await agent.run('What tools are available?')
+console.log(result)
+```
+
+#### `stream(query: string, maxSteps?: number): AsyncGenerator<AgentStep, string, void>`
+
+Yields intermediate steps during execution, providing visibility into the agent's reasoning process.
+
+```ts
+const stream = agent.stream('Search for restaurants in Tokyo')
+for await (const step of stream) {
+  console.log(`Tool: ${step.action.tool}, Input: ${step.action.toolInput}`)
+  console.log(`Result: ${step.observation}`)
+}
+```
+
+#### `streamEvents(query: string, maxSteps?: number): AsyncGenerator<StreamEvent, void, void>`
+
+Yields fine-grained LangChain StreamEvent objects, enabling token-by-token streaming and detailed event tracking.
+
+```ts
+const eventStream = agent.streamEvents('What is the weather today?')
+for await (const event of eventStream) {
+  // Handle different event types
+  switch (event.event) {
+    case 'on_chat_model_stream':
+      // Token-by-token streaming from the LLM
+      if (event.data?.chunk?.content) {
+        process.stdout.write(event.data.chunk.content)
+      }
+      break
+    case 'on_tool_start':
+      console.log(`\nTool started: ${event.name}`)
+      break
+    case 'on_tool_end':
+      console.log(`Tool completed: ${event.name}`)
+      break
+  }
+}
+```
+
+### Key Differences
+
+- **`run()`**: Best for simple queries where you only need the final result
+- **`stream()`**: Best for debugging and understanding the agent's tool usage
+- **`streamEvents()`**: Best for real-time UI updates with token-level streaming
+
+## 🔄 AI SDK Integration
+
+The library provides built-in utilities for integrating with [Vercel AI SDK](https://sdk.vercel.ai/), making it easy to build streaming UIs with React hooks like `useCompletion` and `useChat`.
+
+### Installation
+
+```bash
+npm install ai @langchain/anthropic
+```
+
+### Basic Usage
+
+```ts
+import { ChatAnthropic } from '@langchain/anthropic'
+import { LangChainAdapter } from 'ai'
+import { createReadableStreamFromGenerator, MCPAgent, MCPClient, streamEventsToAISDK } from 'mcp-use'
+
+async function createApiHandler() {
+  const config = {
+    mcpServers: {
+      everything: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-everything'] }
+    }
+  }
+
+  const client = new MCPClient(config)
+  const llm = new ChatAnthropic({ model: 'claude-sonnet-4-20250514' })
+  const agent = new MCPAgent({ llm, client, maxSteps: 5 })
+
+  return async (request: { prompt: string }) => {
+    const streamEvents = agent.streamEvents(request.prompt)
+    const aiSDKStream = streamEventsToAISDK(streamEvents)
+    const readableStream = createReadableStreamFromGenerator(aiSDKStream)
+
+    return LangChainAdapter.toDataStreamResponse(readableStream)
+  }
+}
+```
+
+### Enhanced Usage with Tool Visibility
+
+```ts
+import { streamEventsToAISDKWithTools } from 'mcp-use'
+
+async function createEnhancedApiHandler() {
+  const config = {
+    mcpServers: {
+      everything: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-everything'] }
+    }
+  }
+
+  const client = new MCPClient(config)
+  const llm = new ChatAnthropic({ model: 'claude-sonnet-4-20250514' })
+  const agent = new MCPAgent({ llm, client, maxSteps: 8 })
+
+  return async (request: { prompt: string }) => {
+    const streamEvents = agent.streamEvents(request.prompt)
+    // Enhanced stream includes tool usage notifications
+    const enhancedStream = streamEventsToAISDKWithTools(streamEvents)
+    const readableStream = createReadableStreamFromGenerator(enhancedStream)
+
+    return LangChainAdapter.toDataStreamResponse(readableStream)
+  }
+}
+```
+
+### Next.js API Route Example
+
+```ts
+// pages/api/chat.ts or app/api/chat/route.ts
+import { ChatAnthropic } from '@langchain/anthropic'
+import { LangChainAdapter } from 'ai'
+import { createReadableStreamFromGenerator, MCPAgent, MCPClient, streamEventsToAISDK } from 'mcp-use'
+
+export async function POST(req: Request) {
+  const { prompt } = await req.json()
+
+  const config = {
+    mcpServers: {
+      everything: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-everything'] }
+    }
+  }
+
+  const client = new MCPClient(config)
+  const llm = new ChatAnthropic({ model: 'claude-sonnet-4-20250514' })
+  const agent = new MCPAgent({ llm, client, maxSteps: 10 })
+
+  try {
+    const streamEvents = agent.streamEvents(prompt)
+    const aiSDKStream = streamEventsToAISDK(streamEvents)
+    const readableStream = createReadableStreamFromGenerator(aiSDKStream)
+
+    return LangChainAdapter.toDataStreamResponse(readableStream)
+  }
+  finally {
+    await client.closeAllSessions()
+  }
+}
+```
+
+### Frontend Integration
+
+```tsx
+// components/Chat.tsx
+import { useCompletion } from 'ai/react'
+
+export function Chat() {
+  const { completion, input, handleInputChange, handleSubmit } = useCompletion({
+    api: '/api/chat',
+  })
+
+  return (
+    <div>
+      <div>{completion}</div>
+      <form onSubmit={handleSubmit}>
+        <input
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Ask me anything..."
+        />
+      </form>
+    </div>
+  )
+}
+```
+
+### Available AI SDK Utilities
+
+- **`streamEventsToAISDK()`**: Converts streamEvents to basic text stream
+- **`streamEventsToAISDKWithTools()`**: Enhanced stream with tool usage notifications
+- **`createReadableStreamFromGenerator()`**: Converts async generator to ReadableStream
+
+---
+
 ## 📂 Configuration File
 
 You can store servers in a JSON file:
@@ -140,6 +331,9 @@ npm install
 npm run example:airbnb      # Search accommodations with Airbnb
 npm run example:browser     # Browser automation with Playwright
 npm run example:chat        # Interactive chat with memory
+npm run example:stream      # Demonstrate streaming methods (stream & streamEvents)
+npm run example:stream_events # Comprehensive streamEvents() examples
+npm run example:ai_sdk      # AI SDK integration with streaming
 npm run example:filesystem  # File system operations
 npm run example:http        # HTTP server connection
 npm run example:everything  # Test MCP functionalities
@@ -153,6 +347,8 @@ npm run example:multi       # Multiple servers in one session
 - **Multi-Server**: Combine multiple MCP servers (Airbnb + Browser) in a single task
 - **Sandboxed Execution**: Run MCP servers in isolated E2B containers
 - **OAuth Flows**: Authenticate with services like Linear using OAuth2
+- **Streaming Methods**: Demonstrate both step-by-step and token-level streaming
+- **AI SDK Integration**: Build streaming UIs with Vercel AI SDK and React hooks
 
 See the [examples README](./examples/README.md) for detailed documentation and prerequisites.
 
