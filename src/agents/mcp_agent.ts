@@ -5,10 +5,10 @@ import type {
 import type { StructuredToolInterface, ToolInterface } from '@langchain/core/tools'
 import type { StreamEvent } from '@langchain/core/tracers/log_stream'
 import type { AgentFinish, AgentStep } from 'langchain/agents'
+import type { z } from 'zod'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
 import type { MCPSession } from '../session.js'
-import type { z } from 'zod'
 import {
   AIMessage,
   HumanMessage,
@@ -305,7 +305,7 @@ export class MCPAgent {
     manageConnector?: boolean,
     externalHistory?: BaseMessage[],
   ): Promise<string>
-  
+
   /**
    * Runs the agent with structured output and returns a promise for the typed result.
    */
@@ -316,7 +316,7 @@ export class MCPAgent {
     externalHistory?: BaseMessage[],
     outputSchema?: z.ZodSchema<T>,
   ): Promise<T>
-  
+
   public async run<T>(
     query: string,
     maxSteps?: number,
@@ -351,7 +351,7 @@ export class MCPAgent {
     const toolsUsedNames: string[] = []
     let stepsTaken = 0
     let success = false
-    
+
     // Schema-aware setup for structured output
     let structuredLlm: BaseLanguageModelInterface | null = null
     let schemaDescription = ''
@@ -360,7 +360,8 @@ export class MCPAgent {
       // Check if withStructuredOutput method exists
       if ('withStructuredOutput' in this.llm && typeof (this.llm as any).withStructuredOutput === 'function') {
         structuredLlm = (this.llm as any).withStructuredOutput(outputSchema)
-      } else {
+      }
+      else {
         // Fallback: use the same LLM but we'll handle structure in our helper method
         structuredLlm = this.llm
       }
@@ -378,7 +379,8 @@ export class MCPAgent {
           }
           schemaDescription = fields.join('\n')
         }
-      } catch (e) {
+      }
+      catch (e) {
         logger.warn(`Could not extract schema details: ${e}`)
         schemaDescription = `Schema: ${outputSchema.constructor.name}`
       }
@@ -461,27 +463,28 @@ export class MCPAgent {
           if ((nextStepOutput as AgentFinish).returnValues) {
             logger.info(`✅ Agent finished at step ${stepNum + 1}`)
             result = (nextStepOutput as AgentFinish).returnValues?.output ?? 'No output generated'
-            
+
             // If structured output is requested, attempt to create it
             if (outputSchema && structuredLlm) {
               try {
                 logger.info('🔧 Attempting structured output...')
                 const structuredResult = await this._attemptStructuredOutput<T>(
-                  result, 
-                  structuredLlm, 
-                  outputSchema, 
-                  schemaDescription
+                  result,
+                  structuredLlm,
+                  outputSchema,
+                  schemaDescription,
                 )
-                
+
                 // Add the final response to conversation history if memory is enabled
                 if (this.memoryEnabled) {
                   this.addToHistory(new AIMessage(`Structured result: ${JSON.stringify(structuredResult)}`))
                 }
-                
+
                 logger.info('✅ Structured output successful')
                 success = true
                 return structuredResult as string | T
-              } catch (e) {
+              }
+              catch (e) {
                 logger.warn(`⚠️ Structured output failed: ${e}`)
                 // Continue execution to gather missing information
                 const missingInfoPrompt = `
@@ -495,17 +498,18 @@ export class MCPAgent {
                 
                 Focus on finding the specific missing details.
                 `
-                
+
                 // Add this as feedback and continue the loop
                 inputs.input = missingInfoPrompt
                 if (this.memoryEnabled) {
                   this.addToHistory(new HumanMessage(missingInfoPrompt))
                 }
-                
+
                 logger.info('🔄 Continuing execution to gather missing information...')
                 continue
               }
-            } else {
+            }
+            else {
               // Regular execution without structured output
               break
             }
@@ -568,21 +572,22 @@ export class MCPAgent {
         try {
           logger.info('🔧 Final attempt at structured output...')
           const structuredResult = await this._attemptStructuredOutput<T>(
-            result, 
-            structuredLlm, 
-            outputSchema, 
-            schemaDescription
+            result,
+            structuredLlm,
+            outputSchema,
+            schemaDescription,
           )
-          
+
           // Add the final response to conversation history if memory is enabled
           if (this.memoryEnabled) {
             this.addToHistory(new AIMessage(`Structured result: ${JSON.stringify(structuredResult)}`))
           }
-          
+
           logger.info('✅ Final structured output successful')
           success = true
           return structuredResult as string | T
-        } catch (e) {
+        }
+        catch (e) {
           logger.error(`❌ Final structured output attempt failed: ${e}`)
           throw new Error(`Failed to generate structured output after ${steps} steps: ${e}`)
         }
@@ -595,7 +600,7 @@ export class MCPAgent {
 
       logger.info('🎉 Agent execution complete')
       success = true
-      
+
       // Return regular result
       return result as string | T
     }
@@ -832,7 +837,7 @@ export class MCPAgent {
     rawResult: string,
     structuredLlm: BaseLanguageModelInterface,
     outputSchema: z.ZodSchema<T>,
-    schemaDescription: string
+    schemaDescription: string,
   ): Promise<T> {
     const formatPrompt = `
     Please format the following information according to the specified schema.
@@ -854,7 +859,7 @@ export class MCPAgent {
     try {
       // Use Zod to validate the structured result
       const validatedResult = outputSchema.parse(structuredResult)
-      
+
       // Additional validation for required fields
       const schemaType = outputSchema as any
       if (schemaType._def && schemaType._def.shape) {
@@ -864,17 +869,18 @@ export class MCPAgent {
           const isNullable = field.isNullable?.() ?? field._def?.typeName === 'ZodNullable'
           if (!isOptional && !isNullable) {
             const value = (validatedResult as any)[fieldName]
-            if (value === null || value === undefined || 
-                (typeof value === 'string' && !value.trim()) ||
-                (Array.isArray(value) && value.length === 0)) {
+            if (value === null || value === undefined
+              || (typeof value === 'string' && !value.trim())
+              || (Array.isArray(value) && value.length === 0)) {
               throw new Error(`Required field '${fieldName}' is missing or empty`)
             }
           }
         }
       }
-      
+
       return validatedResult
-    } catch (e) {
+    }
+    catch (e) {
       logger.debug(`Validation details: ${e}`)
       throw e // Re-raise to trigger retry logic
     }
@@ -900,7 +906,7 @@ export class MCPAgent {
       }
 
       const schemaDescription = schemaFields.join('\n')
-      
+
       // Enhance the query with schema awareness
       const enhancedQuery = `
       ${query}
@@ -912,9 +918,10 @@ export class MCPAgent {
       Make sure you gather ALL the required information during your task execution.
       If any required information is missing, continue working to find it.
       `
-      
+
       return enhancedQuery
-    } catch (e) {
+    }
+    catch (e) {
       logger.warn(`Could not extract schema details: ${e}`)
       return query
     }

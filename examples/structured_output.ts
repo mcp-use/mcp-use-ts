@@ -2,7 +2,7 @@
  * Structured Output Example - City Research with Playwright
  *
  * This example demonstrates intelligent structured output by researching Padova, Italy.
- * The agent becomes schema-aware and will intelligently retry to gather missing 
+ * The agent becomes schema-aware and will intelligently retry to gather missing
  * information until all required fields can be populated.
  */
 
@@ -66,10 +66,10 @@ async function main() {
       and university websites to gather detailed information including demographics, history,
       governance, education, economy, landmarks, and international relationships.
       `,
-      50,    // maxSteps
-      true,  // manageConnector 
-      [],    // externalHistory
-      CityInfoSchema  // outputSchema - this enables structured output
+      50, // maxSteps
+      true, // manageConnector
+      [], // externalHistory
+      CityInfoSchema, // outputSchema - this enables structured output
     )
 
     // Now you have strongly-typed, validated data!
@@ -85,18 +85,19 @@ async function main() {
     console.log(`Landmarks: ${result.famous_landmarks.join(', ')}`)
     console.log(`Sister Cities: ${result.sister_cities.length > 0 ? result.sister_cities.join(', ') : 'None'}`)
     console.log(`Historical Significance: ${result.historical_significance}`)
-    
+
     if (result.climate_type) {
       console.log(`Climate: ${result.climate_type}`)
     }
-    
+
     if (result.elevation_meters !== null) {
       console.log(`Elevation: ${result.elevation_meters} meters`)
     }
-
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error:', error)
-  } finally {
+  }
+  finally {
     await agent.close()
   }
 }
