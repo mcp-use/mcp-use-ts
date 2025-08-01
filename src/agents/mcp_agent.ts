@@ -699,6 +699,7 @@ export class MCPAgent {
     let success = false
     let eventCount = 0
     let totalResponseLength = 0
+    let finalResponse = ''
 
     try {
       // Initialize if needed
@@ -763,16 +764,21 @@ export class MCPAgent {
 
         yield event
 
-        // Handle final message for history
+        // Capture final response from chain end event
         if (event.event === 'on_chain_end' && event.data?.output) {
           const output = event.data.output
-          if (typeof output === 'string' && this.memoryEnabled) {
-            this.addToHistory(new AIMessage(output))
+          if (typeof output === 'string') {
+            finalResponse = output
           }
-          else if (output?.output && typeof output.output === 'string' && this.memoryEnabled) {
-            this.addToHistory(new AIMessage(output.output))
+          else if (output?.output && typeof output.output === 'string') {
+            finalResponse = output.output
           }
         }
+      }
+
+      // Add the final AI response to conversation history if memory is enabled
+      if (this.memoryEnabled && finalResponse) {
+        this.addToHistory(new AIMessage(finalResponse))
       }
 
       logger.info(`🎉 StreamEvents complete - ${eventCount} events emitted`)
