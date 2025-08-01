@@ -1,7 +1,7 @@
 {
   "name": "mcp-use",
   "type": "module",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "packageManager": "pnpm@10.6.1",
   "description": "A utility library for integrating Model Context Protocol (MCP) with LangChain, Zod, and related tools. Provides helpers for schema conversion, event streaming, and SDK usage.",
   "author": "Zane",
