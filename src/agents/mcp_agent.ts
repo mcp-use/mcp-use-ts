@@ -727,6 +727,7 @@ export class MCPAgent {
 
       // Add user message to history if memory enabled
       if (this.memoryEnabled) {
+        logger.info(`🔄 Adding user message to history: ${query}`)
         this.addToHistory(new HumanMessage(query))
       }
 
@@ -767,11 +768,8 @@ export class MCPAgent {
         // Capture final response from chain end event
         if (event.event === 'on_chain_end' && event.data?.output) {
           const output = event.data.output
-          if (typeof output === 'string') {
-            finalResponse = output
-          }
-          else if (output?.output && typeof output.output === 'string') {
-            finalResponse = output.output
+          if (Array.isArray(output) && output.length > 0 && output[0]?.text) {
+            finalResponse = output[0].text
           }
         }
       }
