@@ -7,7 +7,6 @@ import type { StreamEvent } from '@langchain/core/tracers/log_stream'
 import type { AgentFinish, AgentStep } from 'langchain/agents'
 
 import type { ZodSchema } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
 import type { MCPSession } from '../session.js'
@@ -25,6 +24,7 @@ import {
   AgentExecutor,
   createToolCallingAgent,
 } from 'langchain/agents'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 import { LangChainAdapter } from '../adapters/langchain_adapter.js'
 import { logger } from '../logging.js'
 import { ServerManager } from '../managers/server_manager.js'
@@ -368,7 +368,7 @@ export class MCPAgent {
         // Fallback: use the same LLM but we'll handle structure in our helper method
         structuredLlm = this.llm
       }
-      schemaDescription = JSON.stringify(zodToJsonSchema(outputSchema), null, 2);
+      schemaDescription = JSON.stringify(zodToJsonSchema(outputSchema), null, 2)
     }
 
     try {
@@ -804,10 +804,10 @@ export class MCPAgent {
     // Get detailed schema information for better prompting
     const maxRetries = 3
     let lastError: string = ''
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       logger.info(`🔄 Structured output attempt ${attempt}/${maxRetries}`)
-      
+
       let formatPrompt = `
       Please format the following information according to the EXACT schema specified below.
       You must use the exact field names and types as shown in the schema.
@@ -842,21 +842,21 @@ export class MCPAgent {
         const validatedResult = this._validateStructuredResult(structuredResult, outputSchema)
         logger.info(`✅ Structured output successful on attempt ${attempt}`)
         return validatedResult
-        
-      } catch (e) {
+      }
+      catch (e) {
         lastError = e instanceof Error ? e.message : String(e)
         logger.warn(`⚠️ Structured output attempt ${attempt} failed: ${lastError}`)
-        
+
         if (attempt === maxRetries) {
           logger.error(`❌ All ${maxRetries} structured output attempts failed`)
           throw new Error(`Failed to generate valid structured output after ${maxRetries} attempts. Last error: ${lastError}`)
         }
-        
+
         // Continue to next attempt
         continue
       }
     }
-    
+
     // This should never be reached, but TypeScript requires it
     throw new Error('Unexpected error in structured output generation')
   }
@@ -866,34 +866,34 @@ export class MCPAgent {
    */
   private _validateStructuredResult<T>(structuredResult: any, outputSchema: ZodSchema<T>): T {
     // Use Zod to validate the structured result
-    try { 
+    try {
       // Use Zod to validate the structured result
       const validatedResult = outputSchema.parse(structuredResult)
 
-    // Additional validation for required fields
-    const schemaType = outputSchema as any
-    if (schemaType._def && schemaType._def.shape) {
-      for (const [fieldName, fieldSchema] of Object.entries(schemaType._def.shape)) {
-        const field = fieldSchema as any
-        const isOptional = field.isOptional?.() ?? field._def?.typeName === 'ZodOptional'
-        const isNullable = field.isNullable?.() ?? field._def?.typeName === 'ZodNullable'
-        if (!isOptional && !isNullable) {
-          const value = (validatedResult as any)[fieldName]
-          if (value === null || value === undefined
-            || (typeof value === 'string' && !value.trim())
-            || (Array.isArray(value) && value.length === 0)) {
-            throw new Error(`Required field '${fieldName}' is missing or empty`)
+      // Additional validation for required fields
+      const schemaType = outputSchema as any
+      if (schemaType._def && schemaType._def.shape) {
+        for (const [fieldName, fieldSchema] of Object.entries(schemaType._def.shape)) {
+          const field = fieldSchema as any
+          const isOptional = field.isOptional?.() ?? field._def?.typeName === 'ZodOptional'
+          const isNullable = field.isNullable?.() ?? field._def?.typeName === 'ZodNullable'
+          if (!isOptional && !isNullable) {
+            const value = (validatedResult as any)[fieldName]
+            if (value === null || value === undefined
+              || (typeof value === 'string' && !value.trim())
+              || (Array.isArray(value) && value.length === 0)) {
+              throw new Error(`Required field '${fieldName}' is missing or empty`)
+            }
           }
         }
       }
-    }
 
-    return validatedResult
-  }
-  catch (e) {
-    logger.debug(`Validation details: ${e}`)
-    throw e // Re-raise to trigger retry logic
-  }
+      return validatedResult
+    }
+    catch (e) {
+      logger.debug(`Validation details: ${e}`)
+      throw e // Re-raise to trigger retry logic
+    }
   }
 
   /**
@@ -901,7 +901,7 @@ export class MCPAgent {
    */
   private _enhanceQueryWithSchema<T>(query: string, outputSchema: ZodSchema<T>): string {
     try {
-      const schemaDescription = JSON.stringify(zodToJsonSchema(outputSchema), null, 2);
+      const schemaDescription = JSON.stringify(zodToJsonSchema(outputSchema), null, 2)
 
       // Enhance the query with schema awareness
       const enhancedQuery = `
