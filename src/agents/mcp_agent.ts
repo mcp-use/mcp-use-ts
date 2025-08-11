@@ -805,24 +805,22 @@ export class MCPAgent {
     logger.info(`🔄 Attempting structured output with schema: ${outputSchema}`)
     logger.info(`🔄 Schema description: ${schemaDescription}`)
     logger.info(`🔄 Raw result: ${JSON.stringify(rawResult, null, 2)}`)
-    
+
     // Handle different input formats - rawResult might be an array or object from the agent
-    let textContent: string = '';
+    let textContent: string = ''
     if (typeof rawResult === 'string') {
-      textContent = rawResult;
+      textContent = rawResult
     }
     else if (rawResult && typeof rawResult === 'object') {
       // Handle object format
-      textContent = JSON.stringify(rawResult);
+      textContent = JSON.stringify(rawResult)
     }
-    
+
     // If we couldn't extract text, use the stringified version
     if (!textContent) {
-      textContent = JSON.stringify(rawResult);
+      textContent = JSON.stringify(rawResult)
     }
-    
-    
-    
+
     // Get detailed schema information for better prompting
     const maxRetries = 3
     let lastError: string = ''
