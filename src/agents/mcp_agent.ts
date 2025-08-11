@@ -14,6 +14,7 @@ import {
   AIMessage,
   HumanMessage,
   SystemMessage,
+  ToolMessage,
 } from '@langchain/core/messages'
 import { OutputParserException } from '@langchain/core/output_parsers'
 import {
@@ -690,7 +691,7 @@ export class MCPAgent {
       const historyToUse = externalHistory ?? this.conversationHistory
       const langchainHistory: BaseMessage[] = []
       for (const msg of historyToUse) {
-        if (msg instanceof HumanMessage || msg instanceof AIMessage) {
+        if (msg instanceof HumanMessage || msg instanceof AIMessage || msg instanceof ToolMessage) {
           langchainHistory.push(msg)
         }
       }
