@@ -19,10 +19,10 @@ export * from './src/managers/tools/index.js'
 // Export telemetry utilities
 export { setTelemetrySource, Telemetry } from './src/telemetry/index.js'
 
+// Re-export message classes to ensure a single constructor instance is shared by consumers
+export { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
+
 // Re-export StreamEvent type from LangChain for convenience
 export type { StreamEvent } from '@langchain/core/tracers/log_stream'
-
-// Re-export message classes to ensure a single constructor instance is shared by consumers
-export { BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
 
 export { BaseConnector, HttpConnector, loadConfigFile, Logger, logger, MCPAgent, MCPClient, MCPSession, StdioConnector, WebSocketConnector }

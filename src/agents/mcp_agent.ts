@@ -694,6 +694,9 @@ export class MCPAgent {
         if (msg instanceof HumanMessage || msg instanceof AIMessage || msg instanceof ToolMessage) {
           langchainHistory.push(msg)
         }
+        else {
+          logger.info(`⚠️ Skipped message of type: ${msg.constructor.name}`)
+        }
       }
 
       // Prepare inputs
