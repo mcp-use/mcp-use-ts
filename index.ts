@@ -1,4 +1,5 @@
 import { MCPAgent } from './src/agents/mcp_agent.js'
+import { RemoteAgent } from './src/agents/remote.js'
 import { MCPClient } from './src/client.js'
 import { loadConfigFile } from './src/config.js'
 import { BaseConnector } from './src/connectors/base.js'
@@ -25,4 +26,4 @@ export { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from
 // Re-export StreamEvent type from LangChain for convenience
 export type { StreamEvent } from '@langchain/core/tracers/log_stream'
 
-export { BaseConnector, HttpConnector, loadConfigFile, Logger, logger, MCPAgent, MCPClient, MCPSession, StdioConnector, WebSocketConnector }
+export { BaseConnector, HttpConnector, loadConfigFile, Logger, logger, MCPAgent, MCPClient, MCPSession, RemoteAgent, StdioConnector, WebSocketConnector }

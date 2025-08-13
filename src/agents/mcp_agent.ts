@@ -32,9 +32,10 @@ import { ServerManager } from '../managers/server_manager.js'
 import { extractModelInfo, Telemetry } from '../telemetry/index.js'
 import { createSystemMessage } from './prompts/system_prompt_builder.js'
 import { DEFAULT_SYSTEM_PROMPT_TEMPLATE, SERVER_MANAGER_SYSTEM_PROMPT_TEMPLATE } from './prompts/templates.js'
+import { RemoteAgent } from './remote.js'
 
 export class MCPAgent {
-  private llm: BaseLanguageModelInterface
+  private llm?: BaseLanguageModelInterface
   private client?: MCPClient
   private connectors: BaseConnector[]
   private maxSteps: number
@@ -60,8 +61,12 @@ export class MCPAgent {
   private modelProvider: string
   private modelName: string
 
+  // Remote agent support
+  private isRemote = false
+  private remoteAgent: RemoteAgent | null = null
+
   constructor(options: {
-    llm: BaseLanguageModelInterface
+    llm?: BaseLanguageModelInterface
     client?: MCPClient
     connectors?: BaseConnector[]
     maxSteps?: number
@@ -76,7 +81,40 @@ export class MCPAgent {
     verbose?: boolean
     adapter?: LangChainAdapter
     serverManagerFactory?: (client: MCPClient) => ServerManager
+    // Remote agent parameters
+    agentId?: string
+    apiKey?: string
+    baseUrl?: string
   }) {
+    // Handle remote execution
+    if (options.agentId) {
+      this.isRemote = true
+      this.remoteAgent = new RemoteAgent({
+        agentId: options.agentId,
+        apiKey: options.apiKey,
+        baseUrl: options.baseUrl,
+      })
+      // Set default values for remote agent
+      this.maxSteps = options.maxSteps ?? 5
+      this.memoryEnabled = options.memoryEnabled ?? true
+      this.autoInitialize = options.autoInitialize ?? false
+      this.verbose = options.verbose ?? false
+      this.connectors = []
+      this.disallowedTools = []
+      this.additionalTools = []
+      this.useServerManager = false
+      this.adapter = new LangChainAdapter()
+      this.telemetry = Telemetry.getInstance()
+      this.modelProvider = 'remote'
+      this.modelName = 'remote-agent'
+      return
+    }
+
+    // Validate requirements for local execution
+    if (!options.llm) {
+      throw new Error('llm is required for local execution. For remote execution, provide agentId instead.')
+    }
+
     this.llm = options.llm
 
     this.client = options.client
@@ -111,9 +149,15 @@ export class MCPAgent {
     // Initialize telemetry
     this.telemetry = Telemetry.getInstance()
     // Track model info for telemetry
-    const [provider, name] = extractModelInfo(this.llm as any)
-    this.modelProvider = provider
-    this.modelName = name
+    if (this.llm) {
+      const [provider, name] = extractModelInfo(this.llm as any)
+      this.modelProvider = provider
+      this.modelName = name
+    }
+    else {
+      this.modelProvider = 'unknown'
+      this.modelName = 'unknown'
+    }
 
     // Make getters configurable for test mocking
     Object.defineProperty(this, 'agentExecutor', {
@@ -131,6 +175,12 @@ export class MCPAgent {
   }
 
   public async initialize(): Promise<void> {
+    // Skip initialization for remote agents
+    if (this.isRemote) {
+      this._initialized = true
+      return
+    }
+
     logger.info('🚀 Initializing MCP agent and connecting to services...')
 
     // If using server manager, initialize it
@@ -219,6 +269,10 @@ export class MCPAgent {
   }
 
   private createAgent(): AgentExecutor {
+    if (!this.llm) {
+      throw new Error('LLM is required to create agent')
+    }
+
     const systemContent = this.systemMessage?.content ?? 'You are a helpful assistant.'
 
     const prompt = ChatPromptTemplate.fromMessages([
@@ -327,6 +381,11 @@ export class MCPAgent {
     externalHistory?: BaseMessage[],
     outputSchema?: ZodSchema<T>,
   ): Promise<string | T> {
+    // Delegate to remote agent if in remote mode
+    if (this.isRemote && this.remoteAgent) {
+      return this.remoteAgent.run(query, maxSteps, manageConnector, externalHistory, outputSchema)
+    }
+
     const generator = this.stream<T>(
       query,
       maxSteps,
@@ -348,6 +407,12 @@ export class MCPAgent {
     externalHistory?: BaseMessage[],
     outputSchema?: ZodSchema<T>,
   ): AsyncGenerator<AgentStep, string | T, void> {
+    // Delegate to remote agent if in remote mode
+    if (this.isRemote && this.remoteAgent) {
+      const result = await this.remoteAgent.run(query, maxSteps, manageConnector, externalHistory, outputSchema)
+      return result as string | T
+    }
+
     let result = ''
     let initializedHere = false
     const startTime = Date.now()
@@ -362,12 +427,15 @@ export class MCPAgent {
       query = this._enhanceQueryWithSchema(query, outputSchema)
       logger.debug(`🔄 Structured output requested, schema: ${JSON.stringify(zodToJsonSchema(outputSchema), null, 2)}`)
       // Check if withStructuredOutput method exists
-      if ('withStructuredOutput' in this.llm && typeof (this.llm as any).withStructuredOutput === 'function') {
+      if (this.llm && 'withStructuredOutput' in this.llm && typeof (this.llm as any).withStructuredOutput === 'function') {
         structuredLlm = (this.llm as any).withStructuredOutput(outputSchema)
       }
-      else {
+      else if (this.llm) {
         // Fallback: use the same LLM but we'll handle structure in our helper method
         structuredLlm = this.llm
+      }
+      else {
+        throw new Error('LLM is required for structured output')
       }
       schemaDescription = JSON.stringify(zodToJsonSchema(outputSchema), null, 2)
     }
@@ -615,6 +683,12 @@ export class MCPAgent {
   }
 
   public async close(): Promise<void> {
+    // Delegate to remote agent if in remote mode
+    if (this.isRemote && this.remoteAgent) {
+      await this.remoteAgent.close()
+      return
+    }
+
     logger.info('🔌 Closing MCPAgent resources…')
     try {
       this._agentExecutor = null
