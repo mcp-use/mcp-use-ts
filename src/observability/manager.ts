@@ -54,30 +54,6 @@ export class ObservabilityManager {
       logger.debug('ObservabilityManager: Langfuse module not available')
     }
 
-    try {
-      const { getLaminarHandler, isLaminarInitialized, getLaminarInitPromise } = await import('./laminar.js')
-      // Wait for initialization to complete
-      const laminarInitPromise = getLaminarInitPromise()
-      if (laminarInitPromise) {
-        await laminarInitPromise
-      }
-      const laminarHandler = getLaminarHandler()
-      if (laminarHandler) {
-        // We have a custom callback handler for Laminar
-        this.availableHandlers.push(laminarHandler)
-        this.handlerNames.push('Laminar')
-        logger.debug('ObservabilityManager: Laminar callback handler available')
-      }
-      else if (isLaminarInitialized()) {
-        // Laminar is initialized but using only automatic instrumentation
-        this.handlerNames.push('Laminar (auto-instrumentation)')
-        logger.debug('ObservabilityManager: Laminar auto-instrumentation active (no callback handler)')
-      }
-    }
-    catch {
-      logger.debug('ObservabilityManager: Laminar module not available')
-    }
-
     // Future: Add more platforms here...
 
     this.initialized = true
@@ -151,9 +127,28 @@ export class ObservabilityManager {
   }
 
   /**
+   * Flush all pending traces to observability platforms.
+   * Important for serverless environments and short-lived processes.
+   */
+  async flush(): Promise<void> {
+    // Flush Langfuse traces
+    const callbacks = await this.getCallbacks()
+    for (const callback of callbacks) {
+      if ('flushAsync' in callback && typeof callback.flushAsync === 'function') {
+        await callback.flushAsync()
+      }
+    }
+    logger.debug('ObservabilityManager: All traces flushed')
+  }
+
+  /**
    * Shutdown all handlers gracefully (for serverless environments).
    */
   async shutdown(): Promise<void> {
+    // Flush before shutdown
+    await this.flush()
+
+    // Shutdown other callbacks
     const callbacks = await this.getCallbacks()
     for (const callback of callbacks) {
       // Check if the callback has a shutdown method (like Langfuse)

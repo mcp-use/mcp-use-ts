@@ -1,10 +1,10 @@
 # Observability Module
 
-This module provides comprehensive observability for MCP agents using LangChain, supporting multiple observability platforms including Langfuse and Laminar.
+This module provides comprehensive observability for MCP agents using LangChain, supporting Langfuse observability platform.
 
 ## Features
 
-- **Multi-platform support**: Integrates with Langfuse and Laminar
+- **Langfuse integration**: Comprehensive observability with Langfuse
 - **Automatic instrumentation**: Zero-code observability with environment variables
 - **Custom callbacks**: Support for custom LangChain callback handlers
 - **TypeScript-first**: Full TypeScript support with proper types
@@ -17,12 +17,6 @@ Install the required packages based on your observability platform:
 ```bash
 # For Langfuse
 npm install langfuse langfuse-langchain
-
-# For Laminar
-npm install @lmnr-ai/lmnr
-
-# Or install both
-npm install langfuse langfuse-langchain @lmnr-ai/lmnr
 ```
 
 ## Configuration
@@ -36,17 +30,6 @@ LANGFUSE_PUBLIC_KEY=pk-lf-...
 LANGFUSE_SECRET_KEY=sk-lf-...
 LANGFUSE_HOST=https://cloud.langfuse.com  # Optional
 MCP_USE_LANGFUSE=true  # Set to false to disable
-```
-
-### Laminar
-
-Set the following environment variables:
-
-```env
-LAMINAR_PROJECT_API_KEY=your_project_api_key
-# or
-LMNR_PROJECT_API_KEY=your_project_api_key
-MCP_USE_LAMINAR=true  # Set to false to disable
 ```
 
 ## Usage
@@ -129,15 +112,6 @@ await manager.shutdown()
 - Session management
 - User tracking
 
-### Laminar Features
-
-- Automatic OpenTelemetry instrumentation
-- Zero-code tracing
-- Real-time monitoring
-- Custom spans with `@observe`
-- Evaluation framework
-- Session grouping
-
 ## Serverless Considerations
 
 For serverless environments (AWS Lambda, Vercel, etc.), ensure proper shutdown:
@@ -182,12 +156,6 @@ process.env.LOG_LEVEL = 'debug'
 - `LANGFUSE_REQUEST_TIMEOUT` - Optional: Request timeout in ms (default: 10000)
 - `LANGFUSE_ENABLED` - Optional: Set to "false" to disable
 - `MCP_USE_LANGFUSE` - Optional: Set to "false" to disable Langfuse integration
-
-### Laminar
-
-- `LAMINAR_PROJECT_API_KEY` / `LMNR_PROJECT_API_KEY` - Required: Your Laminar project API key
-- `LAMINAR_BASE_URL` / `LMNR_BASE_URL` - Optional: Laminar API URL
-- `MCP_USE_LAMINAR` - Optional: Set to "false" to disable Laminar integration
 
 ## Examples
 

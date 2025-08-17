@@ -77,14 +77,10 @@
     "example:structured": "npm run build && node dist/examples/structured_output.js"
   },
   "peerDependencies": {
-    "@lmnr-ai/lmnr": "^0.6.18",
     "langfuse": "^3.32.0",
     "langfuse-langchain": "^3.32.0"
   },
   "peerDependenciesMeta": {
-    "@lmnr-ai/lmnr": {
-      "optional": true
-    },
     "langfuse": {
       "optional": true
     },
