@@ -513,6 +513,9 @@ export class MCPAgent {
         // Create a run manager for this chain execution
         runManager = await callbackManager.handleChainStart({
           name: 'MCPAgent (mcp-use)',
+          id: ['MCPAgent (mcp-use)'],
+          lc: 1,
+          type: 'not_implemented',
         } as Serialized, inputs)
       }
 
