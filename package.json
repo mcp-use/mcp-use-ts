@@ -78,7 +78,7 @@
   },
   "peerDependencies": {
     "langfuse": "^3.32.0",
-    "langfuse-langchain": "^3.32.0"
+    "langfuse-langchain": "^3.38.4"
   },
   "peerDependenciesMeta": {
     "langfuse": {
