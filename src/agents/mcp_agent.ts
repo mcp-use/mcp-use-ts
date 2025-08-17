@@ -1,3 +1,4 @@
+import type { BaseCallbackHandler } from '@langchain/core/callbacks/base'
 import type { BaseLanguageModelInterface, LanguageModelLike } from '@langchain/core/language_models/base'
 import type {
   BaseMessage,
@@ -29,6 +30,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { LangChainAdapter } from '../adapters/langchain_adapter.js'
 import { logger } from '../logging.js'
 import { ServerManager } from '../managers/server_manager.js'
+import { ObservabilityManager } from '../observability/index.js'
 import { extractModelInfo, Telemetry } from '../telemetry/index.js'
 import { createSystemMessage } from './prompts/system_prompt_builder.js'
 import { DEFAULT_SYSTEM_PROMPT_TEMPLATE, SERVER_MANAGER_SYSTEM_PROMPT_TEMPLATE } from './prompts/templates.js'
@@ -61,6 +63,10 @@ export class MCPAgent {
   private modelProvider: string
   private modelName: string
 
+  // Observability support
+  private observabilityManager: ObservabilityManager
+  private callbacks: BaseCallbackHandler[] = []
+
   // Remote agent support
   private isRemote = false
   private remoteAgent: RemoteAgent | null = null
@@ -81,6 +87,7 @@ export class MCPAgent {
     verbose?: boolean
     adapter?: LangChainAdapter
     serverManagerFactory?: (client: MCPClient) => ServerManager
+    callbacks?: BaseCallbackHandler[]
     // Remote agent parameters
     agentId?: string
     apiKey?: string
@@ -107,6 +114,8 @@ export class MCPAgent {
       this.telemetry = Telemetry.getInstance()
       this.modelProvider = 'remote'
       this.modelName = 'remote-agent'
+      this.observabilityManager = new ObservabilityManager({ customCallbacks: options.callbacks })
+      this.callbacks = []
       return
     }
 
@@ -159,6 +168,12 @@ export class MCPAgent {
       this.modelName = 'unknown'
     }
 
+    // Set up observability callbacks using the ObservabilityManager
+    this.observabilityManager = new ObservabilityManager({
+      customCallbacks: options.callbacks,
+      verbose: this.verbose,
+    })
+
     // Make getters configurable for test mocking
     Object.defineProperty(this, 'agentExecutor', {
       get: () => this._agentExecutor,
@@ -183,6 +198,13 @@ export class MCPAgent {
 
     logger.info('🚀 Initializing MCP agent and connecting to services...')
 
+    // Initialize observability callbacks
+    this.callbacks = await this.observabilityManager.getCallbacks()
+    const handlerNames = await this.observabilityManager.getHandlerNames()
+    if (handlerNames.length > 0) {
+      logger.info(`📊 Observability enabled with: ${handlerNames.join(', ')}`)
+    }
+
     // If using server manager, initialize it
     if (this.useServerManager && this.serverManager) {
       await this.serverManager.initialize()
@@ -202,7 +224,7 @@ export class MCPAgent {
       // Standard initialization - if using client, get or create sessions
       if (this.client) {
         // First try to get existing sessions
-        this.sessions = await this.client.getAllActiveSessions()
+        this.sessions = this.client.getAllActiveSessions()
         logger.info(`🔌 Found ${Object.keys(this.sessions).length} existing sessions`)
 
         // If no active sessions exist, create new ones
@@ -294,6 +316,7 @@ export class MCPAgent {
       maxIterations: this.maxSteps,
       verbose: this.verbose,
       returnIntermediateSteps: true,
+      callbacks: this.callbacks,
     })
   }
 
@@ -642,7 +665,7 @@ export class MCPAgent {
 
       let serverCount = 0
       if (this.client) {
-        serverCount = Object.keys(await this.client.getAllActiveSessions()).length
+        serverCount = Object.keys(this.client.getAllActiveSessions()).length
       }
       else if (this.connectors) {
         serverCount = this.connectors.length
@@ -690,6 +713,9 @@ export class MCPAgent {
     }
 
     logger.info('🔌 Closing MCPAgent resources…')
+
+    // Shutdown observability handlers (important for serverless)
+    await this.observabilityManager.shutdown()
     try {
       this._agentExecutor = null
       this._tools = []
@@ -779,7 +805,10 @@ export class MCPAgent {
       // Stream events from the agent executor
       const eventStream = agentExecutor.streamEvents(
         inputs,
-        { version: 'v2' },
+        {
+          version: 'v2',
+          callbacks: this.callbacks.length > 0 ? this.callbacks : undefined,
+        },
       )
 
       // Yield each event
@@ -829,7 +858,7 @@ export class MCPAgent {
 
       let serverCount = 0
       if (this.client) {
-        serverCount = Object.keys(await this.client.getAllActiveSessions()).length
+        serverCount = Object.keys(this.client.getAllActiveSessions()).length
       }
       else if (this.connectors) {
         serverCount = this.connectors.length
