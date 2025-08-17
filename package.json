@@ -76,6 +76,18 @@
     "example:add_server": "npm run build && node dist/examples/add_server_tool.js",
     "example:structured": "npm run build && node dist/examples/structured_output.js"
   },
+  "peerDependencies": {
+    "langfuse": "^3.32.0",
+    "langfuse-langchain": "^3.38.4"
+  },
+  "peerDependenciesMeta": {
+    "langfuse": {
+      "optional": true
+    },
+    "langfuse-langchain": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
     "@langchain/anthropic": "^0.3.14",

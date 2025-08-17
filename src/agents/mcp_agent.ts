@@ -1,15 +1,18 @@
+import type { BaseCallbackHandler } from '@langchain/core/callbacks/base'
+import type { CallbackManagerForChainRun } from '@langchain/core/callbacks/manager'
 import type { BaseLanguageModelInterface, LanguageModelLike } from '@langchain/core/language_models/base'
+import type { Serialized } from '@langchain/core/load/serializable'
 import type {
   BaseMessage,
 } from '@langchain/core/messages'
 import type { StructuredToolInterface, ToolInterface } from '@langchain/core/tools'
 import type { StreamEvent } from '@langchain/core/tracers/log_stream'
 import type { AgentFinish, AgentStep } from 'langchain/agents'
-
 import type { ZodSchema } from 'zod'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
 import type { MCPSession } from '../session.js'
+import { CallbackManager } from '@langchain/core/callbacks/manager'
 import {
   AIMessage,
   HumanMessage,
@@ -21,14 +24,12 @@ import {
   ChatPromptTemplate,
   MessagesPlaceholder,
 } from '@langchain/core/prompts'
-import {
-  AgentExecutor,
-  createToolCallingAgent,
-} from 'langchain/agents'
+import { AgentExecutor, createToolCallingAgent } from 'langchain/agents'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { LangChainAdapter } from '../adapters/langchain_adapter.js'
 import { logger } from '../logging.js'
 import { ServerManager } from '../managers/server_manager.js'
+import { ObservabilityManager } from '../observability/index.js'
 import { extractModelInfo, Telemetry } from '../telemetry/index.js'
 import { createSystemMessage } from './prompts/system_prompt_builder.js'
 import { DEFAULT_SYSTEM_PROMPT_TEMPLATE, SERVER_MANAGER_SYSTEM_PROMPT_TEMPLATE } from './prompts/templates.js'
@@ -61,6 +62,10 @@ export class MCPAgent {
   private modelProvider: string
   private modelName: string
 
+  // Observability support
+  private observabilityManager: ObservabilityManager
+  private callbacks: BaseCallbackHandler[] = []
+
   // Remote agent support
   private isRemote = false
   private remoteAgent: RemoteAgent | null = null
@@ -81,6 +86,7 @@ export class MCPAgent {
     verbose?: boolean
     adapter?: LangChainAdapter
     serverManagerFactory?: (client: MCPClient) => ServerManager
+    callbacks?: BaseCallbackHandler[]
     // Remote agent parameters
     agentId?: string
     apiKey?: string
@@ -107,6 +113,8 @@ export class MCPAgent {
       this.telemetry = Telemetry.getInstance()
       this.modelProvider = 'remote'
       this.modelName = 'remote-agent'
+      this.observabilityManager = new ObservabilityManager({ customCallbacks: options.callbacks })
+      this.callbacks = []
       return
     }
 
@@ -159,6 +167,12 @@ export class MCPAgent {
       this.modelName = 'unknown'
     }
 
+    // Set up observability callbacks using the ObservabilityManager
+    this.observabilityManager = new ObservabilityManager({
+      customCallbacks: options.callbacks,
+      verbose: this.verbose,
+    })
+
     // Make getters configurable for test mocking
     Object.defineProperty(this, 'agentExecutor', {
       get: () => this._agentExecutor,
@@ -183,6 +197,13 @@ export class MCPAgent {
 
     logger.info('🚀 Initializing MCP agent and connecting to services...')
 
+    // Initialize observability callbacks
+    this.callbacks = await this.observabilityManager.getCallbacks()
+    const handlerNames = await this.observabilityManager.getHandlerNames()
+    if (handlerNames.length > 0) {
+      logger.info(`📊 Observability enabled with: ${handlerNames.join(', ')}`)
+    }
+
     // If using server manager, initialize it
     if (this.useServerManager && this.serverManager) {
       await this.serverManager.initialize()
@@ -202,7 +223,7 @@ export class MCPAgent {
       // Standard initialization - if using client, get or create sessions
       if (this.client) {
         // First try to get existing sessions
-        this.sessions = await this.client.getAllActiveSessions()
+        this.sessions = this.client.getAllActiveSessions()
         logger.info(`🔌 Found ${Object.keys(this.sessions).length} existing sessions`)
 
         // If no active sessions exist, create new ones
@@ -294,6 +315,7 @@ export class MCPAgent {
       maxIterations: this.maxSteps,
       verbose: this.verbose,
       returnIntermediateSteps: true,
+      callbacks: this.callbacks,
     })
   }
 
@@ -480,6 +502,23 @@ export class MCPAgent {
       let nameToToolMap: Record<string, StructuredToolInterface> = Object.fromEntries(this._tools.map(t => [t.name, t]))
       logger.info(`🏁 Starting agent execution with max_steps=${steps}`)
 
+      // Create a run manager with our callbacks if we have any - ONCE for the entire execution
+      let runManager: CallbackManagerForChainRun | undefined
+      if (this.callbacks?.length > 0) {
+        // Create an async callback manager with our callbacks
+        const callbackManager = new CallbackManager(undefined, {
+          handlers: this.callbacks,
+          inheritableHandlers: this.callbacks,
+        })
+        // Create a run manager for this chain execution
+        runManager = await callbackManager.handleChainStart({
+          name: 'MCPAgent (mcp-use)',
+          id: ['MCPAgent (mcp-use)'],
+          lc: 1,
+          type: 'not_implemented',
+        } as Serialized, inputs)
+      }
+
       for (let stepNum = 0; stepNum < steps; stepNum++) {
         stepsTaken = stepNum + 1
         if (this.useServerManager && this.serverManager) {
@@ -508,15 +547,17 @@ export class MCPAgent {
 
         try {
           logger.debug('Starting agent step execution')
-          const nextStepOutput = await this._agentExecutor._takeNextStep(
+          const nextStepOutput: AgentStep[] | AgentFinish = await this._agentExecutor._takeNextStep(
             nameToToolMap as Record<string, ToolInterface>,
             inputs,
             intermediateSteps,
+            runManager,
           )
-          // Agent finish handling
-          if ((nextStepOutput as AgentFinish).returnValues) {
+          // Agent finish handling (AgentFinish contains returnValues property)
+          if ('returnValues' in nextStepOutput) {
             logger.info(`✅ Agent finished at step ${stepNum + 1}`)
-            result = (nextStepOutput as AgentFinish).returnValues?.output ?? 'No output generated'
+            result = nextStepOutput.returnValues?.output ?? 'No output generated'
+            runManager?.handleChainEnd({ output: result })
 
             // If structured output is requested, attempt to create it
             if (outputSchema && structuredLlm) {
@@ -595,10 +636,10 @@ export class MCPAgent {
           // Detect direct return
           if (stepArray.length) {
             const lastStep = stepArray[stepArray.length - 1]
-            const toolReturn = await this._agentExecutor._getToolReturn(lastStep)
+            const toolReturn: AgentFinish | null = await this._agentExecutor._getToolReturn(lastStep)
             if (toolReturn) {
               logger.info(`🏆 Tool returned directly at step ${stepNum + 1}`)
-              result = (toolReturn as unknown as AgentFinish).returnValues?.output ?? 'No output generated'
+              result = toolReturn.returnValues?.output ?? 'No output generated'
               break
             }
           }
@@ -607,11 +648,13 @@ export class MCPAgent {
           if (e instanceof OutputParserException) {
             logger.error(`❌ Output parsing error during step ${stepNum + 1}: ${e}`)
             result = `Agent stopped due to a parsing error: ${e}`
+            runManager?.handleChainError(result)
             break
           }
           logger.error(`❌ Error during agent execution step ${stepNum + 1}: ${e}`)
           console.error(e)
           result = `Agent stopped due to an error: ${e}`
+          runManager?.handleChainError(result)
           break
         }
       }
@@ -620,6 +663,7 @@ export class MCPAgent {
       if (!result) {
         logger.warn(`⚠️ Agent stopped after reaching max iterations (${steps})`)
         result = `Agent stopped after reaching the maximum number of steps (${steps}).`
+        runManager?.handleChainEnd({ output: result })
       }
 
       logger.info('🎉 Agent execution complete')
@@ -642,7 +686,7 @@ export class MCPAgent {
 
       let serverCount = 0
       if (this.client) {
-        serverCount = Object.keys(await this.client.getAllActiveSessions()).length
+        serverCount = Object.keys(this.client.getAllActiveSessions()).length
       }
       else if (this.connectors) {
         serverCount = this.connectors.length
@@ -690,6 +734,9 @@ export class MCPAgent {
     }
 
     logger.info('🔌 Closing MCPAgent resources…')
+
+    // Shutdown observability handlers (important for serverless)
+    await this.observabilityManager.shutdown()
     try {
       this._agentExecutor = null
       this._tools = []
@@ -776,10 +823,15 @@ export class MCPAgent {
       // Prepare inputs
       const inputs = { input: query, chat_history: langchainHistory }
 
+      logger.info('callbacks', this.callbacks)
+
       // Stream events from the agent executor
       const eventStream = agentExecutor.streamEvents(
         inputs,
-        { version: 'v2' },
+        {
+          version: 'v2',
+          callbacks: this.callbacks.length > 0 ? this.callbacks : undefined,
+        },
       )
 
       // Yield each event
@@ -829,7 +881,7 @@ export class MCPAgent {
 
       let serverCount = 0
       if (this.client) {
-        serverCount = Object.keys(await this.client.getAllActiveSessions()).length
+        serverCount = Object.keys(this.client.getAllActiveSessions()).length
       }
       else if (this.connectors) {
         serverCount = this.connectors.length
