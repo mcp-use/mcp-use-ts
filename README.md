@@ -61,6 +61,10 @@
 npm install mcp-use
 # LangChain.js and your LLM provider (e.g., OpenAI)
 npm install langchain @langchain/openai dotenv
+
+# Optional: Install observability packages for monitoring
+npm install langfuse langfuse-langchain  # For Langfuse observability
+npm install @lmnr-ai/lmnr                # For Laminar observability
 ```
 
 Create a `.env`:
