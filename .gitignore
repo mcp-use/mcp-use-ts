@@ -54,3 +54,8 @@ static/browser_history/*.gif
 
 # user conf
 conf.yaml
+
+# Agents
+.cursor
+.cursorrules
+.claude
