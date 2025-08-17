@@ -25,14 +25,3 @@ declare module 'langfuse' {
     })
   }
 }
-
-declare module '@lmnr-ai/lmnr' {
-  export class Laminar {
-    static initialize(config: {
-      projectApiKey?: string
-      baseUrl?: string
-    }): void
-  }
-
-  export function observe(config?: any): any
-}
