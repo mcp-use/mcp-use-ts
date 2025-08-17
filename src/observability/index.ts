@@ -6,15 +6,9 @@
  */
 
 // Import observability providers - order matters for initialization
-import './laminar.js'
 import './langfuse.js'
 
 // Re-export individual handlers for direct usage if needed
-export {
-  getLaminarHandler,
-  getLaminarInitPromise,
-  isLaminarInitialized,
-} from './laminar.js'
 export {
   langfuseClient,
   langfuseHandler,
