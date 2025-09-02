@@ -1,0 +1,104 @@
+# Dependabot configuration for automated dependency updates
+# Documentation: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Main npm/pnpm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "pederzh"  # Replace with your GitHub username
+    assignees:
+      - "pederzh"  # Replace with your GitHub username
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    # Group related packages together
+    groups:
+      # LangChain ecosystem
+      langchain-packages:
+        patterns:
+          - "@langchain/*"
+          - "langchain"
+        update-types:
+          - "patch"
+          - "minor"
+      # TypeScript types
+      typescript-types:
+        patterns:
+          - "@types/*"
+        update-types:
+          - "patch"
+          - "minor"
+      # ESLint ecosystem
+      eslint-packages:
+        patterns:
+          - "eslint*"
+          - "@antfu/eslint-config"
+        update-types:
+          - "patch"
+          - "minor"
+      # Development tools
+      dev-tools:
+        patterns:
+          - "typescript"
+          - "vitest"
+          - "husky"
+          - "lint-staged"
+        update-types:
+          - "patch"
+          - "minor"
+      # Utility libraries
+      utilities:
+        patterns:
+          - "lodash-es"
+          - "uuid"
+          - "winston"
+          - "dotenv"
+          - "ws"
+        update-types:
+          - "patch"
+          - "minor"
+      # Schema and validation
+      schema-validation:
+        patterns:
+          - "zod*"
+          - "*json-schema*"
+        update-types:
+          - "patch"
+          - "minor"
+    # Ignore specific packages if needed
+    ignore:
+      # Example: ignore major updates for critical packages
+      - dependency-name: "@modelcontextprotocol/sdk"
+        update-types: ["version-update:semver-major"]
+      # Example: ignore specific versions
+      # - dependency-name: "some-package"
+      #   versions: ["1.x", "2.x"]
+    
+  # GitHub Actions workflow dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    reviewers:
+      - "pederzh"  # Replace with your GitHub username
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "github-actions"
+      - "ci"
