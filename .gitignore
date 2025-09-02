@@ -43,6 +43,7 @@ __pycache__/
 *.py[oc]
 build/
 dist/
+dist-cjs/
 wheels/
 *.egg-info
 .coverage
