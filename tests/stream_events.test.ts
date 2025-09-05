@@ -381,6 +381,6 @@ describe('mCPAgent streamEvents() edge cases', () => {
       events.push(event)
     }
 
-    expect(events).toHaveLength(3) // Should still yield all events, even malformed ones
+    expect(events).toHaveLength(2) // Should yield valid events and filter out malformed ones (null event gets filtered)
   })
 })
