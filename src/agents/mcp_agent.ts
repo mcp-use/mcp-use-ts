@@ -5,9 +5,10 @@ import type { Serialized } from '@langchain/core/load/serializable'
 import type {
   BaseMessage,
 } from '@langchain/core/messages'
+import type { ToolCall } from '@langchain/core/messages/tool'
 import type { StructuredToolInterface, ToolInterface } from '@langchain/core/tools'
 import type { StreamEvent } from '@langchain/core/tracers/log_stream'
-import type { AgentFinish, AgentStep } from 'langchain/agents'
+import type { AgentAction, AgentFinish, AgentStep } from 'langchain/agents'
 import type { ZodSchema } from 'zod'
 import type { MCPClient } from '../client.js'
 import type { BaseConnector } from '../connectors/base.js'
@@ -35,6 +36,25 @@ import { createSystemMessage } from './prompts/system_prompt_builder.js'
 import { DEFAULT_SYSTEM_PROMPT_TEMPLATE, SERVER_MANAGER_SYSTEM_PROMPT_TEMPLATE } from './prompts/templates.js'
 import { RemoteAgent } from './remote.js'
 
+// Configuration interfaces
+interface TruncationConfig {
+  maxCharacters: number
+  maxBytes: number
+  warnThreshold: number
+  method: 'end' | 'middle' | 'smart' | 'structured'
+  preserveLines: number
+  preserveStructure: boolean
+  truncationMarker: string
+  includeSizeInfo: boolean
+  includeHash: boolean
+}
+
+interface PlaceholderMessages {
+  toolExecutionNoResponse?: string
+  toolExecutionError?: string
+  toolExecutionTimeout?: string
+}
+
 export class MCPAgent {
   private llm?: BaseLanguageModelInterface
   private client?: MCPClient
@@ -49,6 +69,11 @@ export class MCPAgent {
   private systemPrompt?: string | null
   private systemPromptTemplateOverride?: string | null
   private additionalInstructions?: string | null
+
+  // Tool history preservation configuration
+  private placeholderMessages: Required<PlaceholderMessages>
+  private truncationConfig: TruncationConfig
+  private perToolTruncation: Record<string, Partial<TruncationConfig>>
 
   private _initialized = false
   private conversationHistory: BaseMessage[] = []
@@ -91,6 +116,10 @@ export class MCPAgent {
     agentId?: string
     apiKey?: string
     baseUrl?: string
+    // Tool history preservation configuration
+    placeholderMessages?: PlaceholderMessages
+    truncationConfig?: Partial<TruncationConfig>
+    perToolTruncation?: Record<string, Partial<TruncationConfig>>
   }) {
     // Handle remote execution
     if (options.agentId) {
@@ -115,6 +144,15 @@ export class MCPAgent {
       this.modelName = 'remote-agent'
       this.observabilityManager = new ObservabilityManager({ customCallbacks: options.callbacks })
       this.callbacks = []
+
+      // Initialize defaults for remote agents
+      this.placeholderMessages = {
+        toolExecutionNoResponse: '[Tool execution completed - no final response]',
+        toolExecutionError: '[Tool execution failed]',
+        toolExecutionTimeout: '[Tool execution timed out]',
+      }
+      this.truncationConfig = this.getDefaultTruncationConfig()
+      this.perToolTruncation = {}
       return
     }
 
@@ -137,6 +175,16 @@ export class MCPAgent {
     this.additionalTools = options.additionalTools ?? []
     this.useServerManager = options.useServerManager ?? false
     this.verbose = options.verbose ?? false
+
+    // Initialize tool history preservation configuration
+    this.placeholderMessages = {
+      toolExecutionNoResponse: '[Tool execution completed - no final response]',
+      toolExecutionError: '[Tool execution failed]',
+      toolExecutionTimeout: '[Tool execution timed out]',
+      ...(options.placeholderMessages || {}),
+    }
+    this.truncationConfig = { ...this.getDefaultTruncationConfig(), ...(options.truncationConfig || {}) }
+    this.perToolTruncation = options.perToolTruncation || {}
 
     if (!this.client && this.connectors.length === 0) {
       throw new Error('Either \'client\' or at least one \'connector\' must be provided.')
@@ -186,6 +234,267 @@ export class MCPAgent {
       get: () => this._initialized,
       configurable: true,
     })
+  }
+
+  private getDefaultTruncationConfig(): TruncationConfig {
+    return {
+      maxCharacters: 50_000,
+      maxBytes: 1_024_000,
+      warnThreshold: 10_000,
+      method: 'smart',
+      preserveLines: 5,
+      preserveStructure: true,
+      truncationMarker: '\n\n[... CONTENT TRUNCATED ...]\n\n',
+      includeSizeInfo: true,
+      includeHash: false,
+    }
+  }
+
+  private getToolExecutionPlaceholder(scenario: 'noResponse' | 'error' | 'timeout' = 'noResponse'): string {
+    switch (scenario) {
+      case 'noResponse':
+        return this.placeholderMessages.toolExecutionNoResponse
+      case 'error':
+        return this.placeholderMessages.toolExecutionError
+      case 'timeout':
+        return this.placeholderMessages.toolExecutionTimeout
+      default:
+        return this.placeholderMessages.toolExecutionNoResponse
+    }
+  }
+
+  private getEffectiveTruncationConfig(toolName: string): TruncationConfig {
+    const toolSpecific = this.perToolTruncation[toolName] || {}
+    return { ...this.truncationConfig, ...toolSpecific }
+  }
+
+  // Type guard to check if action has toolCallId (from ToolsAgentAction)
+  private isToolsAgentAction(action: AgentAction): action is AgentAction & { toolCallId: string } {
+    return 'toolCallId' in action && typeof (action as any).toolCallId === 'string'
+  }
+
+  // Type-safe tool call ID generation
+  private getToolCallId(action: AgentAction): string {
+    return this.isToolsAgentAction(action) ? action.toolCallId : crypto.randomUUID()
+  }
+
+  private applyTruncation(content: string, config: TruncationConfig): string {
+    if (content.length <= config.maxCharacters && content.length <= config.maxBytes) {
+      return content
+    }
+
+    // Log truncation event for monitoring
+    if (content.length > config.warnThreshold) {
+      const wasActuallyTruncated = content.length > Math.min(config.maxCharacters, config.maxBytes)
+      logger.info(`🔍 Content size: ${content.length.toLocaleString()} chars${
+        wasActuallyTruncated ? ` → truncating (limit: ${Math.min(config.maxCharacters, config.maxBytes).toLocaleString()})` : ' (within limits)'
+      }`, {
+        originalSize: content.length,
+        truncated: wasActuallyTruncated,
+      })
+    }
+
+    switch (config.method) {
+      case 'end':
+        return this.truncateEnd(content, config)
+      case 'middle':
+        return this.truncateMiddle(content, config)
+      case 'smart':
+        return this.truncateSmart(content, config)
+      case 'structured':
+        return this.truncateStructured(content, config)
+      default:
+        return this.truncateEnd(content, config)
+    }
+  }
+
+  private truncateEnd(content: string, config: TruncationConfig): string {
+    const maxChars = Math.min(config.maxCharacters, config.maxBytes)
+    if (content.length <= maxChars)
+      return content
+
+    const truncated = content.slice(0, maxChars)
+    const sizeInfo = config.includeSizeInfo
+      ? ` (${content.length.toLocaleString()} → ${maxChars.toLocaleString()} chars)`
+      : ''
+
+    return truncated + config.truncationMarker + sizeInfo
+  }
+
+  private truncateMiddle(content: string, config: TruncationConfig): string {
+    const maxChars = Math.min(config.maxCharacters, config.maxBytes)
+    if (content.length <= maxChars)
+      return content
+
+    const keepStart = Math.floor(maxChars * 0.4) // 40% at start
+    const keepEnd = Math.floor(maxChars * 0.4) // 40% at end
+    // 20% for truncation marker and size info
+
+    const start = content.slice(0, keepStart)
+    const end = content.slice(-keepEnd)
+    const sizeInfo = config.includeSizeInfo
+      ? ` (${content.length.toLocaleString()} chars total)`
+      : ''
+
+    return start + config.truncationMarker + sizeInfo + end
+  }
+
+  private truncateSmart(content: string, config: TruncationConfig): string {
+    const maxChars = Math.min(config.maxCharacters, config.maxBytes)
+    if (content.length <= maxChars)
+      return content
+
+    // Detect content type and apply appropriate strategy
+    if (this.isJsonLike(content)) {
+      return this.truncateJson(content, config)
+    }
+    else if (this.isXmlLike(content)) {
+      return this.truncateMiddle(content, config) // Fallback for XML
+    }
+    else if (this.isLogLike(content)) {
+      return this.truncateByLines(content, config)
+    }
+    else {
+      // Fall back to line-aware truncation
+      return this.truncateByLines(content, config)
+    }
+  }
+
+  private truncateStructured(content: string, config: TruncationConfig): string {
+    if (this.isJsonLike(content)) {
+      return this.truncateJson(content, config)
+    }
+    else {
+      return this.truncateSmart(content, config)
+    }
+  }
+
+  private isJsonLike(content: string): boolean {
+    const trimmed = content.trim()
+    return (trimmed.startsWith('{') && trimmed.endsWith('}'))
+      || (trimmed.startsWith('[') && trimmed.endsWith(']'))
+  }
+
+  private isXmlLike(content: string): boolean {
+    const trimmed = content.trim()
+    return trimmed.startsWith('<') && trimmed.endsWith('>')
+  }
+
+  private isLogLike(content: string): boolean {
+    const lines = content.split('\n')
+    if (lines.length < 3)
+      return false
+
+    // Check if multiple lines match common log patterns
+    const logPatterns = [
+      /^\d{4}-\d{2}-\d{2}/, // Date
+      /^\[\d{2}:\d{2}:\d{2}\]/, // Timestamp
+      /^(INFO|DEBUG|WARN|ERROR|TRACE)/, // Log levels
+      /^\d+:\d+:\d+/, // Time
+    ]
+
+    const logLikeLines = lines.slice(0, 10).filter(line =>
+      logPatterns.some(pattern => pattern.test(line.trim())),
+    ).length
+
+    return logLikeLines >= lines.slice(0, 10).length * 0.3 // 30% of first 10 lines
+  }
+
+  private truncateByLines(content: string, config: TruncationConfig): string {
+    const lines = content.split('\n')
+    const preserveLines = config.preserveLines
+
+    if (lines.length <= preserveLines * 2) {
+      // Too few lines, use end truncation
+      return this.truncateEnd(content, config)
+    }
+
+    const startLines = lines.slice(0, preserveLines).join('\n')
+    const endLines = lines.slice(-preserveLines).join('\n')
+    const markerInfo = config.truncationMarker
+      + (config.includeSizeInfo
+        ? ` (${lines.length} lines, ${content.length.toLocaleString()} chars total)`
+        : '')
+
+    const result = startLines + markerInfo + endLines
+
+    // If still too long, fall back to character truncation
+    const maxChars = Math.min(config.maxCharacters, config.maxBytes)
+    return result.length > maxChars ? this.truncateEnd(result, config) : result
+  }
+
+  private truncateJson(content: string, config: TruncationConfig): string {
+    try {
+      const parsed = JSON.parse(content)
+
+      if (Array.isArray(parsed)) {
+        // Truncate array while maintaining structure
+        const truncated = this.truncateArray(parsed, config)
+        return JSON.stringify(truncated, null, 2)
+      }
+      else if (typeof parsed === 'object' && parsed !== null) {
+        // Truncate object properties
+        const truncated = this.truncateObject(parsed, config)
+        return JSON.stringify(truncated, null, 2)
+      }
+    }
+    catch {
+      // Not valid JSON, fall back to smart truncation
+    }
+
+    return this.truncateMiddle(content, config)
+  }
+
+  private truncateArray(arr: any[], config: TruncationConfig): any[] {
+    const maxChars = Math.min(config.maxCharacters, config.maxBytes)
+    const baseSize = JSON.stringify([]).length
+    let currentSize = baseSize
+    const result = []
+
+    for (const item of arr) {
+      const itemSize = JSON.stringify(item).length + 1 // +1 for comma
+
+      if (currentSize + itemSize > maxChars * 0.8) { // Leave room for metadata
+        result.push({
+          _truncated: true,
+          _originalLength: arr.length,
+          _showingFirst: result.length,
+          _message: `Array truncated: showing ${result.length} of ${arr.length} items`,
+        })
+        break
+      }
+
+      result.push(item)
+      currentSize += itemSize
+    }
+
+    return result
+  }
+
+  private truncateObject(obj: any, config: TruncationConfig): any {
+    const maxChars = Math.min(config.maxCharacters, config.maxBytes)
+    const entries = Object.entries(obj)
+    const result: any = {}
+    let currentSize = JSON.stringify({}).length
+    let _truncated = false
+
+    for (const [key, value] of entries) {
+      const entrySize = JSON.stringify({ [key]: value }).length
+
+      if (currentSize + entrySize > maxChars * 0.8) {
+        result._truncated = true
+        result._originalKeys = entries.length
+        result._showingKeys = Object.keys(result).length - 1 // Subtract metadata keys
+        result._message = `Object truncated: showing ${Object.keys(result).length - 1} of ${entries.length} keys`
+        _truncated = true
+        break
+      }
+
+      result[key] = value
+      currentSize += entrySize
+    }
+
+    return result
   }
 
   public async initialize(): Promise<void> {
@@ -667,9 +976,123 @@ export class MCPAgent {
 
       // Add BOTH the user message and AI response to conversation history if memory is enabled
       if (this.memoryEnabled) {
-        this.addToHistory(new HumanMessage(query))
-        if (result) {
-          this.addToHistory(new AIMessage(result as string))
+        try {
+          this.addToHistory(new HumanMessage(query))
+
+          // CRITICAL: Preserve tool calls even if there's no result text
+          if (result || intermediateSteps.length > 0) {
+            // Convert intermediateSteps to tool_calls format with error handling
+            const toolCalls: ToolCall[] = []
+            const toolCallIdMap = new Map<AgentStep, string>() // Use step object as key to avoid collisions
+
+            intermediateSteps.forEach((step, index) => {
+              try {
+                // Validate step structure
+                if (!step || !step.action || !step.action.tool) {
+                  logger.warn(`⚠️ Invalid step structure at index ${index}:`, step)
+                  return
+                }
+
+                // Use type-safe tool call ID generation
+                const toolCallId = this.getToolCallId(step.action)
+                toolCallIdMap.set(step, toolCallId) // Use step object as key for uniqueness
+
+                // Validate tool input
+                let toolArgs: any
+                try {
+                  toolArgs = step.action.toolInput || {}
+                }
+                catch (argsError) {
+                  logger.warn(`⚠️ Invalid tool args for ${step.action.tool}:`, argsError)
+                  toolArgs = {}
+                }
+
+                toolCalls.push({
+                  id: toolCallId,
+                  name: step.action.tool,
+                  args: toolArgs,
+                } as ToolCall)
+              }
+              catch (stepError) {
+                logger.error(`❌ Error processing step ${index}:`, stepError)
+                // Continue with other steps
+              }
+            })
+
+            // Create AIMessage with tool_calls (with error handling)
+            try {
+              // Use result if available, otherwise use configurable placeholder for tool execution without final response
+              const responseContent = (result as string) || this.getToolExecutionPlaceholder()
+
+              const aiMessage = toolCalls.length > 0
+                ? new AIMessage({ content: responseContent, tool_calls: toolCalls })
+                : new AIMessage(responseContent)
+
+              this.addToHistory(aiMessage)
+            }
+            catch (aiMessageError) {
+              logger.error('❌ Error creating AIMessage:', aiMessageError)
+              // Fallback to simple AIMessage without tool_calls
+              try {
+                const fallbackContent = (result as string) || this.getToolExecutionPlaceholder()
+                this.addToHistory(new AIMessage(fallbackContent))
+              }
+              catch (fallbackError) {
+                logger.error('❌ Error creating fallback AIMessage:', fallbackError)
+              }
+            }
+
+            // Add ToolMessages for observations with individual error handling
+            intermediateSteps.forEach((step, index) => {
+              try {
+                // Validate step structure
+                if (!step || !step.action || !step.action.tool) {
+                  return // Already logged above
+                }
+
+                const toolCallId = toolCallIdMap.get(step)
+                if (!toolCallId) {
+                  logger.warn(`⚠️ No toolCallId found for step ${index}`)
+                  return
+                }
+
+                // Ensure observation is serialized as string for ToolMessage content with safe serialization and truncation
+                let observationContent: string
+                try {
+                  const rawContent = typeof step.observation === 'string'
+                    ? step.observation
+                    : JSON.stringify(step.observation || 'No observation', null, 2)
+
+                  // Apply tool-specific or default truncation
+                  const toolName = step.action.tool
+                  const config = this.getEffectiveTruncationConfig(toolName)
+
+                  observationContent = this.applyTruncation(rawContent, config)
+                }
+                catch (jsonError) {
+                  logger.warn(`⚠️ Failed to serialize observation for ${step.action.tool}:`, jsonError)
+                  const fallbackContent = String(step.observation || 'Serialization failed')
+
+                  // Still apply truncation to fallback content
+                  const config = this.getEffectiveTruncationConfig(step.action.tool)
+                  observationContent = this.applyTruncation(fallbackContent, config)
+                }
+
+                this.addToHistory(new ToolMessage({
+                  content: observationContent,
+                  tool_call_id: toolCallId,
+                }))
+              }
+              catch (toolMessageError) {
+                logger.error(`❌ Error creating ToolMessage for step ${index}:`, toolMessageError)
+                // Continue with other tool messages
+              }
+            })
+          }
+        }
+        catch (historyError) {
+          logger.error('❌ Error adding to conversation history in stream():', historyError)
+          // Don't throw - this shouldn't break the stream execution
         }
       }
 
@@ -782,6 +1205,11 @@ export class MCPAgent {
     let totalResponseLength = 0
     let finalResponse = ''
 
+    // Track tool calls during streaming
+    const toolCalls: ToolCall[] = []
+    const toolResults: Array<{ tool_call_id: string, content: string }> = []
+    const toolStartEvents = new Map<string, any>() // run_id -> start event
+
     try {
       // Initialize if needed
       if (manageConnector && !this._initialized) {
@@ -834,35 +1262,164 @@ export class MCPAgent {
 
       // Yield each event
       for await (const event of eventStream) {
-        eventCount++
+        try {
+          eventCount++
 
-        // Skip null or invalid events
-        if (!event || typeof event !== 'object') {
-          continue
-        }
-
-        // Track response length for telemetry
-        if (event.event === 'on_chat_model_stream' && event.data?.chunk?.content) {
-          totalResponseLength += event.data.chunk.content.length
-        }
-
-        yield event
-
-        // Capture final response from chain end event
-        if (event.event === 'on_chain_end' && event.data?.output) {
-          const output = event.data.output
-          if (Array.isArray(output) && output.length > 0 && output[0]?.text) {
-            finalResponse = output[0].text
+          // Validate event structure
+          if (!event || typeof event !== 'object' || !event.event) {
+            logger.warn('⚠️ Invalid event structure:', event)
+            continue
           }
+
+          // Track tool start events
+          if (event.event === 'on_tool_start') {
+            if (event.run_id && event.name) {
+              toolStartEvents.set(event.run_id, event)
+            }
+            else {
+              logger.warn('⚠️ Invalid on_tool_start event - missing run_id or name:', event)
+            }
+          }
+
+          // Track tool end events and create tool call history
+          if (event.event === 'on_tool_end') {
+            if (!event.run_id) {
+              logger.warn('⚠️ on_tool_end event missing run_id:', event)
+            }
+            else {
+              const startEvent = toolStartEvents.get(event.run_id)
+              if (startEvent) {
+                // Validate required fields
+                if (!startEvent.name || !startEvent.data?.input) {
+                  logger.warn('⚠️ Invalid tool start event data:', startEvent)
+                }
+                else {
+                  // CRITICAL: Use consistent ID generation strategy with stream() method
+                  // Try to extract toolCallId from events, fallback to UUID generation
+                  const toolCallId = (startEvent.data?.toolCallId || event.data?.toolCallId) || crypto.randomUUID()
+
+                  // Create ToolCall from start event
+                  toolCalls.push({
+                    id: toolCallId,
+                    name: startEvent.name,
+                    args: startEvent.data.input,
+                  } as ToolCall)
+
+                  // Store tool result for ToolMessage (with safe serialization and truncation)
+                  let outputContent: string
+                  try {
+                    const rawContent = typeof event.data?.output === 'string'
+                      ? event.data.output
+                      : JSON.stringify(event.data?.output || 'No output', null, 2)
+
+                    // Apply tool-specific or default truncation
+                    const config = this.getEffectiveTruncationConfig(startEvent.name)
+                    outputContent = this.applyTruncation(rawContent, config)
+                  }
+                  catch (jsonError) {
+                    logger.warn('⚠️ Failed to serialize tool output:', jsonError)
+                    const fallbackContent = String(event.data?.output || 'Serialization failed')
+
+                    // Still apply truncation to fallback content
+                    const config = this.getEffectiveTruncationConfig(startEvent.name)
+                    outputContent = this.applyTruncation(fallbackContent, config)
+                  }
+
+                  toolResults.push({
+                    tool_call_id: toolCallId,
+                    content: outputContent,
+                  })
+
+                  // Clean up to prevent memory leaks
+                  toolStartEvents.delete(event.run_id)
+                }
+              }
+              else {
+                logger.warn('⚠️ on_tool_end event without matching on_tool_start:', event.run_id)
+              }
+            }
+          }
+
+          // Track response length for telemetry
+          if (event.event === 'on_chat_model_stream' && event.data?.chunk?.content) {
+            totalResponseLength += event.data.chunk.content.length
+          }
+
+          yield event
+
+          // Capture final response from chain end event (enhanced to handle all output formats)
+          if (event.event === 'on_chain_end' && event.data?.output) {
+            const output = event.data.output
+            try {
+              if (typeof output === 'string') {
+                finalResponse = output
+              }
+              else if (Array.isArray(output) && output.length > 0 && output[0]?.text) {
+                finalResponse = output[0].text
+              }
+              else if (output && typeof output === 'object' && output.output) {
+                finalResponse = typeof output.output === 'string' ? output.output : JSON.stringify(output.output)
+              }
+              else if (output && typeof output === 'object') {
+                // For custom structured outputs, try common text fields or stringify
+                finalResponse = output.answer || output.text || output.content || JSON.stringify(output)
+              }
+              else {
+                logger.warn('⚠️ Unexpected chain end output format:', typeof output, output)
+              }
+            }
+            catch (error) {
+              logger.warn('⚠️ Error processing chain end output:', error)
+            }
+          }
+        }
+        catch (eventError) {
+          logger.error('❌ Error processing event:', eventError, 'Event:', event)
+          // Continue processing other events despite individual failures
+          continue
         }
       }
 
-      // Add BOTH the user message and AI response to conversation history if memory is enabled
+      // Add to conversation history with proper tool call information and error handling
       if (this.memoryEnabled) {
-        this.addToHistory(new HumanMessage(query))
-        if (finalResponse) {
-          this.addToHistory(new AIMessage(finalResponse))
+        try {
+          this.addToHistory(new HumanMessage(query))
+
+          // CRITICAL: Preserve tool calls even if there's no final response
+          if (finalResponse || toolCalls.length > 0) {
+            // Use finalResponse if available, otherwise use configurable placeholder for tool execution without final response
+            const responseContent = finalResponse || this.getToolExecutionPlaceholder()
+
+            // Create AIMessage with tool_calls if any tools were used
+            const aiMessage = toolCalls.length > 0
+              ? new AIMessage({ content: responseContent, tool_calls: toolCalls })
+              : new AIMessage(responseContent)
+
+            this.addToHistory(aiMessage)
+
+            // Add ToolMessages for each tool result with individual error handling
+            toolResults.forEach((result, index) => {
+              try {
+                this.addToHistory(new ToolMessage({
+                  content: result.content,
+                  tool_call_id: result.tool_call_id,
+                }))
+              }
+              catch (toolMessageError) {
+                logger.error(`❌ Failed to add ToolMessage ${index}:`, toolMessageError)
+              }
+            })
+          }
         }
+        catch (historyError) {
+          logger.error('❌ Error adding to conversation history:', historyError)
+          // Don't throw - this shouldn't break the streaming
+        }
+      }
+
+      // Log any orphaned tool start events (potential memory leaks or missed events)
+      if (toolStartEvents.size > 0) {
+        logger.warn(`⚠️ ${toolStartEvents.size} orphaned tool start events:`, Array.from(toolStartEvents.keys()))
       }
 
       logger.info(`🎉 StreamEvents complete - ${eventCount} events emitted`)
