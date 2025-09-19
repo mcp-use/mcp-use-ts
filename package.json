@@ -93,7 +93,7 @@
     "@langchain/anthropic": "^0.3.26",
     "@langchain/core": "^0.3.72",
     "@langchain/openai": "^0.6.9",
-    "@modelcontextprotocol/sdk": "1.12.1",
+    "@modelcontextprotocol/sdk": "1.18.0",
     "@scarf/scarf": "^1.4.0",
     "ai": "^4.3.19",
     "dotenv": "^16.5.0",
