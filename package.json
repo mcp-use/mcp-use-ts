@@ -107,7 +107,7 @@
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.13.2",
+    "@antfu/eslint-config": "^5.2.1",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.19.8",
     "@types/ws": "^8.18.1",
