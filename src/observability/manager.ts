@@ -13,6 +13,14 @@ export interface ObservabilityConfig {
   customCallbacks?: BaseCallbackHandler[]
   /** Whether to enable verbose logging */
   verbose?: boolean
+  /** Agent ID for tagging traces */
+  agentId?: string
+  /** Metadata to add to traces */
+  metadata?: Record<string, any>
+  /** Function to get current metadata from agent */
+  metadataProvider?: () => Record<string, any>
+  /** Function to get current tags from agent */
+  tagsProvider?: () => string[]
 }
 
 export class ObservabilityManager {
@@ -21,10 +29,18 @@ export class ObservabilityManager {
   private handlerNames: string[] = []
   private initialized = false
   private verbose: boolean
+  private agentId?: string
+  private metadata?: Record<string, any>
+  private metadataProvider?: () => Record<string, any>
+  private tagsProvider?: () => string[]
 
   constructor(config: ObservabilityConfig = {}) {
     this.customCallbacks = config.customCallbacks
     this.verbose = config.verbose ?? false
+    this.agentId = config.agentId
+    this.metadata = config.metadata
+    this.metadataProvider = config.metadataProvider
+    this.tagsProvider = config.tagsProvider
   }
 
   /**
@@ -38,11 +54,22 @@ export class ObservabilityManager {
     // Import handlers lazily to avoid circular imports
     try {
       const { langfuseHandler, langfuseInitPromise } = await import('./langfuse.js')
-      // Wait for initialization to complete
-      const initPromise = langfuseInitPromise()
-      if (initPromise) {
-        await initPromise
+
+      // If we have an agent ID, metadata, or providers, we need to reinitialize Langfuse
+      if (this.agentId || this.metadata || this.metadataProvider || this.tagsProvider) {
+        // Import the initialization function directly
+        const { initializeLangfuse } = await import('./langfuse.js')
+        await initializeLangfuse(this.agentId, this.metadata, this.metadataProvider, this.tagsProvider)
+        logger.debug(`ObservabilityManager: Reinitialized Langfuse with agent ID: ${this.agentId}, metadata: ${JSON.stringify(this.metadata)}`)
       }
+      else {
+        // Wait for existing initialization to complete
+        const initPromise = langfuseInitPromise()
+        if (initPromise) {
+          await initPromise
+        }
+      }
+
       const handler = langfuseHandler()
       if (handler) {
         this.availableHandlers.push(handler)

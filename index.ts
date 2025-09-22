@@ -17,6 +17,9 @@ export { ServerManager } from './src/managers/server_manager.js'
 
 export * from './src/managers/tools/index.js'
 
+// Export observability utilities
+export { type ObservabilityConfig, ObservabilityManager } from './src/observability/index.js'
+
 // Export telemetry utilities
 export { setTelemetrySource, Telemetry } from './src/telemetry/index.js'
 

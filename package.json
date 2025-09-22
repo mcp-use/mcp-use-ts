@@ -122,6 +122,10 @@
     "*.{js,ts}": [
       "eslint --fix",
       "eslint"
+    ],
+    "*.md": [
+      "eslint --fix",
+      "eslint"
     ]
   }
 }
