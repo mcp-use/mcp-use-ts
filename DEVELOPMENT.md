@@ -77,11 +77,13 @@ We use GitHub Actions to automate our release process, connecting GitHub Release
    ```
 
    This will:
+
    - Update the version in package.json
    - Create a git tag
    - Push the changes and tag to GitHub
 
 2. **Create GitHub Release**:
+
    - Go to GitHub repository → "Releases" → "Draft a new release"
    - Choose the tag that was just created
    - Fill in release notes detailing what's new, fixes, and any breaking changes
@@ -90,6 +92,7 @@ We use GitHub Actions to automate our release process, connecting GitHub Release
 3. **Automated Publishing**:
 
    The GitHub Action will automatically:
+
    - Verify the package version matches the GitHub tag
    - Run linting and build checks
    - Generate a changelog from commits since the last release
@@ -103,10 +106,12 @@ We use GitHub Actions to automate our release process, connecting GitHub Release
 To set up automated publishing:
 
 1. Generate an NPM access token:
+
    - Go to npmjs.com → User Settings → Access Tokens
    - Create a new token with "Automation" type and publish permissions
 
 2. Add the token to GitHub repository secrets:
+
    - Go to your GitHub repository → Settings → Secrets → Actions
    - Add a new secret named `NPM_TOKEN` with the value of your NPM token
 

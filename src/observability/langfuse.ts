@@ -23,7 +23,7 @@ const langfuseState = {
   initPromise: null as Promise<void> | null,
 }
 
-async function initializeLangfuse(): Promise<void> {
+async function initializeLangfuse(agentId?: string, metadata?: Record<string, any>, metadataProvider?: () => Record<string, any>, tagsProvider?: () => string[]): Promise<void> {
   try {
     // Dynamically import to avoid errors if package not installed
     const langfuseModule = await import('langfuse-langchain').catch(() => null)
@@ -33,10 +33,124 @@ async function initializeLangfuse(): Promise<void> {
     }
 
     const { CallbackHandler } = langfuseModule as any
-    // Create a custom CallbackHandler wrapper to add logging
+    // Create a custom CallbackHandler wrapper to add logging and custom metadata
     class LoggingCallbackHandler extends CallbackHandler {
-      constructor(config?: any) {
+      private agentId?: string
+      private metadata?: Record<string, any>
+      private metadataProvider?: () => Record<string, any>
+      private tagsProvider?: () => string[]
+      private verbose: boolean
+
+      constructor(config?: any, agentId?: string, metadata?: Record<string, any>, metadataProvider?: () => Record<string, any>, tagsProvider?: () => string[]) {
         super(config)
+        this.agentId = agentId
+        this.metadata = metadata
+        this.metadataProvider = metadataProvider
+        this.tagsProvider = tagsProvider
+        this.verbose = config?.verbose ?? false
+      }
+
+      // Override to add custom metadata to traces
+      async handleChainStart(chain: any, inputs: any, runId?: string, parentRunId?: string, tags?: string[], metadata?: any, name?: string, kwargs?: any): Promise<void> {
+        logger.debug('Langfuse: Chain start intercepted')
+
+        // Add custom tags and metadata
+        const customTags = this.getCustomTags()
+        const metadataToAdd = this.getMetadata()
+
+        // Merge with existing tags and metadata
+        const enhancedTags = [...(tags || []), ...customTags]
+        const enhancedMetadata = { ...(metadata || {}), ...metadataToAdd }
+
+        if (this.verbose) {
+          logger.debug(`Langfuse: Chain start with custom tags: ${JSON.stringify(enhancedTags)}`)
+          logger.debug(`Langfuse: Chain start with metadata: ${JSON.stringify(enhancedMetadata)}`)
+        }
+
+        return super.handleChainStart(chain, inputs, runId, parentRunId, enhancedTags, enhancedMetadata, name, kwargs)
+      }
+
+      // Get custom tags based on environment and agent configuration
+      private getCustomTags(): string[] {
+        const tags: string[] = []
+
+        // Add environment tag
+        const env = this.getEnvironmentTag()
+        if (env) {
+          tags.push(`env:${env}`)
+        }
+
+        // Add agent ID tag if available
+        if (this.agentId) {
+          tags.push(`agent_id:${this.agentId}`)
+        }
+
+        // Add tags from provider if available
+        if (this.tagsProvider) {
+          const providerTags = this.tagsProvider()
+          if (providerTags && providerTags.length > 0) {
+            tags.push(...providerTags)
+          }
+        }
+
+        return tags
+      }
+
+      // Get metadata
+      private getMetadata(): any {
+        const metadata: any = {}
+
+        // Add environment metadata
+        const env = this.getEnvironmentTag()
+        if (env) {
+          metadata.env = env
+        }
+
+        // Add agent ID metadata if available
+        if (this.agentId) {
+          metadata.agent_id = this.agentId
+        }
+
+        // Add static metadata if provided
+        if (this.metadata) {
+          Object.assign(metadata, this.metadata)
+        }
+
+        // Add dynamic metadata from provider if available
+        if (this.metadataProvider) {
+          const dynamicMetadata = this.metadataProvider()
+          if (dynamicMetadata) {
+            Object.assign(metadata, dynamicMetadata)
+          }
+        }
+
+        return metadata
+      }
+
+      // Determine environment tag based on MCP_USE_AGENT_ENV
+      private getEnvironmentTag(): string | null {
+        const agentEnv = process.env.MCP_USE_AGENT_ENV
+        if (!agentEnv) {
+          // Default to 'unknown' if environment is not explicitly set
+          return 'unknown'
+        }
+
+        const envLower = agentEnv.toLowerCase()
+        if (envLower === 'local' || envLower === 'development') {
+          return 'local'
+        }
+        else if (envLower === 'production' || envLower === 'prod') {
+          return 'production'
+        }
+        else if (envLower === 'staging' || envLower === 'stage') {
+          return 'staging'
+        }
+        else if (envLower === 'hosted' || envLower === 'cloud') {
+          return 'hosted'
+        }
+
+        // For any other values, use the value as-is but sanitized
+        return envLower.replace(/[^a-z0-9_-]/g, '_')
       }
 
       async handleLLMStart(...args: any[]): Promise<void> {
@@ -45,14 +159,6 @@ async function initializeLangfuse(): Promise<void> {
           logger.debug(`Langfuse: LLM start args: ${JSON.stringify(args)}`)
         }
         return super.handleLLMStart(...args)
-      }
-
-      async handleChainStart(...args: any[]): Promise<void> {
-        logger.debug('Langfuse: Chain start intercepted')
-        if (this.verbose) {
-          logger.debug(`Langfuse: Chain start args: ${JSON.stringify(args)}`)
-        }
-        return super.handleChainStart(...args)
       }
 
       async handleToolStart(...args: any[]): Promise<void> {
@@ -100,7 +206,7 @@ async function initializeLangfuse(): Promise<void> {
       enabled: process.env.LANGFUSE_ENABLED !== 'false',
     }
 
-    langfuseState.handler = new LoggingCallbackHandler(config) as BaseCallbackHandler
+    langfuseState.handler = new LoggingCallbackHandler(config, agentId, metadata, metadataProvider, tagsProvider) as unknown as BaseCallbackHandler
     logger.debug('Langfuse observability initialized successfully with logging enabled')
 
     // Also initialize the client for direct usage if needed
@@ -143,3 +249,4 @@ else {
 export const langfuseHandler = () => langfuseState.handler
 export const langfuseClient = () => langfuseState.client
 export const langfuseInitPromise = () => langfuseState.initPromise
+export { initializeLangfuse }

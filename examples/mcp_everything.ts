@@ -5,20 +5,45 @@
 
 import { ChatOpenAI } from '@langchain/openai'
 import { config } from 'dotenv'
-import { MCPAgent, MCPClient } from '../index.js'
+import { Logger, MCPAgent, MCPClient } from '../index.js'
 
 // Load environment variables from .env file
 config()
+
+// Enable debug logging to see observability messages
+Logger.setDebug(true)
 
 const everythingServer = {
   mcpServers: { everything: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-everything'] } },
 }
 
 async function main() {
+  console.log('🚀 Starting MCP Everything example with Langfuse tracing...')
+  console.log('📊 Environment variables:')
+  console.log(`   LANGFUSE_PUBLIC_KEY: ${process.env.LANGFUSE_PUBLIC_KEY ? '✅ Set' : '❌ Missing'}`)
+  console.log(`   LANGFUSE_SECRET_KEY: ${process.env.LANGFUSE_SECRET_KEY ? '✅ Set' : '❌ Missing'}`)
+  console.log(`   LANGFUSE_HOST: ${process.env.LANGFUSE_HOST || 'Not set'}`)
+  console.log(`   MCP_USE_LANGFUSE: ${process.env.MCP_USE_LANGFUSE || 'Not set'}`)
+
   const client = new MCPClient(everythingServer)
   const llm = new ChatOpenAI({ model: 'gpt-4o', temperature: 0 })
-  const agent = new MCPAgent({ llm, client, maxSteps: 30 })
+  const agent = new MCPAgent({
+    llm,
+    client,
+    maxSteps: 30,
+  })
 
+  console.log('🔧 Initializing agent...')
+  await agent.initialize()
+
+  // Set additional metadata for testing
+  agent.setMetadata({
+    agent_id: 'test-agent-123',
+    test_run: true,
+    example: 'mcp_everything',
+  })
+
+  console.log('💬 Running agent query...')
   const result = await agent.run(
     `Hello, you are a tester can you please answer the follwing questions:
 - Which resources do you have access to?
@@ -26,7 +51,11 @@ async function main() {
 - Which tools do you have access to?`,
     30,
   )
-  console.log(`\nResult: ${result}`)
+  console.log(`\n✅ Result: ${result}`)
+
+  console.log('🧹 Closing agent...')
+  await agent.close()
+  console.log('🎉 Example completed! Check your Langfuse dashboard for traces.')
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
