@@ -365,6 +365,7 @@ describe('mCPAgent streamEvents() edge cases', () => {
       get: () => ({
         streamEvents: vi.fn().mockImplementation(async function* () {
           yield { event: 'malformed' } // Missing required fields
+          yield null // Invalid event
           yield { event: 'on_chat_model_stream', data: { chunk: { content: 'test' } } }
           yield { event: 'on_chain_end', data: { output: [{ text: 'test response' }] } }
         }),

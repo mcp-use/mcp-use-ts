@@ -46,6 +46,7 @@ export class MCPAgent {
   private additionalTools: StructuredToolInterface[]
   private useServerManager: boolean
   private verbose: boolean
+  private observe: boolean
   private systemPrompt?: string | null
   private systemPromptTemplateOverride?: string | null
   private additionalInstructions?: string | null
@@ -86,6 +87,7 @@ export class MCPAgent {
     additionalTools?: StructuredToolInterface[]
     useServerManager?: boolean
     verbose?: boolean
+    observe?: boolean
     adapter?: LangChainAdapter
     serverManagerFactory?: (client: MCPClient) => ServerManager
     callbacks?: BaseCallbackHandler[]
@@ -107,6 +109,7 @@ export class MCPAgent {
       this.memoryEnabled = options.memoryEnabled ?? true
       this.autoInitialize = options.autoInitialize ?? false
       this.verbose = options.verbose ?? false
+      this.observe = options.observe ?? true
       this.connectors = []
       this.disallowedTools = []
       this.additionalTools = []
@@ -142,6 +145,7 @@ export class MCPAgent {
     this.additionalTools = options.additionalTools ?? []
     this.useServerManager = options.useServerManager ?? false
     this.verbose = options.verbose ?? false
+    this.observe = options.observe ?? true
 
     if (!this.client && this.connectors.length === 0) {
       throw new Error('Either \'client\' or at least one \'connector\' must be provided.')
@@ -176,6 +180,7 @@ export class MCPAgent {
     this.observabilityManager = new ObservabilityManager({
       customCallbacks: options.callbacks,
       verbose: this.verbose,
+      observe: this.observe,
       agentId: options.agentId,
       metadataProvider: () => this.getMetadata(),
       tagsProvider: () => this.getTags(),

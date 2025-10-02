@@ -298,25 +298,9 @@ export function Chat() {
 
 ## 📊 Observability & Monitoring
 
-mcp-use-ts provides built-in observability support through the `ObservabilityManager`, with seamless integration for Langfuse and other observability platforms.
+mcp-use-ts provides built-in observability support through the `ObservabilityManager`, with integration for Langfuse and other observability platforms.
 
-### Features
-
-- **Automatic Tracing**: All agent executions, tool calls, and LLM interactions are automatically traced
-- **Dynamic Metadata**: Add contextual metadata to traces at runtime
-- **Tag Support**: Tag traces with dynamic information for better organization
-- **Langfuse Integration**: Native support for Langfuse observability platform
-- **Custom Callbacks**: Support for additional custom callback handlers
-
-### Setup
-
-#### 1. Install Observability Dependencies
-
-```bash
-npm install langfuse langfuse-langchain
-```
-
-#### 2. Configure Environment Variables
+#### To enable observability simply configure Environment Variables
 
 ```ini
 # .env
@@ -325,41 +309,12 @@ LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
 LANGFUSE_HOST=https://cloud.langfuse.com  # or your self-hosted instance
 ```
 
-#### 3. Basic Usage
-
-```ts
-import { ChatOpenAI } from '@langchain/openai'
-import { MCPAgent, MCPClient, ObservabilityManager } from 'mcp-use'
-
-const client = new MCPClient({
-  mcpServers: {
-    everything: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-everything'] }
-  }
-})
-
-const llm = new ChatOpenAI({ model: 'gpt-4o' })
-
-// Create agent with observability enabled
-const agent = new MCPAgent({
-  llm,
-  client,
-  maxSteps: 10,
-  verbose: true // Enable verbose logging for better observability
-})
-
-// Initialize to set up observability callbacks
-await agent.initialize()
-
-// Run queries - all interactions will be automatically traced
-const result = await agent.run('What tools are available?')
-```
-
 ### Advanced Observability Features
 
 #### Dynamic Metadata and Tags
 
 ```ts
-// Set metadata for the current execution
+// Set custom metadata for the current execution
 agent.setMetadata({
   userId: 'user123',
   sessionId: 'session456',
@@ -371,77 +326,6 @@ agent.setTags(['production', 'user-query', 'tool-discovery'])
 
 // Run query with metadata and tags
 const result = await agent.run('Search for restaurants in Tokyo')
-```
-
-#### Custom Observability Manager
-
-```ts
-import { ObservabilityManager } from 'mcp-use'
-
-// Create custom observability manager
-const observabilityManager = new ObservabilityManager({
-  verbose: true,
-  agentId: 'my-custom-agent',
-  metadata: {
-    version: '1.0.0',
-    deployment: 'production'
-  },
-  metadataProvider: () => ({
-    timestamp: new Date().toISOString(),
-    requestId: crypto.randomUUID()
-  }),
-  tagsProvider: () => ['automated', 'scheduled']
-})
-
-// Use with MCPAgent
-const agent = new MCPAgent({
-  llm,
-  client,
-  callbacks: await observabilityManager.getCallbacks()
-})
-```
-
-#### Runtime Metadata Updates
-
-```ts
-// Update metadata during execution
-agent.setMetadata({
-  currentStep: 1,
-  toolsUsed: ['search', 'browse']
-})
-
-// Add more tags
-agent.setTags(['step-1', 'search-complete'])
-
-// Continue execution with updated context
-const result = await agent.run('Continue with the search')
-```
-
-### Observability in Production
-
-#### Environment Configuration
-
-```ts
-// Production setup with comprehensive observability
-const agent = new MCPAgent({
-  llm,
-  client,
-  maxSteps: 20,
-  verbose: process.env.NODE_ENV === 'development',
-  // Observability is automatically enabled when environment variables are set
-})
-
-await agent.initialize()
-
-// Set production metadata
-agent.setMetadata({
-  service: 'mcp-agent',
-  version: process.env.APP_VERSION,
-  environment: process.env.NODE_ENV,
-  region: process.env.AWS_REGION
-})
-
-agent.setTags(['production', 'api', 'mcp-agent'])
 ```
 
 #### Monitoring Agent Performance
@@ -471,32 +355,13 @@ for await (const event of eventStream) {
 
 ### Disabling Observability
 
-To disable observability, set the environment variable:
-
-```ini
-MCP_USE_LANGFUSE=false
-```
-
-Or programmatically:
+To disable observability, either remove langfuse env variables or
 
 ```ts
 const agent = new MCPAgent({
   llm,
   client,
-  callbacks: [] // No callbacks = no observability
-})
-```
-
-### Available Observability Exports
-
-```ts
-import type { ObservabilityConfig } from 'mcp-use'
-import { ObservabilityManager } from 'mcp-use'
-
-// Use ObservabilityManager directly for custom setups
-const manager = new ObservabilityManager({
-  verbose: true,
-  agentId: 'custom-agent'
+  observe: false
 })
 ```
 
