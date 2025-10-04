@@ -6,8 +6,8 @@ This document provides guidance for developers contributing to this project and 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/zandko/mcp-use.git
-   cd mcp-use
+   git clone https://github.com/<YOUR_USERNAME>/mcp-use-ts.git
+   cd mcp-use-ts
    ```
 2. Install dependencies:
    ```bash
