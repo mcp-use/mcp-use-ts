@@ -29,14 +29,16 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist-cjs/index.js"
     }
   },
-  "main": "./dist/index.js",
+  "main": "./dist-cjs/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "dist-cjs"
   ],
   "engines": {
     "node": ">=22.0.0"
@@ -45,7 +47,9 @@
     "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "shx rm -rf dist && tsc",
+    "build:cjs": "shx rm -rf dist-cjs && tsc --project tsconfig.cjs.json && node scripts/create-cjs-package.cjs",
+    "build:all": "npm run build && npm run build:cjs",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "test": "vitest",
@@ -99,6 +103,7 @@
     "ai": "^4.3.19",
     "dotenv": "^16.5.0",
     "langchain": "^0.3.27",
+    "lodash": "^4.17.21",
     "lodash-es": "^4.17.21",
     "posthog-node": "^5.1.1",
     "uuid": "^11.1.0",
