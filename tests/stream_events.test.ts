@@ -100,7 +100,7 @@ describe('mCPAgent streamEvents()', () => {
       yield {
         event: 'on_chain_end',
         name: 'AgentExecutor',
-        data: { output: 'Hello world' },
+        data: { output: [{ text: 'Hello world' }] },
       }
     })
 
@@ -367,6 +367,7 @@ describe('mCPAgent streamEvents() edge cases', () => {
           yield { event: 'malformed' } // Missing required fields
           yield null // Invalid event
           yield { event: 'on_chat_model_stream', data: { chunk: { content: 'test' } } }
+          yield { event: 'on_chain_end', data: { output: [{ text: 'test response' }] } }
         }),
         maxIterations: 3,
       }),

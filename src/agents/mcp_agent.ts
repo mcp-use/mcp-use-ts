@@ -46,6 +46,7 @@ export class MCPAgent {
   private additionalTools: StructuredToolInterface[]
   private useServerManager: boolean
   private verbose: boolean
+  private observe: boolean
   private systemPrompt?: string | null
   private systemPromptTemplateOverride?: string | null
   private additionalInstructions?: string | null
@@ -65,6 +66,8 @@ export class MCPAgent {
   // Observability support
   private observabilityManager: ObservabilityManager
   private callbacks: BaseCallbackHandler[] = []
+  private metadata: Record<string, any> = {}
+  private tags: string[] = []
 
   // Remote agent support
   private isRemote = false
@@ -84,6 +87,7 @@ export class MCPAgent {
     additionalTools?: StructuredToolInterface[]
     useServerManager?: boolean
     verbose?: boolean
+    observe?: boolean
     adapter?: LangChainAdapter
     serverManagerFactory?: (client: MCPClient) => ServerManager
     callbacks?: BaseCallbackHandler[]
@@ -105,6 +109,7 @@ export class MCPAgent {
       this.memoryEnabled = options.memoryEnabled ?? true
       this.autoInitialize = options.autoInitialize ?? false
       this.verbose = options.verbose ?? false
+      this.observe = options.observe ?? true
       this.connectors = []
       this.disallowedTools = []
       this.additionalTools = []
@@ -113,7 +118,10 @@ export class MCPAgent {
       this.telemetry = Telemetry.getInstance()
       this.modelProvider = 'remote'
       this.modelName = 'remote-agent'
-      this.observabilityManager = new ObservabilityManager({ customCallbacks: options.callbacks })
+      this.observabilityManager = new ObservabilityManager({
+        customCallbacks: options.callbacks,
+        agentId: options.agentId,
+      })
       this.callbacks = []
       return
     }
@@ -137,6 +145,7 @@ export class MCPAgent {
     this.additionalTools = options.additionalTools ?? []
     this.useServerManager = options.useServerManager ?? false
     this.verbose = options.verbose ?? false
+    this.observe = options.observe ?? true
 
     if (!this.client && this.connectors.length === 0) {
       throw new Error('Either \'client\' or at least one \'connector\' must be provided.')
@@ -171,6 +180,10 @@ export class MCPAgent {
     this.observabilityManager = new ObservabilityManager({
       customCallbacks: options.callbacks,
       verbose: this.verbose,
+      observe: this.observe,
+      agentId: options.agentId,
+      metadataProvider: () => this.getMetadata(),
+      tagsProvider: () => this.getTags(),
     })
 
     // Make getters configurable for test mocking
@@ -263,6 +276,14 @@ export class MCPAgent {
     // Create the agent executor and mark initialized
     this._agentExecutor = this.createAgent()
     this._initialized = true
+
+    // Add MCP server information to observability metadata
+    const mcpServerInfo = this.getMCPServerInfo()
+    if (Object.keys(mcpServerInfo).length > 0) {
+      this.setMetadata(mcpServerInfo)
+      logger.debug(`MCP server info added to metadata: ${JSON.stringify(mcpServerInfo)}`)
+    }
+
     logger.info('✨ Agent initialization complete')
   }
 
@@ -359,6 +380,179 @@ export class MCPAgent {
 
   public getDisallowedTools(): string[] {
     return this.disallowedTools
+  }
+
+  /**
+   * Set metadata for observability traces
+   * @param newMetadata - Key-value pairs to add to metadata. Keys should be strings, values should be serializable.
+   */
+  public setMetadata(newMetadata: Record<string, any>): void {
+    // Validate and sanitize metadata
+    const sanitizedMetadata = this.sanitizeMetadata(newMetadata)
+
+    // Merge with existing metadata instead of replacing it
+    this.metadata = { ...this.metadata, ...sanitizedMetadata }
+    logger.debug(`Metadata set: ${JSON.stringify(this.metadata)}`)
+  }
+
+  /**
+   * Get current metadata
+   * @returns A copy of the current metadata object
+   */
+  public getMetadata(): Record<string, any> {
+    return { ...this.metadata }
+  }
+
+  /**
+   * Set tags for observability traces
+   * @param newTags - Array of tag strings to add. Duplicates will be automatically removed.
+   */
+  public setTags(newTags: string[]): void {
+    // Validate and sanitize tags
+    const sanitizedTags = this.sanitizeTags(newTags)
+    this.tags = [...new Set([...this.tags, ...sanitizedTags])] // Remove duplicates
+    logger.debug(`Tags set: ${JSON.stringify(this.tags)}`)
+  }
+
+  /**
+   * Get current tags
+   * @returns A copy of the current tags array
+   */
+  public getTags(): string[] {
+    return [...this.tags]
+  }
+
+  /**
+   * Sanitize metadata to ensure compatibility with observability platforms
+   * @param metadata - Raw metadata object
+   * @returns Sanitized metadata object
+   */
+  private sanitizeMetadata(metadata: Record<string, any>): Record<string, any> {
+    const sanitized: Record<string, any> = {}
+
+    for (const [key, value] of Object.entries(metadata)) {
+      // Validate key
+      if (typeof key !== 'string' || key.length === 0) {
+        logger.warn(`Invalid metadata key: ${key}. Skipping.`)
+        continue
+      }
+
+      // Sanitize key (remove special characters that might cause issues)
+      const sanitizedKey = key.replace(/[^\w-]/g, '_')
+
+      // Validate and sanitize value
+      if (value === null || value === undefined) {
+        sanitized[sanitizedKey] = value
+      }
+      else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        sanitized[sanitizedKey] = value
+      }
+      else if (Array.isArray(value)) {
+        // Only allow arrays of primitives
+        const sanitizedArray = value.filter(item =>
+          typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
+        )
+        if (sanitizedArray.length > 0) {
+          sanitized[sanitizedKey] = sanitizedArray
+        }
+      }
+      else if (typeof value === 'object') {
+        // Try to serialize objects, but limit depth to prevent circular references
+        try {
+          const serialized = JSON.stringify(value)
+          if (serialized.length > 1000) {
+            logger.warn(`Metadata value for key '${sanitizedKey}' is too large. Truncating.`)
+            sanitized[sanitizedKey] = `${serialized.substring(0, 1000)}...`
+          }
+          else {
+            sanitized[sanitizedKey] = value
+          }
+        }
+        catch (error) {
+          logger.warn(`Failed to serialize metadata value for key '${sanitizedKey}': ${error}. Skipping.`)
+        }
+      }
+      else {
+        logger.warn(`Unsupported metadata value type for key '${sanitizedKey}': ${typeof value}. Skipping.`)
+      }
+    }
+
+    return sanitized
+  }
+
+  /**
+   * Sanitize tags to ensure compatibility with observability platforms
+   * @param tags - Array of tag strings
+   * @returns Array of sanitized tag strings
+   */
+  private sanitizeTags(tags: string[]): string[] {
+    return tags
+      .filter(tag => typeof tag === 'string' && tag.length > 0)
+      .map(tag => tag.replace(/[^\w:-]/g, '_'))
+      .filter(tag => tag.length <= 50) // Limit tag length
+  }
+
+  /**
+   * Get MCP server information for observability metadata
+   */
+  private getMCPServerInfo(): Record<string, any> {
+    const serverInfo: Record<string, any> = {}
+
+    try {
+      if (this.client) {
+        const serverNames = this.client.getServerNames()
+        serverInfo.mcp_servers_count = serverNames.length
+        serverInfo.mcp_server_names = serverNames
+
+        // Get server types and configurations
+        const serverConfigs: Record<string, any> = {}
+        for (const serverName of serverNames) {
+          try {
+            const config = this.client.getServerConfig(serverName)
+            if (config) {
+              // Determine server type based on configuration
+              let serverType = 'unknown'
+              if (config.command) {
+                serverType = 'command'
+              }
+              else if (config.url) {
+                serverType = 'http'
+              }
+              else if (config.ws_url) {
+                serverType = 'websocket'
+              }
+
+              serverConfigs[serverName] = {
+                type: serverType,
+                // Include safe configuration details (avoid sensitive data)
+                has_args: !!config.args,
+                has_env: !!config.env,
+                has_headers: !!config.headers,
+                url: config.url || null,
+                command: config.command || null,
+              }
+            }
+          }
+          catch (error) {
+            logger.warn(`Failed to get config for server '${serverName}': ${error}`)
+            serverConfigs[serverName] = { type: 'error', error: 'config_unavailable' }
+          }
+        }
+        serverInfo.mcp_server_configs = serverConfigs
+      }
+      else if (this.connectors && this.connectors.length > 0) {
+        // Handle direct connectors
+        serverInfo.mcp_servers_count = this.connectors.length
+        serverInfo.mcp_server_names = this.connectors.map(c => c.publicIdentifier)
+        serverInfo.mcp_server_types = this.connectors.map(c => c.constructor.name)
+      }
+    }
+    catch (error) {
+      logger.warn(`Failed to collect MCP server info: ${error}`)
+      serverInfo.error = 'collection_failed'
+    }
+
+    return serverInfo
   }
 
   private async _consumeAndReturn<T>(

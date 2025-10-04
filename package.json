@@ -74,7 +74,8 @@
     "example:oauth": "npm run build && node dist/examples/simple_oauth_example.js",
     "example:blender": "npm run build && node dist/examples/blender_use.js",
     "example:add_server": "npm run build && node dist/examples/add_server_tool.js",
-    "example:structured": "npm run build && node dist/examples/structured_output.js"
+    "example:structured": "npm run build && node dist/examples/structured_output.js",
+    "example:observability": "npm run build && node dist/examples/observability.js"
   },
   "peerDependencies": {
     "langfuse": "^3.32.0",
@@ -120,6 +121,10 @@
   },
   "lint-staged": {
     "*.{js,ts}": [
+      "eslint --fix",
+      "eslint"
+    ],
+    "*.md": [
       "eslint --fix",
       "eslint"
     ]

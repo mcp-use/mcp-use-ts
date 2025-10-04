@@ -13,6 +13,16 @@ export interface ObservabilityConfig {
   customCallbacks?: BaseCallbackHandler[]
   /** Whether to enable verbose logging */
   verbose?: boolean
+  /** Whether to enable observability (defaults to true) */
+  observe?: boolean
+  /** Agent ID for tagging traces */
+  agentId?: string
+  /** Metadata to add to traces */
+  metadata?: Record<string, any>
+  /** Function to get current metadata from agent */
+  metadataProvider?: () => Record<string, any>
+  /** Function to get current tags from agent */
+  tagsProvider?: () => string[]
 }
 
 export class ObservabilityManager {
@@ -21,10 +31,20 @@ export class ObservabilityManager {
   private handlerNames: string[] = []
   private initialized = false
   private verbose: boolean
+  private observe: boolean
+  private agentId?: string
+  private metadata?: Record<string, any>
+  private metadataProvider?: () => Record<string, any>
+  private tagsProvider?: () => string[]
 
   constructor(config: ObservabilityConfig = {}) {
     this.customCallbacks = config.customCallbacks
     this.verbose = config.verbose ?? false
+    this.observe = config.observe ?? true
+    this.agentId = config.agentId
+    this.metadata = config.metadata
+    this.metadataProvider = config.metadataProvider
+    this.tagsProvider = config.tagsProvider
   }
 
   /**
@@ -38,11 +58,22 @@ export class ObservabilityManager {
     // Import handlers lazily to avoid circular imports
     try {
       const { langfuseHandler, langfuseInitPromise } = await import('./langfuse.js')
-      // Wait for initialization to complete
-      const initPromise = langfuseInitPromise()
-      if (initPromise) {
-        await initPromise
+
+      // If we have an agent ID, metadata, or providers, we need to reinitialize Langfuse
+      if (this.agentId || this.metadata || this.metadataProvider || this.tagsProvider) {
+        // Import the initialization function directly
+        const { initializeLangfuse } = await import('./langfuse.js')
+        await initializeLangfuse(this.agentId, this.metadata, this.metadataProvider, this.tagsProvider)
+        logger.debug(`ObservabilityManager: Reinitialized Langfuse with agent ID: ${this.agentId}, metadata: ${JSON.stringify(this.metadata)}`)
       }
+      else {
+        // Wait for existing initialization to complete
+        const initPromise = langfuseInitPromise()
+        if (initPromise) {
+          await initPromise
+        }
+      }
+
       const handler = langfuseHandler()
       if (handler) {
         this.availableHandlers.push(handler)
@@ -64,6 +95,12 @@ export class ObservabilityManager {
    * @returns List of callbacks - either custom callbacks if provided, or all available observability handlers.
    */
   async getCallbacks(): Promise<BaseCallbackHandler[]> {
+    // If observability is disabled, return empty array
+    if (!this.observe) {
+      logger.debug('ObservabilityManager: Observability disabled via observe=false')
+      return []
+    }
+
     // If custom callbacks were provided, use those
     if (this.customCallbacks) {
       logger.debug(`ObservabilityManager: Using ${this.customCallbacks.length} custom callbacks`)
@@ -88,6 +125,11 @@ export class ObservabilityManager {
    * @returns List of handler names (e.g., ["Langfuse", "Laminar"])
    */
   async getHandlerNames(): Promise<string[]> {
+    // If observability is disabled, return empty array
+    if (!this.observe) {
+      return []
+    }
+
     if (this.customCallbacks) {
       // For custom callbacks, try to get their class names
       return this.customCallbacks.map(cb => cb.constructor.name)
@@ -102,6 +144,11 @@ export class ObservabilityManager {
    * @returns True if callbacks are available, False otherwise.
    */
   async hasCallbacks(): Promise<boolean> {
+    // If observability is disabled, no callbacks are available
+    if (!this.observe) {
+      return false
+    }
+
     const callbacks = await this.getCallbacks()
     return callbacks.length > 0
   }

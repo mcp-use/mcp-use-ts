@@ -44,6 +44,7 @@
 | 🧩 **Multi-Server Support**     | Use multiple MCP servers in one agent.                                     |
 | 🛡️ **Tool Restrictions**        | Restrict unsafe tools like filesystem or network.                          |
 | 🔧 **Custom Agents**            | Build your own agents with LangChain.js adapter or implement new adapters. |
+| 📊 **Observability**            | Built-in support for Langfuse with dynamic metadata and tag handling.      |
 
 ---
 
@@ -292,6 +293,77 @@ export function Chat() {
 - **`streamEventsToAISDK()`**: Converts streamEvents to basic text stream
 - **`streamEventsToAISDKWithTools()`**: Enhanced stream with tool usage notifications
 - **`createReadableStreamFromGenerator()`**: Converts async generator to ReadableStream
+
+---
+
+## 📊 Observability & Monitoring
+
+mcp-use-ts provides built-in observability support through the `ObservabilityManager`, with integration for Langfuse and other observability platforms.
+
+#### To enable observability simply configure Environment Variables
+
+```ini
+# .env
+LANGFUSE_PUBLIC_KEY=pk-lf-your-public-key
+LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
+LANGFUSE_HOST=https://cloud.langfuse.com  # or your self-hosted instance
+```
+
+### Advanced Observability Features
+
+#### Dynamic Metadata and Tags
+
+```ts
+// Set custom metadata for the current execution
+agent.setMetadata({
+  userId: 'user123',
+  sessionId: 'session456',
+  environment: 'production'
+})
+
+// Set tags for better organization
+agent.setTags(['production', 'user-query', 'tool-discovery'])
+
+// Run query with metadata and tags
+const result = await agent.run('Search for restaurants in Tokyo')
+```
+
+#### Monitoring Agent Performance
+
+```ts
+// Stream events for detailed monitoring
+const eventStream = agent.streamEvents('Complex multi-step query')
+
+for await (const event of eventStream) {
+  // Monitor different event types
+  switch (event.event) {
+    case 'on_llm_start':
+      console.log('LLM call started:', event.data)
+      break
+    case 'on_tool_start':
+      console.log('Tool execution started:', event.name, event.data)
+      break
+    case 'on_tool_end':
+      console.log('Tool execution completed:', event.name, event.data)
+      break
+    case 'on_chain_end':
+      console.log('Agent execution completed:', event.data)
+      break
+  }
+}
+```
+
+### Disabling Observability
+
+To disable observability, either remove langfuse env variables or
+
+```ts
+const agent = new MCPAgent({
+  llm,
+  client,
+  observe: false
+})
+```
 
 ---
 
