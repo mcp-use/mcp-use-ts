@@ -1,7 +1,7 @@
 {
   "name": "mcp-use",
   "type": "module",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "packageManager": "pnpm@10.6.1",
   "description": "A utility library for integrating Model Context Protocol (MCP) with LangChain, Zod, and related tools. Provides helpers for schema conversion, event streaming, and SDK usage.",
   "author": "mcp-use, Inc.",
@@ -74,8 +74,7 @@
     "example:oauth": "npm run build && node dist/examples/simple_oauth_example.js",
     "example:blender": "npm run build && node dist/examples/blender_use.js",
     "example:add_server": "npm run build && node dist/examples/add_server_tool.js",
-    "example:structured": "npm run build && node dist/examples/structured_output.js",
-    "example:observability": "npm run build && node dist/examples/observability.js"
+    "example:structured": "npm run build && node dist/examples/structured_output.js"
   },
   "peerDependencies": {
     "langfuse": "^3.32.0",
