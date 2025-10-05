@@ -677,11 +677,7 @@ export class MCPAgent {
         = query.length > 50 ? `${query.slice(0, 50).replace(/\n/g, ' ')}...` : query.replace(/\n/g, ' ')
       logger.info(`💬 Received query: '${display_query}'`)
 
-      // —–– Record user message
-      if (this.memoryEnabled) {
-        this.addToHistory(new HumanMessage(query))
-      }
-
+      // Prepare history (WITHOUT adding current message yet)
       const historyToUse = externalHistory ?? this.conversationHistory
       const langchainHistory: BaseMessage[] = []
       for (const msg of historyToUse) {
@@ -863,6 +859,14 @@ export class MCPAgent {
       logger.info('🎉 Agent execution complete')
       success = true
 
+      // Add BOTH the user message and AI response to conversation history if memory is enabled
+      if (this.memoryEnabled) {
+        this.addToHistory(new HumanMessage(query))
+        if (result) {
+          this.addToHistory(new AIMessage(result as string))
+        }
+      }
+
       // Return regular result
       return result as string | T
     }
@@ -996,13 +1000,7 @@ export class MCPAgent {
         = query.length > 50 ? `${query.slice(0, 50).replace(/\n/g, ' ')}...` : query.replace(/\n/g, ' ')
       logger.info(`💬 Received query for streamEvents: '${display_query}'`)
 
-      // Add user message to history if memory enabled
-      if (this.memoryEnabled) {
-        logger.info(`🔄 Adding user message to history: ${query}`)
-        this.addToHistory(new HumanMessage(query))
-      }
-
-      // Prepare history
+      // Prepare history (WITHOUT adding current message yet)
       const historyToUse = externalHistory ?? this.conversationHistory
       const langchainHistory: BaseMessage[] = []
       for (const msg of historyToUse) {
@@ -1053,9 +1051,12 @@ export class MCPAgent {
         }
       }
 
-      // Add the final AI response to conversation history if memory is enabled
-      if (this.memoryEnabled && finalResponse) {
-        this.addToHistory(new AIMessage(finalResponse))
+      // Add BOTH the user message and AI response to conversation history if memory is enabled
+      if (this.memoryEnabled) {
+        this.addToHistory(new HumanMessage(query))
+        if (finalResponse) {
+          this.addToHistory(new AIMessage(finalResponse))
+        }
       }
 
       logger.info(`🎉 StreamEvents complete - ${eventCount} events emitted`)
