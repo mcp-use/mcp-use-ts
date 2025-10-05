@@ -69,7 +69,7 @@ jobs:
         run: pnpm run build
 
       - name: Run tests
-        run: pnpm test || echo "No tests found, skipping test step"
+        run: pnpm run test:run
 
   publish:
     runs-on: ubuntu-latest
