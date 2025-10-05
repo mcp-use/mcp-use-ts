@@ -42,17 +42,34 @@ jobs:
         with:
           node-version: 22.x
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.1
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Run tests
-        run: npm test || echo "No tests found, skipping test step"
+        run: pnpm run test:run
 
   publish:
     runs-on: ubuntu-latest
@@ -67,11 +84,28 @@ jobs:
           node-version: 22.x
           registry-url: 'https://registry.npmjs.org'
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.1
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Generate changelog
         id: changelog
@@ -88,12 +122,12 @@ jobs:
           body: |
             ${{ steps.changelog.outputs.changelog }}
 
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ github.ref_name }}...HEAD
+            **Full Changelog**: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
           draft: false
           prerelease: false
 
       - name: Publish to NPM
-        run: npm publish
+        run: pnpm publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
 
