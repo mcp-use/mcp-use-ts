@@ -1,7 +1,20 @@
 import type { Logger as WinstonLogger } from 'winston'
-import fs from 'node:fs'
-import path from 'node:path'
 import { createLogger, format, transports } from 'winston'
+
+// Conditional imports for Node.js-only modules
+async function getNodeModules() {
+  if (typeof process !== 'undefined' && process.platform) {
+    try {
+      // Use dynamic imports for Node.js environments
+      const fs = await import('node:fs')
+      const path = await import('node:path')
+      return { fs: fs.default, path: path.default }
+    } catch {
+      return { fs: null, path: null }
+    }
+  }
+  return { fs: null, path: null }
+}
 
 const { combine, timestamp, label, printf, colorize, splat } = format
 
@@ -38,8 +51,7 @@ function isNodeJSEnvironment(): boolean {
 
     // Check for Node.js modules
     const hasNodeModules = (
-      typeof fs !== 'undefined'
-      && typeof createLogger === 'function'
+      typeof createLogger === 'function'
     )
 
     return hasNodeGlobals && hasNodeModules
@@ -195,7 +207,7 @@ export class Logger {
     }
   }
 
-  public static configure(options: LoggerOptions = {}): void {
+  public static async configure(options: LoggerOptions = {}): Promise<void> {
     const { level, console = true, file, format = 'minimal' } = options
     const debugEnv = (typeof process !== 'undefined' && process.env?.DEBUG) || undefined
     const resolvedLevel = level ?? resolveLevel(debugEnv)
@@ -205,16 +217,17 @@ export class Logger {
 
     root.level = resolvedLevel
 
+    // Winston-specific configuration for Node.js environments
+    const winstonRoot = root as WinstonLogger
+
     // For non-Node.js environments, just update the level
     if (!isNodeJSEnvironment()) {
       Object.values(this.simpleInstances).forEach((logger) => {
         logger.level = resolvedLevel
       })
+      
       return
     }
-
-    // Winston-specific configuration for Node.js environments
-    const winstonRoot = root as WinstonLogger
     winstonRoot.clear()
 
     if (console) {
@@ -222,11 +235,14 @@ export class Logger {
     }
 
     if (file) {
-      const dir = path.dirname(path.resolve(file))
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true })
+      const { fs: nodeFs, path: nodePath } = await getNodeModules()
+      if (nodeFs && nodePath) {
+        const dir = nodePath.dirname(nodePath.resolve(file))
+        if (!nodeFs.existsSync(dir)) {
+          nodeFs.mkdirSync(dir, { recursive: true })
+        }
+        winstonRoot.add(new transports.File({ filename: file }))
       }
-      winstonRoot.add(new transports.File({ filename: file }))
     }
 
     // Update all existing Winston loggers with new format

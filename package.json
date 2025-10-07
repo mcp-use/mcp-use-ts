@@ -30,6 +30,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/src/browser.d.ts",
+      "import": "./dist/src/browser.js"
     }
   },
   "main": "./dist/index.js",
@@ -103,6 +107,7 @@
     "posthog-node": "^5.1.1",
     "uuid": "^11.1.0",
     "winston": "^3.17.0",
+    "winston-transport-browserconsole": "^1.0.5",
     "ws": "^8.18.2",
     "zod": "^3.25.48",
     "zod-to-json-schema": "^3.24.6"
