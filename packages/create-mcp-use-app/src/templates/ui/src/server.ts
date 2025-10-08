@@ -149,12 +149,5 @@ server.tool({
 })
 
 
-console.log('🚀 Starting UI MCP Server...')
-console.log('📋 Server: ui-mcp-server v1.0.0')
-console.log('📦 Resources: ui://status, ui://widget/kanban-board, ui://widget/todo-list, ui://widget/data-visualization')
-console.log('🛠️  Tools: show-kanban, show-todo-list, show-data-viz')
-console.log('💬 Prompts: ui-development')
-console.log(`🔍 Inspector UI: http://localhost:${PORT}/inspector`)
-
 // Start the server (MCP endpoints auto-mounted at /mcp)
 server.listen(PORT)
