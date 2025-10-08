@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { MCPClient, OAuthHelper, LINEAR_OAUTH_CONFIG, createOAuthMCPConfig } from 'mcp-use/browser'
+import { createOAuthMCPConfig, LINEAR_OAUTH_CONFIG, MCPClient, OAuthHelper } from 'mcp-use/browser'
+import React, { useEffect, useState } from 'react'
 
 interface Tool {
   name: string
@@ -36,12 +36,13 @@ const MCPTools: React.FC<MCPToolsProps> = ({ config }) => {
         try {
           const tokenResult = await oauthHelper.completeOAuthFlow(serverUrl, callback.code)
           setOAuthState(oauthHelper.getState())
-          
+
           // Create new config with the access token
           const oauthConfig = createOAuthMCPConfig(`${serverUrl}/sse`, tokenResult.access_token)
           const mcpClient = new MCPClient(oauthConfig)
           setClient(mcpClient)
-        } catch (err) {
+        }
+        catch (err) {
           setError(`OAuth authentication failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
           setOAuthState(oauthHelper.getState())
         }
@@ -59,7 +60,8 @@ const MCPTools: React.FC<MCPToolsProps> = ({ config }) => {
         if (requiresAuth) {
           setOAuthState(oauthHelper.getState())
         }
-      } catch (err) {
+      }
+      catch (err) {
         console.warn('Could not check auth requirement:', err)
       }
     }
@@ -79,7 +81,7 @@ const MCPTools: React.FC<MCPToolsProps> = ({ config }) => {
     try {
       // Get all server names from config
       const serverNames = client.getServerNames()
-      
+
       if (serverNames.length === 0) {
         setError('No MCP servers configured')
         setLoading(false)
@@ -92,24 +94,27 @@ const MCPTools: React.FC<MCPToolsProps> = ({ config }) => {
 
       // Collect tools from all sessions
       const allTools: Tool[] = []
-      
+
       for (const [serverName, session] of Object.entries(sessions)) {
         try {
           const sessionTools = session.connector.tools
           const toolsWithServer = sessionTools.map(tool => ({
             ...tool,
-            server: serverName
+            server: serverName,
           }))
           allTools.push(...toolsWithServer)
-        } catch (err) {
+        }
+        catch (err) {
           console.warn(`Failed to get tools from server ${serverName}:`, err)
         }
       }
 
       setTools(allTools)
-    } catch (err) {
+    }
+    catch (err) {
       setError(`Failed to load tools: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    } finally {
+    }
+    finally {
       setLoading(false)
     }
   }
@@ -127,7 +132,8 @@ const MCPTools: React.FC<MCPToolsProps> = ({ config }) => {
     try {
       await oauthHelper.startOAuthFlow(serverUrl)
       setOAuthState(oauthHelper.getState())
-    } catch (err) {
+    }
+    catch (err) {
       setError(`Failed to start OAuth flow: ${err instanceof Error ? err.message : 'Unknown error'}`)
       setOAuthState(oauthHelper.getState())
     }
@@ -145,118 +151,137 @@ const MCPTools: React.FC<MCPToolsProps> = ({ config }) => {
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1>MCP Tools Explorer</h1>
-      
-      <div style={{ marginBottom: '20px' }}>
-        {!oauthState.isAuthenticated ? (
-          <button 
-            onClick={startOAuthFlow} 
-            disabled={oauthState.isAuthenticating || oauthState.isCompletingOAuth}
-            style={{
-              padding: '10px 20px',
-              marginRight: '10px',
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: (oauthState.isAuthenticating || oauthState.isCompletingOAuth) ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {oauthState.isAuthenticating ? 'Opening OAuth...' : 
-             oauthState.isCompletingOAuth ? 'Completing OAuth...' : 
-             'Authenticate with Linear'}
-          </button>
-        ) : (
-          <>
-            <button 
-              onClick={loadTools} 
-              disabled={loading || !client}
-              style={{
-                padding: '10px 20px',
-                marginRight: '10px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: loading || !client ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {loading ? 'Loading...' : 'Load Tools'}
-            </button>
-            
-            <button 
-              onClick={disconnect}
-              disabled={connectedServers.length === 0}
-              style={{
-                padding: '10px 20px',
-                marginRight: '10px',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: connectedServers.length === 0 ? 'not-allowed' : 'pointer'
-              }}
-            >
-              Disconnect
-            </button>
 
-            <button 
-              onClick={clearAuth}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Clear Auth
-            </button>
-          </>
-        )}
+      <div style={{ marginBottom: '20px' }}>
+        {!oauthState.isAuthenticated
+          ? (
+              <button
+                onClick={startOAuthFlow}
+                disabled={oauthState.isAuthenticating || oauthState.isCompletingOAuth}
+                style={{
+                  padding: '10px 20px',
+                  marginRight: '10px',
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: (oauthState.isAuthenticating || oauthState.isCompletingOAuth) ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {oauthState.isAuthenticating
+                  ? 'Opening OAuth...'
+                  : oauthState.isCompletingOAuth
+                    ? 'Completing OAuth...'
+                    : 'Authenticate with Linear'}
+              </button>
+            )
+          : (
+              <>
+                <button
+                  onClick={loadTools}
+                  disabled={loading || !client}
+                  style={{
+                    padding: '10px 20px',
+                    marginRight: '10px',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: loading || !client ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {loading ? 'Loading...' : 'Load Tools'}
+                </button>
+
+                <button
+                  onClick={disconnect}
+                  disabled={connectedServers.length === 0}
+                  style={{
+                    padding: '10px 20px',
+                    marginRight: '10px',
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: connectedServers.length === 0 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Disconnect
+                </button>
+
+                <button
+                  onClick={clearAuth}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Clear Auth
+                </button>
+              </>
+            )}
       </div>
 
       {error && (
-        <div style={{ 
-          padding: '10px', 
-          backgroundColor: '#f8d7da', 
-          color: '#721c24', 
+        <div style={{
+          padding: '10px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
           border: '1px solid #f5c6cb',
           borderRadius: '4px',
-          marginBottom: '20px'
-        }}>
-          Error: {error}
+          marginBottom: '20px',
+        }}
+        >
+          Error:
+          {' '}
+          {error}
         </div>
       )}
 
       {oauthState.isAuthenticated && oauthState.oauthTokens && (
-        <div style={{ 
-          marginBottom: '20px', 
-          padding: '10px', 
-          backgroundColor: '#d4edda', 
+        <div style={{
+          marginBottom: '20px',
+          padding: '10px',
+          backgroundColor: '#d4edda',
           border: '1px solid #c3e6cb',
-          borderRadius: '4px'
-        }}>
+          borderRadius: '4px',
+        }}
+        >
           <h3 style={{ margin: '0 0 5px 0', color: '#155724' }}>✓ Authenticated with Linear</h3>
           <p style={{ margin: '0', color: '#155724', fontSize: '0.9em' }}>
-            Access token: {oauthState.oauthTokens.access_token.substring(0, 20)}...
+            Access token:
+            {' '}
+            {oauthState.oauthTokens.access_token.substring(0, 20)}
+            ...
             {oauthState.oauthTokens.expires_at && (
-              <span> (expires: {new Date(oauthState.oauthTokens.expires_at * 1000).toLocaleString()})</span>
+              <span>
+                {' '}
+                (expires:
+                {new Date(oauthState.oauthTokens.expires_at * 1000).toLocaleString()}
+                )
+              </span>
             )}
           </p>
         </div>
       )}
 
       {oauthState.authError && (
-        <div style={{ 
-          marginBottom: '20px', 
-          padding: '10px', 
-          backgroundColor: '#f8d7da', 
-          color: '#721c24', 
+        <div style={{
+          marginBottom: '20px',
+          padding: '10px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
           border: '1px solid #f5c6cb',
-          borderRadius: '4px'
-        }}>
-          OAuth Error: {oauthState.authError}
+          borderRadius: '4px',
+        }}
+        >
+          OAuth Error:
+          {' '}
+          {oauthState.authError}
         </div>
       )}
 
@@ -265,65 +290,76 @@ const MCPTools: React.FC<MCPToolsProps> = ({ config }) => {
           <h3>Connected Servers:</h3>
           <ul>
             {connectedServers.map(server => (
-              <li key={server} style={{ color: '#28a745' }}>✓ {server}</li>
+              <li key={server} style={{ color: '#28a745' }}>
+                ✓
+                {server}
+              </li>
             ))}
           </ul>
         </div>
       )}
 
       <div>
-        <h3>Available Tools ({tools.length})</h3>
+        <h3>
+          Available Tools (
+          {tools.length}
+          )
+        </h3>
         {tools.length === 0 && !loading && (
           <p style={{ color: '#6c757d' }}>No tools loaded. Click "Load Tools" to get started.</p>
         )}
-        
+
         {tools.map((tool, index) => (
-          <div 
-            key={index} 
-            style={{ 
-              border: '1px solid #dee2e6', 
-              borderRadius: '4px', 
-              padding: '15px', 
+          <div
+            key={index}
+            style={{
+              border: '1px solid #dee2e6',
+              borderRadius: '4px',
+              padding: '15px',
               marginBottom: '10px',
-              backgroundColor: '#f8f9fa'
+              backgroundColor: '#f8f9fa',
             }}
           >
             <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>
               {tool.name}
               {tool.server && (
-                <span style={{ 
-                  fontSize: '0.8em', 
-                  color: '#6c757d', 
+                <span style={{
+                  fontSize: '0.8em',
+                  color: '#6c757d',
                   marginLeft: '10px',
                   backgroundColor: '#e9ecef',
                   padding: '2px 6px',
-                  borderRadius: '3px'
-                }}>
-                  from {tool.server}
+                  borderRadius: '3px',
+                }}
+                >
+                  from
+                  {' '}
+                  {tool.server}
                 </span>
               )}
             </h4>
-            
+
             {tool.description && (
               <p style={{ margin: '0 0 10px 0', color: '#6c757d' }}>
                 {tool.description}
               </p>
             )}
-            
+
             {tool.inputSchema && (
               <details style={{ marginTop: '10px' }}>
                 <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>
                   Input Schema
                 </summary>
-                <pre style={{ 
-                  marginTop: '10px', 
-                  padding: '10px', 
-                  backgroundColor: '#f8f9fa', 
+                <pre style={{
+                  marginTop: '10px',
+                  padding: '10px',
+                  backgroundColor: '#f8f9fa',
                   border: '1px solid #dee2e6',
                   borderRadius: '4px',
                   overflow: 'auto',
-                  fontSize: '0.9em'
-                }}>
+                  fontSize: '0.9em',
+                }}
+                >
                   {JSON.stringify(tool.inputSchema, null, 2)}
                 </pre>
               </details>
@@ -340,26 +376,42 @@ const ReactExample: React.FC = () => {
   return (
     <div>
       <MCPTools />
-      
-      <div style={{ 
-        marginTop: '40px', 
-        padding: '20px', 
+
+      <div style={{
+        marginTop: '40px',
+        padding: '20px',
         backgroundColor: '#e7f3ff',
         border: '1px solid #b3d9ff',
-        borderRadius: '4px'
-      }}>
+        borderRadius: '4px',
+      }}
+      >
         <h3>🔐 OAuth Authentication Required</h3>
         <p>
-          This example demonstrates OAuth authentication with Linear's MCP server. 
+          This example demonstrates OAuth authentication with Linear's MCP server.
           Click "Authenticate with Linear" to start the OAuth flow.
         </p>
         <p>
-          <strong>Note:</strong> You'll need to register this application with Linear to get a proper client ID.
+          <strong>Note:</strong>
+          {' '}
+          You'll need to register this application with Linear to get a proper client ID.
           For this demo, we're using a placeholder client ID.
         </p>
         <p>
-          <strong>Browser limitations:</strong> Stdio connections (using <code>command</code> and <code>args</code>) 
-          are not supported in the browser. Use <code>ws_url</code> for WebSocket or <code>url</code> for HTTP/SSE connections.
+          <strong>Browser limitations:</strong>
+          {' '}
+          Stdio connections (using
+          <code>command</code>
+          {' '}
+          and
+          <code>args</code>
+          )
+          are not supported in the browser. Use
+          <code>ws_url</code>
+          {' '}
+          for WebSocket or
+          <code>url</code>
+          {' '}
+          for HTTP/SSE connections.
         </p>
       </div>
     </div>

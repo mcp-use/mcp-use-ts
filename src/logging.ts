@@ -9,7 +9,8 @@ async function getNodeModules() {
       const fs = await import('node:fs')
       const path = await import('node:path')
       return { fs: fs.default, path: path.default }
-    } catch {
+    }
+    catch {
       return { fs: null, path: null }
     }
   }
@@ -97,31 +98,31 @@ class SimpleConsoleLogger {
 
   info(message: string): void {
     if (this.shouldLog('info')) {
-      console.info(this.formatMessage('info', message)) // eslint-disable-line no-console
+      console.info(this.formatMessage('info', message))
     }
   }
 
   debug(message: string): void {
     if (this.shouldLog('debug')) {
-      console.debug(this.formatMessage('debug', message)) // eslint-disable-line no-console
+      console.debug(this.formatMessage('debug', message))
     }
   }
 
   http(message: string): void {
     if (this.shouldLog('http')) {
-      console.log(this.formatMessage('http', message)) // eslint-disable-line no-console
+      console.log(this.formatMessage('http', message))
     }
   }
 
   verbose(message: string): void {
     if (this.shouldLog('verbose')) {
-      console.log(this.formatMessage('verbose', message)) // eslint-disable-line no-console
+      console.log(this.formatMessage('verbose', message))
     }
   }
 
   silly(message: string): void {
     if (this.shouldLog('silly')) {
-      console.log(this.formatMessage('silly', message)) // eslint-disable-line no-console
+      console.log(this.formatMessage('silly', message))
     }
   }
 
@@ -225,7 +226,7 @@ export class Logger {
       Object.values(this.simpleInstances).forEach((logger) => {
         logger.level = resolvedLevel
       })
-      
+
       return
     }
     winstonRoot.clear()

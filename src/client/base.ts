@@ -4,7 +4,7 @@ import { MCPSession } from '../session.js'
 
 /**
  * Base MCPClient class with shared functionality
- * 
+ *
  * This class contains all the common logic that works in both Node.js and browser environments.
  * Platform-specific implementations should extend this class and override methods as needed.
  */
@@ -70,7 +70,7 @@ export abstract class BaseMCPClient {
 
     const connector = this.createConnectorFromConfig(servers[serverName])
     const session = new MCPSession(connector)
-    
+
     if (autoInitialize) {
       await session.initialize()
     }

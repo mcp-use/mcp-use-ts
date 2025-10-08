@@ -6,6 +6,7 @@ const container = document.getElementById('root')
 if (container) {
   const root = createRoot(container)
   root.render(<ReactExample />)
-} else {
+}
+else {
   console.error('Root element not found')
 }

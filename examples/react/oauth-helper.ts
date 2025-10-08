@@ -1,6 +1,6 @@
 /**
  * OAuth helper for browser-based MCP authentication
- * 
+ *
  * This helper provides OAuth 2.0 authorization code flow support for MCP servers
  * that require authentication, such as Linear's MCP server.
  */
@@ -107,12 +107,13 @@ export class OAuthHelper {
       // Any other response (200, 404, 500, etc.) means no auth required
       console.log('✅ [OAuthHelper] No authentication required for:', serverUrl)
       return false
-    } catch (error: any) {
+    }
+    catch (error: any) {
       console.warn('⚠️ [OAuthHelper] Could not check auth requirement for:', serverUrl, error)
 
       // Handle specific error types
-      if (error.name === 'TypeError' && 
-          (error.message?.includes('CORS') || error.message?.includes('Failed to fetch'))) {
+      if (error.name === 'TypeError'
+        && (error.message?.includes('CORS') || error.message?.includes('Failed to fetch'))) {
         console.log('🔍 [OAuthHelper] CORS blocked direct check, using heuristics for:', serverUrl)
         return this.checkAuthByHeuristics(serverUrl)
       }
@@ -149,7 +150,7 @@ export class OAuthHelper {
     // Known patterns that typically don't require auth (public MCP servers)
     const noAuthPatterns = [
       /localhost/i, // Local development
-      /127\.0\.0\.1/i, // Local development
+      /127\.0\.0\.1/, // Local development
       /\.local/i, // Local development
       /mcp\..*\.com/i, // Generic MCP server pattern (often public)
     ]
@@ -182,14 +183,15 @@ export class OAuthHelper {
     try {
       const discoveryUrl = `${serverUrl}/.well-known/oauth-authorization-server`
       const response = await fetch(discoveryUrl)
-      
+
       if (!response.ok) {
         throw new Error(`OAuth discovery failed: ${response.status} ${response.statusText}`)
       }
-      
+
       this.discovery = await response.json()
       return this.discovery
-    } catch (error) {
+    }
+    catch (error) {
       throw new Error(`Failed to discover OAuth configuration: ${error}`)
     }
   }
@@ -197,7 +199,7 @@ export class OAuthHelper {
   /**
    * Register a new OAuth client dynamically
    */
-  async registerClient(serverUrl: string): Promise<ClientRegistration> {
+  async registerClient(_serverUrl: string): Promise<ClientRegistration> {
     if (!this.discovery) {
       throw new Error('OAuth discovery not performed. Call discoverOAuthConfig first.')
     }
@@ -227,7 +229,7 @@ export class OAuthHelper {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(registrationData)
+        body: JSON.stringify(registrationData),
       })
 
       if (!response.ok) {
@@ -242,7 +244,8 @@ export class OAuthHelper {
       })
 
       return this.clientRegistration
-    } catch (error) {
+    }
+    catch (error) {
       console.error('❌ [OAuthHelper] Client registration failed:', error)
       throw new Error(`Failed to register OAuth client: ${error}`)
     }
@@ -262,7 +265,7 @@ export class OAuthHelper {
       response_type: 'code',
       scope: this.config.scope || 'read',
       state: this.config.state || this.generateState(),
-      ...additionalParams
+      ...additionalParams,
     })
 
     return `${this.discovery.authorization_endpoint}?${params.toString()}`
@@ -272,9 +275,9 @@ export class OAuthHelper {
    * Exchange authorization code for access token
    */
   async exchangeCodeForToken(
-    serverUrl: string, 
-    code: string, 
-    codeVerifier?: string
+    serverUrl: string,
+    code: string,
+    codeVerifier?: string,
   ): Promise<OAuthResult> {
     if (!this.discovery) {
       throw new Error('OAuth discovery not performed. Call discoverOAuthConfig first.')
@@ -296,7 +299,7 @@ export class OAuthHelper {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: body.toString()
+      body: body.toString(),
     })
 
     if (!response.ok) {
@@ -310,7 +313,7 @@ export class OAuthHelper {
   /**
    * Handle OAuth callback and extract authorization code
    */
-  handleCallback(): { code: string; state: string } | null {
+  handleCallback(): { code: string, state: string } | null {
     const urlParams = new URLSearchParams(window.location.search)
     const code = urlParams.get('code')
     const state = urlParams.get('state')
@@ -340,12 +343,12 @@ export class OAuthHelper {
     try {
       await this.discoverOAuthConfig(serverUrl)
       const authUrl = this.generateAuthUrl(serverUrl)
-      
+
       // Open popup window for authentication (similar to your implementation)
       const authWindow = window.open(
         authUrl,
         'mcp-oauth',
-        'width=500,height=600,scrollbars=yes,resizable=yes,status=yes,location=yes'
+        'width=500,height=600,scrollbars=yes,resizable=yes,status=yes,location=yes',
       )
 
       if (!authWindow) {
@@ -353,7 +356,8 @@ export class OAuthHelper {
       }
 
       console.log('✅ [OAuthHelper] OAuth popup opened successfully')
-    } catch (error) {
+    }
+    catch (error) {
       console.error('❌ [OAuthHelper] Failed to start OAuth flow:', error)
       this.setState({
         isAuthenticating: false,
@@ -374,7 +378,7 @@ export class OAuthHelper {
 
     try {
       const tokenResponse = await this.exchangeCodeForToken(serverUrl, code)
-      
+
       this.setState({
         isAuthenticating: false,
         isAuthenticated: true,
@@ -385,7 +389,8 @@ export class OAuthHelper {
 
       console.log('✅ [OAuthHelper] OAuth flow completed successfully')
       return tokenResponse
-    } catch (error) {
+    }
+    catch (error) {
       console.error('❌ [OAuthHelper] Failed to complete OAuth flow:', error)
       this.setState({
         isAuthenticating: false,
@@ -421,8 +426,8 @@ export class OAuthHelper {
    * Generate a random state parameter for CSRF protection
    */
   private generateState(): string {
-    return Math.random().toString(36).substring(2, 15) + 
-           Math.random().toString(36).substring(2, 15)
+    return Math.random().toString(36).substring(2, 15)
+      + Math.random().toString(36).substring(2, 15)
   }
 }
 
@@ -444,8 +449,8 @@ export function createOAuthMCPConfig(serverUrl: string, accessToken: string) {
       linear: {
         url: serverUrl,
         authToken: accessToken,
-        transport: 'sse'
-      }
-    }
+        transport: 'sse',
+      },
+    },
   }
 }
