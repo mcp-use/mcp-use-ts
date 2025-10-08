@@ -53,6 +53,9 @@ importers:
       winston:
         specifier: ^3.17.0
         version: 3.17.0
+      winston-transport-browserconsole:
+        specifier: ^1.0.5
+        version: 1.0.5
       ws:
         specifier: ^8.18.2
         version: 8.18.2
@@ -2895,6 +2898,9 @@ packages:
     resolution: {integrity: sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w==}
     engines: {node: '>=8'}
     hasBin: true
+
+  winston-transport-browserconsole@1.0.5:
+    resolution: {integrity: sha512-BFZDvknATAmsqaRY3WatB2S0eEb0ziwqBYIv+H0Fnu9oe7GnPUVQzEJC1frmLdNsfEkfnyR1PCNDBAFtZE3SuQ==}
 
   winston-transport@4.9.0:
     resolution: {integrity: sha512-8drMJ4rkgaPo1Me4zD/3WLfI/zPdA9o2IipKODunnGDcuqbHwjsbB79ylv04LCGGzU0xQ6vTznOMpQGaLhhm6A==}
@@ -5902,6 +5908,11 @@ snapshots:
     dependencies:
       siginfo: 2.0.0
       stackback: 0.0.2
+
+  winston-transport-browserconsole@1.0.5:
+    dependencies:
+      winston: 3.17.0
+      winston-transport: 4.9.0
 
   winston-transport@4.9.0:
     dependencies:
