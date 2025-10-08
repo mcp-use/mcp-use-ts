@@ -112,14 +112,7 @@ export class McpServer {
       inputSchema,
       async (params: any) => {
         const result = await definition.fn(params)
-        return {
-          content: [
-            {
-              type: 'text',
-              text: result,
-            },
-          ],
-        }
+        return result
       },
     )
     return this
