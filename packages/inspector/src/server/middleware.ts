@@ -74,5 +74,5 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
     res.sendFile(indexPath)
   })
 
-  console.log(`🔍 MCP Inspector mounted at ${basePath}`)
+  console.log(`MCP Inspector mounted at ${basePath}`)
 }

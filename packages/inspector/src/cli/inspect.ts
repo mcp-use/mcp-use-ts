@@ -48,7 +48,7 @@ mountInspector(app, '/', mcpUrl)
 
 // Start the server
 app.listen(port, () => {
-  console.log(`🔍 MCP Inspector running at http://localhost:${port}`)
+  console.log(`MCP Inspector running at http://localhost:${port}`)
   if (mcpUrl) {
     console.log(`📡 Auto-connecting to: ${mcpUrl}`)
   }
