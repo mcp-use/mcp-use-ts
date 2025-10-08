@@ -1,4 +1,4 @@
-import type { CallToolResult, GetPromptResult, ReadResourceResult} from '@modelcontextprotocol/sdk/types.js'
+import type { CallToolResult, GetPromptResult, ReadResourceResult, ResourceTemplate} from '@modelcontextprotocol/sdk/types.js'
 export interface ServerConfig {
   name: string
   version: string
@@ -13,20 +13,23 @@ export interface InputDefinition {
   default?: any
 }
 
-export interface ResourceDefinition {
-  uri: string
-  name?: string
+export interface ResourceTemplateDefinition {
+  name: string
+  resourceTemplate: ResourceTemplate
+  title?: string
   description?: string
-  mimeType?: string
-  fn: ResourceHandler
+  fn: ResourceTemplateHandler
 }
 
-export interface TemplateDefinition {
-  uriTemplate: string
-  name?: string
-  description?: string
-  mimeType?: string
-  fn: TemplateHandler
+export interface ResourceDefinition {
+  name: string
+  uri: string
+  resource: {
+    title?: string
+    description?: string
+    mimeType: string
+  }
+  fn: ResourceHandler
 }
 
 export interface ToolDefinition {
@@ -44,6 +47,6 @@ export interface PromptDefinition {
 }
 
 export type ResourceHandler = () => Promise<ReadResourceResult>
-export type TemplateHandler = (params: Record<string, string>) => Promise<ReadResourceResult>
+export type ResourceTemplateHandler = (uri: URL, params: Record<string, any>) => Promise<ReadResourceResult>
 export type ToolHandler = (params: Record<string, any>) => Promise<CallToolResult>
 export type PromptHandler = (params: Record<string, any>) => Promise<GetPromptResult>

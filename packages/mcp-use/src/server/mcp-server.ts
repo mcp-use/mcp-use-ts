@@ -2,7 +2,6 @@ import type {
   PromptDefinition,
   ResourceDefinition,
   ServerConfig,
-  TemplateDefinition,
   ToolDefinition,
 } from './types.js'
 import { McpServer as OfficialMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -52,69 +51,46 @@ export class McpServer {
   }
 
   /**
-   * Define a resource that can be accessed by clients
+   * Define a static resource that can be accessed by clients
    */
-  resource(definition: ResourceDefinition): this {
+  resource(resourceDefinition: ResourceDefinition): this {
     this.server.resource(
-      definition.name || definition.uri,
-      definition.uri,
-      {
-        name: definition.name,
-        description: definition.description,
-        mimeType: definition.mimeType,
+      resourceDefinition.name,
+      resourceDefinition.uri,
+      resourceDefinition.resource,
+      async () => {
+        return await resourceDefinition.fn()
       },
-      async () => ({
-        contents: [
-          {
-            uri: definition.uri,
-            mimeType: definition.mimeType || 'text/plain',
-            text: await definition.fn(),
-          },
-        ],
-      }),
     )
     return this
   }
 
   /**
-   * Define a resource template with parameterized URIs
+   * Define a dynamic resource template with parameters
    */
-  template(definition: TemplateDefinition): this {
-    // For templates, we'll register them as tools that return resource content
-    const toolName = `template_${definition.uriTemplate.replace(/[^a-z0-9]/gi, '_')}`
-
-    this.server.tool(
-      toolName,
-      definition.description || 'Resource Template',
-      this.createInputSchema(definition.uriTemplate),
-      async (params: any) => {
-        const content = await definition.fn(params as Record<string, string>)
-        return {
-          content: [
-            {
-              type: 'text',
-              text: content,
-            },
-          ],
-        }
-      },
-    )
-    return this
-  }
+  // TODO implement, for some freaky reason this give errors
+  // resourceTemplate(resourceTemplateDefinition: ResourceTemplateDefinition): this {
+  //   this.server.resource(
+  //     resourceTemplateDefinition.name,
+  //     resourceTemplateDefinition.resourceTemplate,
+  //     async (uri, params) => {
+  //       return await resourceTemplateDefinition.fn(uri, params)
+  //     },
+  //   )
+  //   return this
+  // }
 
   /**
    * Define a tool that can be called by clients
    */
-  tool(definition: ToolDefinition): this {
-    const inputSchema = this.createToolInputSchema(definition.inputs || [])
-
+  tool(toolDefinition: ToolDefinition): this {
+    const inputSchema = this.createToolInputSchema(toolDefinition.inputs || [])
     this.server.tool(
-      definition.name,
-      definition.description || definition.name,
+      toolDefinition.name,
+      toolDefinition.description ?? "",
       inputSchema,
       async (params: any) => {
-        const result = await definition.fn(params)
-        return result
+        return await toolDefinition.fn(params)
       },
     )
     return this
@@ -123,26 +99,14 @@ export class McpServer {
   /**
    * Define a prompt template
    */
-  prompt(definition: PromptDefinition): this {
-    const argsSchema = this.createPromptArgsSchema(definition.args || [])
-
+  prompt(promptDefinition: PromptDefinition): this {
+    const argsSchema = this.createPromptArgsSchema(promptDefinition.args || [])
     this.server.prompt(
-      definition.name,
-      definition.description || definition.name,
+      promptDefinition.name,
+      promptDefinition.description ?? "",
       argsSchema,
       async (params: any) => {
-        const result = await definition.fn(params)
-        return {
-          messages: [
-            {
-              role: 'user',
-              content: {
-                type: 'text',
-                text: result,
-              },
-            },
-          ],
-        }
+        return await promptDefinition.fn(params)
       },
     )
     return this
