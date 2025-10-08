@@ -1,0 +1,29 @@
+{
+  "name": "@dprint/markdown",
+  "version": "0.17.8",
+  "description": "Wasm module for dprint-plugin-markdown.",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dprint/dprint-plugin-markdown.git"
+  },
+  "keywords": [
+    "markdown",
+    "code",
+    "formatter",
+    "dprint"
+  ],
+  "author": "David Sherret",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dprint/dprint-plugin-markdown/issues"
+  },
+  "homepage": "https://github.com/dprint/dprint-plugin-markdown#readme",
+  "scripts": {
+    "test": "node index.test.js"
+  },
+  "devDependencies": {
+    "@dprint/formatter": "~0.1.4"
+  }
+}

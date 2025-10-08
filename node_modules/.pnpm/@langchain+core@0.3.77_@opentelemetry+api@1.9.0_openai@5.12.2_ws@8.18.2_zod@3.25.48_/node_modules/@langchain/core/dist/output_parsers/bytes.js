@@ -1,0 +1,37 @@
+import { BaseTransformOutputParser } from "./transform.js";
+/**
+ * OutputParser that parses LLMResult into the top likely string and
+ * encodes it into bytes.
+ */
+export class BytesOutputParser extends BaseTransformOutputParser {
+    constructor() {
+        super(...arguments);
+        Object.defineProperty(this, "lc_namespace", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: ["langchain_core", "output_parsers", "bytes"]
+        });
+        Object.defineProperty(this, "lc_serializable", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: true
+        });
+        Object.defineProperty(this, "textEncoder", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new TextEncoder()
+        });
+    }
+    static lc_name() {
+        return "BytesOutputParser";
+    }
+    parse(text) {
+        return Promise.resolve(this.textEncoder.encode(text));
+    }
+    getFormatInstructions() {
+        return "";
+    }
+}

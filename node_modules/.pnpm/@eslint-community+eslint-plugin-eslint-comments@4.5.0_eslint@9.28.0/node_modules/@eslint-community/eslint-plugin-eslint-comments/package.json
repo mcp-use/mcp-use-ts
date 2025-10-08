@@ -1,0 +1,87 @@
+{
+  "name": "@eslint-community/eslint-plugin-eslint-comments",
+  "version": "4.5.0",
+  "description": "Additional ESLint rules for ESLint directive comments.",
+  "engines": {
+    "node": "^12.22.0 || ^14.17.0 || >=16.0.0"
+  },
+  "main": "index.js",
+  "type": "commonjs",
+  "files": [
+    "configs.js",
+    "lib"
+  ],
+  "exports": {
+    "./configs": "./configs.js",
+    ".": "./index.js"
+  },
+  "peerDependencies": {
+    "eslint": "^6.0.0 || ^7.0.0 || ^8.0.0 || ^9.0.0"
+  },
+  "dependencies": {
+    "escape-string-regexp": "^4.0.0",
+    "ignore": "^5.2.4"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.9",
+    "@babel/eslint-parser": "^7.22.9",
+    "@eslint-community/eslint-plugin-mysticatea": "^15.5.1",
+    "@eslint/core": "^0.13.0",
+    "@eslint/css": "^0.6.0",
+    "@types/node": "^14.18.54",
+    "@vuepress/plugin-pwa": "^1.9.9",
+    "cross-spawn": "^7.0.3",
+    "esbuild": "^0.19.3",
+    "eslint": "^8.46.0",
+    "fs-extra": "^10.1.0",
+    "mocha": "^10.4.0",
+    "monaco-editor": "^0.47.0",
+    "nyc": "^15.1.0",
+    "opener": "^1.5.2",
+    "rimraf": "^3.0.2",
+    "semver": "^7.5.4",
+    "vite-plugin-eslint4b": "^0.2.1",
+    "vitepress": "^1.0.0-rc.15"
+  },
+  "scripts": {
+    "preversion": "npm test",
+    "version": "node scripts/update && git add .",
+    "postversion": "git push && git push --tags",
+    "clean": "rimraf .nyc_output coverage docs/.vitepress/cache",
+    "docs:build": "vitepress build docs",
+    "docs:watch": "vitepress dev docs",
+    "lint": "eslint lib scripts tests",
+    "test": "nyc npm run debug",
+    "debug": "mocha \"tests/lib/**/*.js\" --reporter dot --timeout 8000",
+    "coverage": "nyc report --reporter lcov && opener coverage/lcov-report/index.html",
+    "watch": "npm run -s test -- --watch --growl"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eslint-community/eslint-plugin-eslint-comments"
+  },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "plugin",
+    "comment",
+    "comments",
+    "directive",
+    "global",
+    "globals",
+    "exported",
+    "eslint-env",
+    "eslint-enable",
+    "eslint-disable",
+    "eslint-disable-line",
+    "eslint-disable-next-line"
+  ],
+  "author": "Toru Nagashima",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/eslint-community/eslint-plugin-eslint-comments/issues"
+  },
+  "homepage": "https://github.com/eslint-community/eslint-plugin-eslint-comments#readme",
+  "funding": "https://opencollective.com/eslint"
+}
