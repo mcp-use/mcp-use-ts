@@ -14,6 +14,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "examples", "src/cli/templates", "test-*"]
+  "include": ["**/*.ts", "../create-mcp-use-app/src/create-mcp-app.ts"],
+  "exclude": ["node_modules", "dist", "examples", "../create-mcp-use-app/src/templates", "test-*"]
 }

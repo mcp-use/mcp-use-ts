@@ -87,10 +87,18 @@
     "example:observability": "npm run build && node dist/examples/observability.js"
   },
   "peerDependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
     "langfuse": "^3.32.0",
     "langfuse-langchain": "^3.38.4"
   },
   "peerDependenciesMeta": {
+    "cors": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    },
     "langfuse": {
       "optional": true
     },
@@ -122,12 +130,15 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.13.2",
-    "@types/express": "^4.17.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.19.8",
     "@types/ws": "^8.18.1",
+    "cors": "^2.8.5",
     "eslint": "^9.28.0",
     "eslint-plugin-format": "^1.0.1",
+    "express": "^4.18.2",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.11",
     "typescript": "^5.8.3",
