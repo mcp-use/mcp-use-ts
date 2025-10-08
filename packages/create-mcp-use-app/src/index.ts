@@ -1,148 +1,124 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
-import prompts from 'prompts';
-import chalk from 'chalk';
-import fs from 'fs-extra';
-import path from 'path';
 
-const program = new Command();
+import { execSync } from 'node:child_process'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { Command } from 'commander'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+const program = new Command()
 
 program
   .name('create-mcp-use-app')
-  .description('Create a new MCP-Use application')
+  .description('Create a new MCP server project')
   .version('0.1.0')
-  .argument('[project-name]', 'Name of the project')
-  .option('-t, --template <template>', 'Template to use (basic, advanced)', 'basic')
-  .option('--typescript', 'Use TypeScript', true)
-  .option('--no-typescript', 'Use JavaScript')
-  .option('--git', 'Initialize git repository', true)
-  .option('--no-git', 'Skip git initialization')
-  .action(async (projectName, options) => {
-    if (!projectName) {
-      const response = await prompts({
-        type: 'text',
-        name: 'projectName',
-        message: 'What is your project named?',
-        initial: 'my-mcp-app'
-      });
-      projectName = response.projectName;
+  .argument('<project-name>', 'Name of the MCP server project')
+  .option('-t, --template <template>', 'Template to use', 'basic')
+  .option('--no-install', 'Skip installing dependencies')
+  .action(async (projectName: string, options: { template: string, install: boolean }) => {
+    try {
+      console.log(`🚀 Creating MCP server "${projectName}"...`)
+
+      const projectPath = resolve(process.cwd(), projectName)
+
+      // Check if directory already exists
+      if (existsSync(projectPath)) {
+        console.error(`❌ Directory "${projectName}" already exists!`)
+        process.exit(1)
+      }
+
+      // Create project directory
+      mkdirSync(projectPath, { recursive: true })
+
+      // Copy template files
+      await copyTemplate(projectPath, options.template)
+
+      // Update package.json with project name
+      updatePackageJson(projectPath, projectName)
+
+      // Install dependencies if requested
+      if (options.install) {
+        console.log('📦 Installing dependencies...')
+        try {
+          execSync('pnpm install', { cwd: projectPath, stdio: 'inherit' })
+        }
+        catch {
+          console.log('⚠️  pnpm not found, trying npm...')
+          try {
+            execSync('npm install', { cwd: projectPath, stdio: 'inherit' })
+          }
+          catch {
+            console.log('⚠️  npm install failed, please run "npm install" manually')
+          }
+        }
+      }
+
+      console.log('✅ MCP server created successfully!')
+      console.log('')
+      console.log('📁 Project structure:')
+      console.log(`   ${projectName}/`)
+      console.log('   ├── src/')
+      console.log('   │   └── server.ts')
+      console.log('   ├── package.json')
+      console.log('   ├── tsconfig.json')
+      console.log('   └── README.md')
+      console.log('')
+      console.log('🚀 To get started:')
+      console.log(`   cd ${projectName}`)
+      if (!options.install) {
+        console.log('   npm install')
+      }
+      console.log('   npm run dev')
+      console.log('')
+      console.log('📚 Learn more: https://docs.mcp-use.io')
     }
-
-    if (!projectName) {
-      console.log(chalk.red('Project name is required'));
-      process.exit(1);
+    catch (error) {
+      console.error('❌ Error creating MCP server:', error)
+      process.exit(1)
     }
+  })
 
-    const projectPath = path.join(process.cwd(), projectName);
+async function copyTemplate(projectPath: string, template: string) {
+  const templatePath = join(__dirname, 'templates', template)
 
-    if (fs.existsSync(projectPath)) {
-      console.log(chalk.red(`Directory ${projectName} already exists`));
-      process.exit(1);
-    }
+  if (!existsSync(templatePath)) {
+    console.error(`❌ Template "${template}" not found!`)
+    console.log('Available templates: basic, filesystem, api, ui')
+    process.exit(1)
+  }
 
-    console.log(chalk.green(`Creating ${projectName}...`));
-    
-    // Create project directory
-    fs.ensureDirSync(projectPath);
-    
-    // Create package.json
-    const packageJson = {
-      name: projectName,
-      version: '0.1.0',
-      private: true,
-      scripts: {
-        dev: 'node src/index.js',
-        build: options.typescript ? 'tsc' : 'echo "No build step"',
-        start: 'node dist/index.js'
-      },
-      dependencies: {
-        'mcp-use': '^0.1.20'
-      },
-      devDependencies: options.typescript ? {
-        '@types/node': '^20.0.0',
-        'typescript': '^5.0.0'
-      } : {}
-    };
-
-    fs.writeJsonSync(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 });
-
-    // Create source files
-    const srcDir = path.join(projectPath, 'src');
-    fs.ensureDirSync(srcDir);
-
-    const ext = options.typescript ? 'ts' : 'js';
-    const indexContent = `import { MCPClient } from 'mcp-use';
-
-async function main() {
-  const client = new MCPClient({
-    name: '${projectName}',
-    version: '0.1.0'
-  });
-
-  // Add your MCP logic here
-  
-  console.log('MCP app initialized');
+  copyDirectory(templatePath, projectPath)
 }
 
-main().catch(console.error);
-`;
+function copyDirectory(src: string, dest: string) {
+  const entries = readdirSync(src, { withFileTypes: true })
 
-    fs.writeFileSync(path.join(srcDir, `index.${ext}`), indexContent);
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name)
+    const destPath = join(dest, entry.name)
 
-    // Create tsconfig if TypeScript
-    if (options.typescript) {
-      const tsconfig = {
-        compilerOptions: {
-          target: 'ES2022',
-          module: 'commonjs',
-          lib: ['ES2022'],
-          outDir: './dist',
-          rootDir: './src',
-          strict: true,
-          esModuleInterop: true,
-          skipLibCheck: true,
-          forceConsistentCasingInFileNames: true
-        },
-        include: ['src/**/*'],
-        exclude: ['node_modules', 'dist']
-      };
-      fs.writeJsonSync(path.join(projectPath, 'tsconfig.json'), tsconfig, { spaces: 2 });
+    if (entry.isDirectory()) {
+      mkdirSync(destPath, { recursive: true })
+      copyDirectory(srcPath, destPath)
     }
-
-    // Create README
-    const readme = `# ${projectName}
-
-An MCP-Use application
-
-## Getting Started
-
-\`\`\`bash
-npm install
-npm run dev
-\`\`\`
-
-## License
-
-MIT
-`;
-    fs.writeFileSync(path.join(projectPath, 'README.md'), readme);
-
-    // Initialize git if requested
-    if (options.git) {
-      const gitignore = `node_modules/
-dist/
-.env
-*.log
-`;
-      fs.writeFileSync(path.join(projectPath, '.gitignore'), gitignore);
+    else {
+      copyFileSync(srcPath, destPath)
     }
+  }
+}
 
-    console.log(chalk.green('✓ Project created successfully!'));
-    console.log();
-    console.log('Next steps:');
-    console.log(chalk.cyan(`  cd ${projectName}`));
-    console.log(chalk.cyan('  npm install'));
-    console.log(chalk.cyan('  npm run dev'));
-  });
+function updatePackageJson(projectPath: string, projectName: string) {
+  const packageJsonPath = join(projectPath, 'package.json')
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
 
-program.parse();
+  packageJson.name = projectName
+  packageJson.description = `MCP server: ${projectName}`
+
+  writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
+}
+
+program.parse()
+

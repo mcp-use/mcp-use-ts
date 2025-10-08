@@ -38,6 +38,17 @@ export type {
 // Export telemetry utilities
 export { setTelemetrySource, Telemetry } from './src/telemetry/index.js'
 
+// Export OAuth helper (legacy - for backward compatibility)
+export { OAuthHelper, LINEAR_OAUTH_CONFIG, createOAuthMCPConfig } from './src/oauth-helper.js'
+export type { OAuthConfig, OAuthDiscovery, ClientRegistration, OAuthResult, OAuthState } from './src/oauth-helper.js'
+
+// Export new SDK-integrated auth utilities (recommended for new projects)
+export { BrowserOAuthClientProvider, onMcpAuthorization } from './src/auth/index.js'
+export type { StoredState } from './src/auth/types.js'
+
+// Export React hooks
+export * from './src/react/index.js'
+
 // Re-export message classes to ensure a single constructor instance is shared by consumers
 export { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
 

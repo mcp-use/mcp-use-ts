@@ -1,12 +1,23 @@
 import React from 'react'
-import { createRoot } from 'react-dom/client'
+import ReactDOM from 'react-dom/client'
 import ReactExample from './react_example'
+import OAuthCallback from './oauth-callback'
 
-const container = document.getElementById('root')
-if (container) {
-  const root = createRoot(container)
-  root.render(<ReactExample />)
+// Simple router based on pathname
+function App() {
+  const path = window.location.pathname
+  
+  // Route to OAuth callback page
+  if (path === '/oauth/callback') {
+    return <OAuthCallback />
+  }
+  
+  // Default to main example
+  return <ReactExample />
 }
-else {
-  console.error('Root element not found')
-}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)

@@ -7,11 +7,15 @@ import type {
 } from './types.js'
 import { McpServer as OfficialMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
+import express, { type Express } from 'express'
+import { existsSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 
 export class McpServer {
   private server: OfficialMcpServer
   private config: ServerConfig
-  private expressApp?: any
+  private app: Express
+  private mcpMounted = false
 
   constructor(config: ServerConfig) {
     this.config = config
@@ -19,6 +23,29 @@ export class McpServer {
       name: config.name,
       version: config.version,
     })
+    this.app = express()
+    
+    // Enable CORS by default
+    this.app.use((req, res, next) => {
+      res.header('Access-Control-Allow-Origin', '*')
+      res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+      res.header('Access-Control-Allow-Headers', 'Content-Type')
+      next()
+    })
+
+    // Setup default widget serving routes
+    this.setupWidgetRoutes()
+
+    // Proxy all Express methods to the underlying app
+    return new Proxy(this, {
+      get(target, prop) {
+        if (prop in target) {
+          return (target as any)[prop]
+        }
+        const value = (target.app as any)[prop]
+        return typeof value === 'function' ? value.bind(target.app) : value
+      }
+    }) as McpServer
   }
 
   /**
@@ -126,83 +153,97 @@ export class McpServer {
   }
 
   /**
-   * Set the Express app for SSE transport
+   * Mount MCP server endpoints at /mcp
    */
-  setExpressApp(app: any): this {
-    this.expressApp = app
-    return this
+  private async mountMcp(): Promise<void> {
+    if (this.mcpMounted) return
+    
+    const { StreamableHTTPServerTransport } = await import('@modelcontextprotocol/sdk/server/streamableHttp.js')
+    
+    // Create StreamableHTTPServerTransport in stateless mode
+    const httpTransport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined // Stateless mode
+    })
+
+    // Connect the MCP server to the transport
+    await this.server.connect(httpTransport)
+
+    const endpoint = '/mcp'
+
+    // GET endpoint for SSE streaming
+    this.app.get(endpoint, async (req, res) => {
+      console.log(`📡 HTTP GET request received at ${endpoint}`)
+      await httpTransport.handleRequest(req, res)
+    })
+
+    // POST endpoint for messages
+    this.app.post(endpoint, express.json(), async (req, res) => {
+      console.log(`📡 HTTP POST request received at ${endpoint}`)
+      await httpTransport.handleRequest(req, res, req.body)
+    })
+
+    // DELETE endpoint for session cleanup
+    this.app.delete(endpoint, async (req, res) => {
+      console.log(`📡 HTTP DELETE request received at ${endpoint}`)
+      await httpTransport.handleRequest(req, res)
+    })
+
+    this.mcpMounted = true
+    console.log(`📡 MCP server mounted at ${endpoint}`)
   }
 
   /**
-   * Start the MCP server with configurable transport
-   * @param options - Transport options (defaults to HTTP)
+   * Start the Express server with MCP endpoints
+   * @param port - Port to listen on (defaults to 3001)
    */
-  async serve(options?: { transport?: 'http' | 'stdio', port?: number, endpoint?: string }): Promise<void> {
-    const transport = options?.transport || (process.env.MCP_TRANSPORT as 'http' | 'stdio') || 'http'
+  async listen(port?: number): Promise<void> {
+    await this.mountMcp()
+    const serverPort = port || 3001
+    this.app.listen(serverPort, () => {
+      console.log(`📡 Server listening on http://localhost:${serverPort}`)
+      console.log(`📡 MCP endpoints available at http://localhost:${serverPort}/mcp`)
+    })
+  }
 
-    if (transport === 'stdio') {
-      // Use stdio transport (for traditional MCP clients)
-      const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js')
-      const stdioTransport = new StdioServerTransport()
-      await this.server.connect(stdioTransport)
-      console.log('📡 MCP server connected via stdio transport')
-    } else {
-      // Default to StreamableHTTPServerTransport (for HTTP/web access)
-      const { StreamableHTTPServerTransport } = await import('@modelcontextprotocol/sdk/server/streamableHttp.js')
-      const endpoint = options?.endpoint || '/mcp'
+  /**
+   * Setup default widget serving routes
+   */
+  private setupWidgetRoutes(): void {
+    // Serve static assets (JS, CSS) from the assets directory
+    this.app.get('/mcp-use/widgets/:widget/assets/*', (req, res, next) => {
+      const widget = req.params.widget
+      const assetFile = (req.params as any)[0]
+      const assetPath = join(process.cwd(), 'dist', 'resources', 'mcp-use', 'widgets', widget, 'assets', assetFile)
+      res.sendFile(assetPath, err => (err ? next() : undefined))
+    })
 
-      if (!this.expressApp) {
-        // Create a standalone Express server if no app provided
-        const express = await import('express')
-        this.expressApp = express.default()
+    // Handle assets served from the wrong path (browser resolves ./assets/ relative to /mcp-use/widgets/)
+    this.app.get('/mcp-use/widgets/assets/*', (req, res, next) => {
+      const assetFile = (req.params as any)[0]
+      // Try to find which widget this asset belongs to by checking all widget directories
+      const widgetsDir = join(process.cwd(), 'dist', 'resources', 'mcp-use', 'widgets')
 
-        // Enable CORS
-        this.expressApp.use((req: any, res: any, next: any) => {
-          res.header('Access-Control-Allow-Origin', '*')
-          res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-          res.header('Access-Control-Allow-Headers', 'Content-Type')
-          next()
-        })
-
-        const port = options?.port || 3001
-        this.expressApp.listen(port, () => {
-          console.log(`📡 MCP HTTP server listening on http://localhost:${port}${endpoint}`)
-        })
+      try {
+        const widgets = readdirSync(widgetsDir)
+        for (const widget of widgets) {
+          const assetPath = join(widgetsDir, widget, 'assets', assetFile)
+          if (existsSync(assetPath)) {
+            return res.sendFile(assetPath)
+          }
+        }
+        next()
       }
+      catch {
+        next()
+      }
+    })
 
-      console.log(`📡 Registering HTTP endpoints on Express app...`)
-
-      // Create StreamableHTTPServerTransport in stateless mode
-      const httpTransport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined // Stateless mode
-      })
-
-      // Connect the MCP server to the transport
-      await this.server.connect(httpTransport)
-
-      // Add HTTP endpoints for StreamableHTTPServerTransport
-      const express = await import('express')
-
-      // GET endpoint for SSE streaming
-      this.expressApp.get(endpoint, async (req: any, res: any) => {
-        console.log(`📡 HTTP GET request received at ${endpoint}`)
-        await httpTransport.handleRequest(req, res)
-      })
-
-      // POST endpoint for messages
-      this.expressApp.post(endpoint, express.json(), async (req: any, res: any) => {
-        console.log(`📡 HTTP POST request received at ${endpoint}`)
-        await httpTransport.handleRequest(req, res, req.body)
-      })
-
-      // DELETE endpoint for session cleanup (if using stateful mode)
-      this.expressApp.delete(endpoint, async (req: any, res: any) => {
-        console.log(`📡 HTTP DELETE request received at ${endpoint}`)
-        await httpTransport.handleRequest(req, res)
-      })
-
-      console.log(`📡 MCP server HTTP endpoints registered at ${endpoint}`)
-    }
+    // Serve each widget's index.html at its route
+    // e.g. GET /mcp-use/widgets/kanban-board -> dist/resources/mcp-use/widgets/kanban-board/index.html
+    this.app.get('/mcp-use/widgets/:widget', (req, res, next) => {
+      const filePath = join(process.cwd(), 'dist', 'resources', 'mcp-use', 'widgets', req.params.widget, 'index.html')
+      res.sendFile(filePath, err => (err ? next() : undefined))
+    })
   }
 
   /**
@@ -304,13 +345,16 @@ export class McpServer {
   }
 }
 
+export type McpServerInstance = Omit<McpServer, keyof Express> & Express
+
 /**
  * Create a new MCP server instance
  */
-export function createMCPServer(name: string, config: Partial<ServerConfig> = {}): McpServer {
-  return new McpServer({
+export function createMCPServer(name: string, config: Partial<ServerConfig> = {}): McpServerInstance {
+  const instance = new McpServer({
     name,
     version: config.version || '1.0.0',
     description: config.description,
   })
+  return instance as unknown as McpServerInstance
 }

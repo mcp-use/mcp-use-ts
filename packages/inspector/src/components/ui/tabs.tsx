@@ -1,0 +1,242 @@
+'use client'
+
+import type { LucideIcon } from 'lucide-react'
+import * as React from 'react'
+import { cn } from '@/lib/utils'
+
+interface TabsContextType {
+  activeValue: string
+  handleValueChange: (value: string) => void
+}
+
+const TabsContext = React.createContext<TabsContextType | undefined>(undefined)
+
+function useTabs() {
+  const context = React.useContext(TabsContext)
+  if (!context) {
+    throw new Error('useTabs must be used within a TabsProvider')
+  }
+  return context
+}
+
+interface TabsProps {
+  children: React.ReactNode
+  defaultValue?: string
+  value?: string
+  onValueChange?: (value: string) => void
+  className?: string
+}
+
+const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
+  ({ children, defaultValue, value, onValueChange, className, ...props }, ref) => {
+    const [activeValue, setActiveValue] = React.useState(defaultValue || '')
+    const isControlled = value !== undefined
+
+    const handleValueChange = React.useCallback(
+      (val: string) => {
+        if (!isControlled) {
+          setActiveValue(val)
+        }
+        onValueChange?.(val)
+      },
+      [isControlled, onValueChange],
+    )
+
+    const currentValue = isControlled ? value : activeValue
+
+    return (
+      <TabsContext.Provider
+        value={{
+          activeValue: currentValue,
+          handleValueChange,
+        }}
+      >
+        <div
+          ref={ref}
+          className={cn('flex flex-col gap-2', className)}
+          {...props}
+        >
+          {children}
+        </div>
+      </TabsContext.Provider>
+    )
+  },
+)
+Tabs.displayName = 'Tabs'
+
+interface TabsListProps {
+  children: React.ReactNode
+  className?: string
+}
+
+const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
+  ({ children, className, ...props }, _ref) => {
+    const { activeValue } = useTabs()
+    const [indicatorStyle, setIndicatorStyle] = React.useState({ width: 0, left: 0 })
+    const containerRef = React.useRef<HTMLDivElement>(null)
+    const childrenArray = React.Children.toArray(children)
+    const activeIndex = childrenArray.findIndex(
+      child => React.isValidElement(child) && child.props.value === activeValue,
+    )
+
+    React.useEffect(() => {
+      const updateIndicator = () => {
+        const container = containerRef.current
+        if (!container)
+          return
+
+        const triggers = container.querySelectorAll('button')
+        const activeTrigger = triggers[activeIndex] as HTMLElement
+
+        if (activeTrigger) {
+          const containerRect = container.getBoundingClientRect()
+          const triggerRect = activeTrigger.getBoundingClientRect()
+
+          setIndicatorStyle({
+            width: triggerRect.width,
+            left: triggerRect.left - containerRect.left,
+          })
+        }
+      }
+
+      // Use a small delay to ensure DOM is updated
+      const timeoutId = setTimeout(updateIndicator, 10)
+      return () => clearTimeout(timeoutId)
+    }, [activeIndex])
+
+    React.useEffect(() => {
+      const handleResize = () => {
+        const container = containerRef.current
+        if (!container)
+          return
+
+        const triggers = container.querySelectorAll('button')
+        const activeTrigger = triggers[activeIndex] as HTMLElement
+
+        if (activeTrigger) {
+          const containerRect = container.getBoundingClientRect()
+          const triggerRect = activeTrigger.getBoundingClientRect()
+
+          setIndicatorStyle({
+            width: triggerRect.width,
+            left: triggerRect.left - containerRect.left,
+          })
+        }
+      }
+
+      window.addEventListener('resize', handleResize)
+      return () => window.removeEventListener('resize', handleResize)
+    }, [activeIndex])
+
+    // Apply dynamic styles using data attributes
+    React.useEffect(() => {
+      const container = containerRef.current
+      if (!container)
+        return
+
+      const glider = container.querySelector('[data-width]') as HTMLElement
+      if (glider) {
+        glider.style.width = `${indicatorStyle.width}px`
+        glider.style.left = `${indicatorStyle.left}px`
+      }
+    }, [indicatorStyle])
+
+    return (
+      <div
+        ref={containerRef}
+        className={cn(
+          'relative flex bg-none p-1 rounded-full border border-zinc-300',
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        <span
+          className="absolute bg-white rounded-full transition-all duration-200 ease-out z-0 h-[calc(100%-8px)] top-1 border border-zinc-300"
+          data-width={indicatorStyle.width}
+          data-left={indicatorStyle.left}
+        />
+      </div>
+    )
+  },
+)
+TabsList.displayName = 'TabsList'
+
+interface TabsTriggerProps {
+  children: React.ReactNode
+  value: string
+  className?: string
+  disabled?: boolean
+  icon?: LucideIcon
+}
+
+/**
+ * TabsTrigger component with optional Lucide icon support.
+ *
+ * @example
+ * ```tsx
+ * import { Settings, User } from 'lucide-react'
+ *
+ * <TabsTrigger value="settings" icon={Settings}>
+ *   Settings
+ * </TabsTrigger>
+ * ```
+ */
+const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
+  ({ children, value, className, disabled, icon: Icon, ...props }, ref) => {
+    const { activeValue, handleValueChange } = useTabs()
+    const isActive = activeValue === value
+
+    return (
+      <button
+        ref={ref}
+        disabled={disabled}
+        onClick={() => handleValueChange(value)}
+        className={cn(
+          'relative z-10 flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+          isActive && 'text-foreground',
+          !isActive && 'text-muted-foreground hover:text-foreground',
+          className,
+        )}
+        {...props}
+      >
+        {Icon && <Icon className="mr-2 h-4 w-4" />}
+        {children}
+      </button>
+    )
+  },
+)
+TabsTrigger.displayName = 'TabsTrigger'
+
+interface TabsContentProps {
+  children: React.ReactNode
+  value: string
+  className?: string
+}
+
+const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
+  ({ children, value, className, ...props }, ref) => {
+    const { activeValue } = useTabs()
+    const isActive = activeValue === value
+
+    if (!isActive)
+      return null
+
+    return (
+      <div
+        ref={ref}
+        role="tabpanel"
+        className={cn(
+          'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+    )
+  },
+)
+TabsContent.displayName = 'TabsContent'
+
+export { Tabs, TabsContent, TabsList, TabsTrigger, useTabs }

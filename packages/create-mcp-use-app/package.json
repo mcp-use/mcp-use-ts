@@ -1,16 +1,23 @@
 {
   "name": "create-mcp-use-app",
   "version": "0.1.0",
+  "type": "module",
   "description": "Create MCP-Use apps with one command",
   "bin": {
     "create-mcp-use-app": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc --build",
+    "build": "npm run clean && tsc --build && npm run copy-templates",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "copy-templates": "mkdir -p dist/templates && cp -r src/templates/* dist/templates/",
     "dev": "tsc --build --watch",
     "test": "vitest",
     "lint": "eslint ."
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "dependencies": {
     "commander": "^11.0.0",
     "prompts": "^2.4.2",

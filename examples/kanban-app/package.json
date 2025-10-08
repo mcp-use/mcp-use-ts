@@ -17,7 +17,7 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc && mcp-use build",
-    "dev": "concurrently \"tsx src/server.ts\" \"tsx mcp-use build --watch\"",
+    "dev": "concurrently \"tsx src/server.ts\" \"mcp-use build --watch\"",
     "start": "node dist/server.js"
   },
   "dependencies": {
