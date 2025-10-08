@@ -13,6 +13,26 @@ program
   .description('MCP CLI tool')
   .version('2.0.1');
 
+// Helper to check if port is available
+async function isPortAvailable(port: number): Promise<boolean> {
+  try {
+    const response = await fetch(`http://localhost:${port}`);
+    return false; // Port is in use
+  } catch {
+    return true; // Port is available
+  }
+}
+
+// Helper to find an available port
+async function findAvailablePort(startPort: number): Promise<number> {
+  for (let port = startPort; port < startPort + 100; port++) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  throw new Error('No available ports found');
+}
+
 // Helper to check if server is ready
 async function waitForServer(port: number, maxAttempts = 30): Promise<boolean> {
   for (let i = 0; i < maxAttempts; i++) {
@@ -81,9 +101,17 @@ program
   .action(async (options) => {
     try {
       const projectPath = path.resolve(options.path);
-      const port = parseInt(options.port, 10);
+      let port = parseInt(options.port, 10);
       
       console.log('\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: 2.0.1\x1b[0m\n');
+
+      // Check if port is available, find alternative if needed
+      if (!(await isPortAvailable(port))) {
+        console.log(`\x1b[33m⚠️  Port ${port} is already in use\x1b[0m`);
+        const availablePort = await findAvailablePort(port);
+        console.log(`\x1b[32m✓\x1b[0m Using port ${availablePort} instead`);
+        port = availablePort;
+      }
 
       // Find the main source file
       let serverFile = 'src/server.ts';
@@ -125,6 +153,21 @@ program
         shell: false,
         env: { ...process.env, PORT: String(port) },
       });
+      
+      // Handle server errors gracefully
+      serverProc.stderr?.on('data', (data) => {
+        const output = data.toString();
+        if (output.includes('EADDRINUSE')) {
+          console.log(`\x1b[31m✗\x1b[0m Port ${port} is still in use. Please try a different port with --port`);
+          console.log(`\x1b[90mHint: Use --port 3001 or kill the process using port ${port}\x1b[0m`);
+          process.exit(1);
+        }
+      });
+      
+      serverProc.stdout?.on('data', (data) => {
+        process.stdout.write(data);
+      });
+      
       processes.push(serverProc);
 
       // Auto-open inspector if enabled
