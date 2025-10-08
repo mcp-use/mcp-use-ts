@@ -5,7 +5,7 @@ import type {
   TemplateDefinition,
   ToolDefinition,
 } from './types.js'
-import { McpServer as OfficialMcpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { McpServer as OfficialMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import express, { type Express } from 'express'
 import { existsSync, readdirSync } from 'node:fs'
@@ -61,7 +61,15 @@ export class McpServer {
         description: definition.description,
         mimeType: definition.mimeType,
       },
-      definition.fn,
+      async () => ({
+        contents: [
+          {
+            uri: definition.uri,
+            mimeType: definition.mimeType || 'text/plain',
+            text: await definition.fn(),
+          },
+        ],
+      }),
     )
     return this
   }
@@ -70,16 +78,24 @@ export class McpServer {
    * Define a resource template with parameterized URIs
    */
   template(definition: TemplateDefinition): this {
-    const template = new ResourceTemplate(definition.uriTemplate, { list: undefined })
-    this.server.resource(
-      definition.name || definition.uriTemplate,
-      template,
-      {
-        name: definition.name,
-        description: definition.description,
-        mimeType: definition.mimeType,
+    // For templates, we'll register them as tools that return resource content
+    const toolName = `template_${definition.uriTemplate.replace(/[^a-z0-9]/gi, '_')}`
+
+    this.server.tool(
+      toolName,
+      definition.description || 'Resource Template',
+      this.createInputSchema(definition.uriTemplate),
+      async (params: any) => {
+        const content = await definition.fn(params as Record<string, string>)
+        return {
+          content: [
+            {
+              type: 'text',
+              text: content,
+            },
+          ],
+        }
       },
-      definition.fn,
     )
     return this
   }
@@ -114,7 +130,17 @@ export class McpServer {
       argsSchema,
       async (params: any) => {
         const result = await definition.fn(params)
-        return result
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: result,
+              },
+            },
+          ],
+        }
       },
     )
     return this
