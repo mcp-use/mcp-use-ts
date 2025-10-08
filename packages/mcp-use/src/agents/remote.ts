@@ -305,6 +305,7 @@ export class RemoteAgent {
     }
   }
 
+  // eslint-disable-next-line require-yield
   public async* stream<T = string>(
     query: string,
     maxSteps?: number,

@@ -8,8 +8,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "vitest",
-    "lint": "eslint ."
+    "test": "vitest"
   },
   "dependencies": {
     "mcp-use-ts": "workspace:*",

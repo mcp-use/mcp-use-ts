@@ -86,6 +86,8 @@ const TodoList: React.FC<TodoListProps> = ({ initialTodos = [] }) => {
       case 'completed':
         filtered = filtered.filter(todo => todo.completed)
         break
+      default:
+        break
     }
 
     // Sort todos

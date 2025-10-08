@@ -4,7 +4,7 @@
  * This module provides automatic instrumentation and callback handler
  * for Langfuse observability platform.
  */
-
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./types.d.ts" />
 
 import type { BaseCallbackHandler } from '@langchain/core/callbacks/base'

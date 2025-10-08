@@ -57,8 +57,6 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc && cp -r src/cli/templates dist/src/cli/",
-    "lint": "eslint",
-    "lint:fix": "eslint --fix",
     "test": "vitest",
     "test:run": "vitest run",
     "test:simple": "vitest run tests/stream_events_simple.test.ts",

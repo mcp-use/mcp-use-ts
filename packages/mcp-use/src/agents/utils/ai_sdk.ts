@@ -70,6 +70,9 @@ export async function* streamEventsToAISDKWithTools(
       case 'on_tool_end':
         yield `\n✅ Tool completed: ${event.name}\n`
         break
+      default:
+        break
     }
+
   }
 }

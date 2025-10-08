@@ -50,7 +50,7 @@ export class LangChainAdapter extends BaseAdapter<StructuredToolInterface> {
       description: mcpTool.description ?? '', // Blank is acceptable but discouraged.
       schema: argsSchema,
       func: async (input: Record<string, any>): Promise<string> => {
-        logger.debug(`MCP tool \"${mcpTool.name}\" received input: ${JSON.stringify(input)}`)
+        logger.debug(`MCP tool "${mcpTool.name}" received input: ${JSON.stringify(input)}`)
         try {
           const result: CallToolResult = await connector.callTool(mcpTool.name, input)
           return JSON.stringify(result)

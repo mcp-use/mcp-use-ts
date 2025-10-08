@@ -8,12 +8,26 @@
   "scripts": {
     "build": "pnpm run -r build",
     "test": "pnpm run -r test",
-    "lint": "pnpm run -r lint",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "lint:strict": "eslint . --ext .js,.jsx,.ts,.tsx --config .eslintrc.cli.json --max-warnings 0",
     "dev": "pnpm run -r --parallel dev"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.57.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
     "typescript": "^5.0.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
   },
   "packageManager": "pnpm@10.6.1"
 }
