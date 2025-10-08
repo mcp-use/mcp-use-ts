@@ -25,6 +25,7 @@ export class McpServer {
     })
     this.app = express()
     
+    // TODO enable override
     // Enable CORS by default
     this.app.use((req, res, next) => {
       res.header('Access-Control-Allow-Origin', '*')
