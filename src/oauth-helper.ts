@@ -243,7 +243,7 @@ export class OAuthHelper {
   /**
    * Register a new OAuth client dynamically
    */
-  async registerClient(_serverUrl: string): Promise<ClientRegistration> {
+  async registerClient(serverUrl: string): Promise<ClientRegistration> {
     if (!this.discovery) {
       throw new Error('OAuth discovery not performed. Call discoverOAuthConfig first.')
     }
