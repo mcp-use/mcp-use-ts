@@ -9,6 +9,7 @@ import { z } from 'zod'
 import express, { type Express } from 'express'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { requestLogger } from './logging.js'
 
 export class McpServer {
   private server: OfficialMcpServer
@@ -44,6 +45,9 @@ export class McpServer {
       res.header('Access-Control-Allow-Headers', 'Content-Type')
       next()
     })
+
+    // Request logging middleware
+    this.app.use(requestLogger)
 
     // Setup default widget serving routes
     this.setupWidgetRoutes()
@@ -237,21 +241,16 @@ export class McpServer {
 
     // GET endpoint for SSE streaming
     this.app.get(endpoint, async (req, res) => {
-      console.log(`[MCP] GET ${endpoint}`)
       await httpTransport.handleRequest(req, res)
     })
 
     // POST endpoint for messages
     this.app.post(endpoint, express.json(), async (req, res) => {
-      const method = req.body?.method || 'unknown'
-      const id = req.body?.id || 'no-id'
-      console.log(`[MCP] POST ${endpoint} → ${method} (id: ${id})`)
       await httpTransport.handleRequest(req, res, req.body)
     })
 
     // DELETE endpoint for session cleanup
     this.app.delete(endpoint, async (req, res) => {
-      console.log(`[MCP] DELETE ${endpoint}`)
       await httpTransport.handleRequest(req, res)
     })
 
