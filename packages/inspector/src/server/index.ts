@@ -1,6 +1,8 @@
+import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
+import faviconProxy from './favicon-proxy'
 import { MCPInspector } from './mcp-inspector'
 
 const app = new Hono()
@@ -8,6 +10,9 @@ const app = new Hono()
 // Middleware
 app.use('*', cors())
 app.use('*', logger())
+
+// Mount favicon proxy
+app.route('/api/favicon', faviconProxy)
 
 // Health check
 app.get('/health', (c) => {
@@ -107,6 +112,13 @@ app.delete('/api/servers/:id', async (c) => {
 })
 
 const port = 3001
+
+// Start the server using Node.js
+serve({
+  fetch: app.fetch,
+  port,
+})
+
 // eslint-disable-next-line no-console
 console.log(`🚀 MCP Inspector Server running on http://localhost:${port}`)
 

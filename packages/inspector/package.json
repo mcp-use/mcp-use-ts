@@ -30,6 +30,8 @@
     "lint:pnpm": "pnpm lint:fix"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.5",
+    "@modelcontextprotocol/sdk": "1.12.1",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -38,6 +40,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tailwindcss/cli": "^4.1.14",
     "@tailwindcss/vite": "^4.1.14",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.22",
@@ -48,6 +51,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.3",
+    "react-syntax-highlighter": "^15.6.6",
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {

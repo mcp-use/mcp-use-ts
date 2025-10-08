@@ -1,44 +1,44 @@
-import { Activity, Database, Server, Trash2, Zap } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Activity, CheckCircle2, Database, Loader2, Server, Trash2, Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-
-interface MCPConnection {
-  id: string
-  name: string
-  status: 'connected' | 'disconnected' | 'error'
-  lastActivity: Date
-  tools: number
-  resources: number
-}
+import { useMcpContext } from '../context/McpContext'
+import { ServerIcon } from './ServerIcon'
 
 export function ServerList() {
-  const [connections, setConnections] = useState<MCPConnection[]>([])
-
-  useEffect(() => {
-    const saved = localStorage.getItem('mcp-connections')
-    if (saved) {
-      setConnections(JSON.parse(saved))
-    }
-  }, [])
+  const { connections, removeConnection } = useMcpContext()
 
   const handleDeleteConnection = (id: string) => {
-    const updated = connections.filter(c => c.id !== id)
-    setConnections(updated)
-    localStorage.setItem('mcp-connections', JSON.stringify(updated))
+    removeConnection(id)
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'connected':
+  const getStatusColor = (state: string) => {
+    switch (state) {
+      case 'ready':
         return 'text-green-600 bg-green-50'
-      case 'disconnected':
-        return 'text-gray-500 bg-gray-50'
-      case 'error':
+      case 'failed':
         return 'text-red-600 bg-red-50'
+      case 'connecting':
+      case 'discovering':
+      case 'loading':
+      case 'authenticating':
+        return 'text-yellow-600 bg-yellow-50'
       default:
         return 'text-gray-500 bg-gray-50'
+    }
+  }
+
+  const getStatusIcon = (state: string) => {
+    switch (state) {
+      case 'ready':
+        return <CheckCircle2 className="w-3 h-3 mr-1" />
+      case 'connecting':
+      case 'discovering':
+      case 'loading':
+      case 'authenticating':
+        return <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+      default:
+        return null
     }
   }
 
@@ -73,45 +73,52 @@ export function ServerList() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <Server className="w-6 h-6 text-primary" />
-                        </div>
+                        <ServerIcon 
+                          serverUrl={connection.url} 
+                          serverName={connection.name}
+                          size="lg"
+                        />
                         <div className="space-y-1">
                           <h3 className="font-semibold text-lg">
                             {connection.name}
                           </h3>
                           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                connection.status,
+                              className={`px-2 py-1 rounded-full text-xs font-medium flex items-center ${getStatusColor(
+                                connection.state,
                               )}`}
                             >
-                              {connection.status}
+                              {getStatusIcon(connection.state)}
+                              {connection.state}
                             </span>
-                            <div className="flex items-center space-x-1">
-                              <Zap className="w-4 h-4" />
-                              <span>
-                                {connection.tools}
-                                {' '}
-                                tools
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Database className="w-4 h-4" />
-                              <span>
-                                {connection.resources}
-                                {' '}
-                                resources
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Activity className="w-4 h-4" />
-                              <span>
-                                Last activity:
-                                {' '}
-                                {connection.lastActivity.toLocaleTimeString()}
-                              </span>
-                            </div>
+                            {connection.state === 'ready' && (
+                              <>
+                                <div className="flex items-center space-x-1">
+                                  <Zap className="w-4 h-4" />
+                                  <span>
+                                    {connection.tools.length}
+                                    {' '}
+                                    tools
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Database className="w-4 h-4" />
+                                  <span>
+                                    {connection.resources.length}
+                                    {' '}
+                                    resources
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Activity className="w-4 h-4" />
+                                  <span>
+                                    {connection.prompts.length}
+                                    {' '}
+                                    prompts
+                                  </span>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -8,7 +8,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'mcp-use/react': path.resolve(__dirname, '../mcp-use/dist/src/react/index.js'),
     },
+  },
+  define: {
+    // Define process.env for browser compatibility
+    'process.env': {},
+  },
+  optimizeDeps: {
+    include: ['mcp-use/react'],
   },
   server: {
     port: 3000,

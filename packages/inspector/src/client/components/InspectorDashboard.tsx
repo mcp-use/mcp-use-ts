@@ -1,74 +1,60 @@
-import { Activity, Plus, Server, Zap } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Activity, AlertCircle, CheckCircle2, Loader2, Plus, Server, Zap } from 'lucide-react'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-
-interface MCPConnection {
-  id: string
-  name: string
-  status: 'connected' | 'disconnected' | 'error'
-  lastActivity: Date
-  tools: number
-  resources: number
-}
+import { useMcpContext } from '../context/McpContext'
 
 export function InspectorDashboard() {
-  const [connections, setConnections] = useState<MCPConnection[]>([])
+  const { connections, addConnection } = useMcpContext()
   const [newServerUrl, setNewServerUrl] = useState('')
-  const [isConnecting, setIsConnecting] = useState(false)
+  const [newServerName, setNewServerName] = useState('')
 
-  useEffect(() => {
-    // Load saved connections from localStorage
-    const saved = localStorage.getItem('mcp-connections')
-    if (saved) {
-      setConnections(JSON.parse(saved))
-    }
-  }, [])
-
-  const handleAddConnection = async () => {
+  const handleAddConnection = () => {
     if (!newServerUrl.trim())
       return
 
-    setIsConnecting(true)
-    try {
-      // Simulate connection attempt
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      const newConnection: MCPConnection = {
-        id: Date.now().toString(),
-        name: newServerUrl,
-        status: 'connected',
-        lastActivity: new Date(),
-        tools: Math.floor(Math.random() * 10) + 1,
-        resources: Math.floor(Math.random() * 5) + 1,
-      }
-
-      const updated = [...connections, newConnection]
-      setConnections(updated)
-      localStorage.setItem('mcp-connections', JSON.stringify(updated))
-      setNewServerUrl('')
-    }
-    catch (error) {
-      console.error('Failed to connect:', error)
-    }
-    finally {
-      setIsConnecting(false)
-    }
+    addConnection(newServerUrl, newServerName || newServerUrl)
+    setNewServerUrl('')
+    setNewServerName('')
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'connected':
+  const getStatusColor = (state: string) => {
+    switch (state) {
+      case 'ready':
         return 'text-green-600'
-      case 'disconnected':
-        return 'text-gray-500'
-      case 'error':
+      case 'failed':
         return 'text-red-600'
+      case 'connecting':
+      case 'discovering':
+      case 'loading':
+      case 'authenticating':
+        return 'text-yellow-600'
       default:
         return 'text-gray-500'
     }
   }
+
+  const getStatusIcon = (state: string) => {
+    switch (state) {
+      case 'ready':
+        return <CheckCircle2 className="w-4 h-4 inline mr-1" />
+      case 'failed':
+        return <AlertCircle className="w-4 h-4 inline mr-1" />
+      case 'connecting':
+      case 'discovering':
+      case 'loading':
+      case 'authenticating':
+        return <Loader2 className="w-4 h-4 inline mr-1 animate-spin" />
+      default:
+        return null
+    }
+  }
+
+  const activeConnections = connections.filter(c => c.state === 'ready').length
+  const totalTools = connections.reduce((sum, c) => sum + c.tools.length, 0)
+  const totalResources = connections.reduce((sum, c) => sum + c.resources.length, 0)
 
   return (
     <div className="space-y-6">
@@ -99,7 +85,7 @@ export function InspectorDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {connections.filter(c => c.status === 'connected').length}
+              {activeConnections}
             </div>
           </CardContent>
         </Card>
@@ -111,7 +97,7 @@ export function InspectorDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {connections.reduce((sum, c) => sum + c.tools, 0)}
+              {totalTools}
             </div>
           </CardContent>
         </Card>
@@ -125,7 +111,7 @@ export function InspectorDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {connections.reduce((sum, c) => sum + c.resources, 0)}
+              {totalResources}
             </div>
           </CardContent>
         </Card>
@@ -136,20 +122,27 @@ export function InspectorDashboard() {
           <CardTitle>Add New MCP Server</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex space-x-2">
+          <div className="space-y-2">
             <Input
-              placeholder="Enter server URL or command..."
-              value={newServerUrl}
-              onChange={e => setNewServerUrl(e.target.value)}
-              onKeyPress={e => e.key === 'Enter' && handleAddConnection()}
+              placeholder="Server Name (optional)"
+              value={newServerName}
+              onChange={e => setNewServerName(e.target.value)}
             />
-            <Button
-              onClick={handleAddConnection}
-              disabled={isConnecting || !newServerUrl.trim()}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {isConnecting ? 'Connecting...' : 'Connect'}
-            </Button>
+            <div className="flex space-x-2">
+              <Input
+                placeholder="Enter server URL (e.g., https://mcp.linear.app/sse)"
+                value={newServerUrl}
+                onChange={e => setNewServerUrl(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && handleAddConnection()}
+              />
+              <Button
+                onClick={handleAddConnection}
+                disabled={!newServerUrl.trim()}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Connect
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -174,35 +167,78 @@ export function InspectorDashboard() {
                   <Card key={connection.id}>
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
-                        <div className="space-y-1">
+                        <div className="space-y-1 flex-1">
                           <h4 className="font-semibold">{connection.name}</h4>
-                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                            <span
-                              className={`font-medium ${getStatusColor(
-                                connection.status,
-                              )}`}
-                            >
-                              {connection.status}
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {connection.url}
+                          </p>
+                          <div className="flex items-center space-x-4 text-sm">
+                            <span className={`font-medium ${getStatusColor(connection.state)}`}>
+                              {getStatusIcon(connection.state)}
+                              {connection.state}
                             </span>
-                            <span>
-                              {connection.tools}
-                              {' '}
-                              tools
-                            </span>
-                            <span>
-                              {connection.resources}
-                              {' '}
-                              resources
-                            </span>
-                            <span>
-                              Last activity:
-                              {' '}
-                              {connection.lastActivity.toLocaleTimeString()}
-                            </span>
+                            {connection.state === 'ready' && (
+                              <>
+                                <span className="text-muted-foreground">
+                                  {connection.tools.length}
+                                  {' '}
+                                  tools
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {connection.resources.length}
+                                  {' '}
+                                  resources
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {connection.prompts.length}
+                                  {' '}
+                                  prompts
+                                </span>
+                              </>
+                            )}
                           </div>
+                          {connection.error && (
+                            <div className="text-sm text-red-600 mt-2">
+                              Error: {connection.error}
+                            </div>
+                          )}
+                          {connection.state === 'pending_auth' && connection.authUrl && (
+                            <div className="text-sm text-yellow-600 mt-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={connection.authenticate}
+                              >
+                                Authenticate
+                              </Button>
+                              {' '}
+                              or
+                              {' '}
+                              <a
+                                href={connection.authUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline"
+                              >
+                                open auth page
+                              </a>
+                            </div>
+                          )}
+                          {connection.state === 'failed' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={connection.retry}
+                              className="mt-2"
+                            >
+                              Retry Connection
+                            </Button>
+                          )}
                         </div>
-                        <Button variant="outline" size="sm">
-                          Inspect
+                        <Button asChild variant="outline" size="sm">
+                          <Link to={`/servers/${connection.id}`}>
+                            Inspect
+                          </Link>
                         </Button>
                       </div>
                     </CardContent>

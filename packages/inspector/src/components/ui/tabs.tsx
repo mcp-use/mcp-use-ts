@@ -76,7 +76,7 @@ const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
     const containerRef = React.useRef<HTMLDivElement>(null)
     const childrenArray = React.Children.toArray(children)
     const activeIndex = childrenArray.findIndex(
-      child => React.isValidElement(child) && child.props.value === activeValue,
+      child => React.isValidElement(child) && (child.props as { value: string }).value === activeValue,
     )
 
     React.useEffect(() => {
