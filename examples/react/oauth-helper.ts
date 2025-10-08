@@ -55,12 +55,9 @@ export class OAuthHelper {
   private discovery?: OAuthDiscovery
   private state: OAuthState
   private clientRegistration?: ClientRegistration
-  private serverUrl?: string
-  private storageKey: string
 
   constructor(config: OAuthConfig) {
     this.config = config
-    this.storageKey = `mcp-oauth-${btoa(config.redirectUri)}`
     this.state = {
       isRequired: false,
       isAuthenticated: false,
@@ -69,9 +66,6 @@ export class OAuthHelper {
       authError: null,
       oauthTokens: null,
     }
-
-    // Load persisted client registration
-    this.loadClientRegistration()
   }
 
   /**
@@ -79,44 +73,6 @@ export class OAuthHelper {
    */
   getState(): OAuthState {
     return { ...this.state }
-  }
-
-  /**
-   * Load client registration from localStorage
-   */
-  private loadClientRegistration(): void {
-    try {
-      const stored = localStorage.getItem(this.storageKey)
-      if (stored) {
-        const data = JSON.parse(stored)
-        this.clientRegistration = data.clientRegistration
-        this.serverUrl = data.serverUrl
-        console.log('🔄 [OAuthHelper] Loaded persisted client registration:', {
-          client_id: this.clientRegistration?.client_id,
-          server: this.serverUrl,
-        })
-      }
-    }
-    catch (error) {
-      console.warn('⚠️ [OAuthHelper] Failed to load client registration:', error)
-    }
-  }
-
-  /**
-   * Save client registration to localStorage
-   */
-  private saveClientRegistration(): void {
-    try {
-      const data = {
-        clientRegistration: this.clientRegistration,
-        serverUrl: this.serverUrl,
-      }
-      localStorage.setItem(this.storageKey, JSON.stringify(data))
-      console.log('💾 [OAuthHelper] Saved client registration to localStorage')
-    }
-    catch (error) {
-      console.warn('⚠️ [OAuthHelper] Failed to save client registration:', error)
-    }
   }
 
   /**
@@ -233,7 +189,7 @@ export class OAuthHelper {
       }
 
       this.discovery = await response.json()
-      return this.discovery!
+      return this.discovery
     }
     catch (error) {
       throw new Error(`Failed to discover OAuth configuration: ${error}`)
@@ -243,7 +199,7 @@ export class OAuthHelper {
   /**
    * Register a new OAuth client dynamically
    */
-  async registerClient(serverUrl: string): Promise<ClientRegistration> {
+  async registerClient(_serverUrl: string): Promise<ClientRegistration> {
     if (!this.discovery) {
       throw new Error('OAuth discovery not performed. Call discoverOAuthConfig first.')
     }
@@ -282,15 +238,12 @@ export class OAuthHelper {
       }
 
       this.clientRegistration = await response.json()
-      this.serverUrl = serverUrl
-      this.saveClientRegistration()
-
       console.log('✅ [OAuthHelper] Client registered successfully:', {
-        client_id: this.clientRegistration!.client_id,
-        client_secret: this.clientRegistration!.client_secret ? '***' : 'none',
+        client_id: this.clientRegistration.client_id,
+        client_secret: this.clientRegistration.client_secret ? '***' : 'none',
       })
 
-      return this.clientRegistration!
+      return this.clientRegistration
     }
     catch (error) {
       console.error('❌ [OAuthHelper] Client registration failed:', error)
@@ -306,12 +259,8 @@ export class OAuthHelper {
       throw new Error('OAuth discovery not performed. Call discoverOAuthConfig first.')
     }
 
-    if (!this.clientRegistration) {
-      throw new Error('Client not registered. Call registerClient first.')
-    }
-
     const params = new URLSearchParams({
-      client_id: this.clientRegistration.client_id,
+      client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
       response_type: 'code',
       scope: this.config.scope || 'read',
@@ -334,13 +283,9 @@ export class OAuthHelper {
       throw new Error('OAuth discovery not performed. Call discoverOAuthConfig first.')
     }
 
-    if (!this.clientRegistration) {
-      throw new Error('Client not registered. Call registerClient first.')
-    }
-
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
-      client_id: this.clientRegistration.client_id,
+      client_id: this.config.clientId,
       code,
       redirect_uri: this.config.redirectUri,
     })
@@ -396,18 +341,10 @@ export class OAuthHelper {
     })
 
     try {
-      // Step 1: Discover OAuth configuration
       await this.discoverOAuthConfig(serverUrl)
-
-      // Step 2: Register client dynamically (if not already registered)
-      if (!this.clientRegistration) {
-        await this.registerClient(serverUrl)
-      }
-
-      // Step 3: Generate authorization URL
       const authUrl = this.generateAuthUrl(serverUrl)
 
-      // Step 4: Open popup window for authentication
+      // Open popup window for authentication (similar to your implementation)
       const authWindow = window.open(
         authUrl,
         'mcp-oauth',
@@ -440,21 +377,6 @@ export class OAuthHelper {
     })
 
     try {
-      // If we don't have discovery data, re-discover it
-      if (!this.discovery) {
-        console.log('🔍 [OAuthHelper] Re-discovering OAuth configuration for callback')
-        await this.discoverOAuthConfig(serverUrl)
-      }
-
-      // Only re-register if we don't have a client registration for this server
-      if (!this.clientRegistration || this.serverUrl !== serverUrl) {
-        console.log('🔐 [OAuthHelper] Re-registering client for callback')
-        await this.registerClient(serverUrl)
-      }
-      else {
-        console.log('🔄 [OAuthHelper] Using existing client registration for callback')
-      }
-
       const tokenResponse = await this.exchangeCodeForToken(serverUrl, code)
 
       this.setState({
@@ -491,17 +413,6 @@ export class OAuthHelper {
       authError: null,
       oauthTokens: null,
     })
-
-    // Clear stored client registration
-    this.clientRegistration = undefined
-    this.serverUrl = undefined
-    try {
-      localStorage.removeItem(this.storageKey)
-      console.log('🗑️ [OAuthHelper] Cleared stored client registration')
-    }
-    catch (error) {
-      console.warn('⚠️ [OAuthHelper] Failed to clear client registration:', error)
-    }
   }
 
   /**
@@ -524,10 +435,9 @@ export class OAuthHelper {
  * Linear-specific OAuth configuration
  */
 export const LINEAR_OAUTH_CONFIG: OAuthConfig = {
-  // No clientId needed - will use dynamic client registration
-  redirectUri: typeof window !== 'undefined' ? window.location.origin + window.location.pathname : 'http://localhost:5174',
+  clientId: 'mcp-use-example', // This should be registered with Linear
+  redirectUri: window.location.origin + window.location.pathname,
   scope: 'read write',
-  clientName: 'MCP Use Example',
 }
 
 /**

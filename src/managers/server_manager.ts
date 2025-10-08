@@ -55,7 +55,7 @@ export class ServerManager {
     }))
 
     logger.info(`Server Manager State: [${context}]`)
-    console.table(tableData) // eslint-disable-line no-console
+    console.table(tableData)
   }
 
   initialize(): void {

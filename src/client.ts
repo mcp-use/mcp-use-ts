@@ -1,12 +1,12 @@
+import type { BaseConnector } from './connectors/base.js'
 import fs from 'node:fs'
 import path from 'node:path'
-import type { BaseConnector } from './connectors/base.js'
-import { createConnectorFromConfig, loadConfigFile } from './config.js'
 import { BaseMCPClient } from './client/base.js'
+import { createConnectorFromConfig, loadConfigFile } from './config.js'
 
 /**
  * Node.js-specific MCPClient implementation
- * 
+ *
  * Extends the base client with Node.js-specific features like:
  * - File system operations (saveConfig)
  * - Config file loading (fromConfigFile)
