@@ -25,7 +25,7 @@ importers:
         version: 11.1.0
       mcp-use-ts:
         specifier: workspace:*
-        version: link:../mcp-use-ts
+        version: link:../mcp-use
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -72,7 +72,7 @@ importers:
     dependencies:
       mcp-use-ts:
         specifier: workspace:*
-        version: link:../mcp-use-ts
+        version: link:../mcp-use
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -84,7 +84,7 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@types/node@20.19.17)
 
-  packages/mcp-use-ts:
+  packages/mcp-use:
     dependencies:
       '@dmitryrechkin/json-schema-to-zod':
         specifier: ^1.0.1
@@ -2580,7 +2580,6 @@ packages:
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
     engines: {node: '>=10.5.0'}
-    deprecated: Use your platform's native DOMException instead
 
   node-fetch@2.7.0:
     resolution: {integrity: sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==}
