@@ -12,13 +12,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:strict": "eslint . --max-warnings 0",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "lint:strict": "eslint . --max-warnings 0",
     "dev": "pnpm run -r --parallel dev"
   },
   "devDependencies": {
-    "@eslint/js": "^9.28.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
