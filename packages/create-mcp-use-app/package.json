@@ -1,0 +1,30 @@
+{
+  "name": "create-mcp-use-app",
+  "version": "0.1.0",
+  "description": "Create MCP-Use apps with one command",
+  "bin": {
+    "create-mcp-use-app": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "prompts": "^2.4.2",
+    "chalk": "^5.3.0",
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/prompts": "^2.4.9",
+    "@types/fs-extra": "^11.0.4",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "mcp-use-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm run -r build",
+    "test": "pnpm run -r test",
+    "lint": "pnpm run -r lint",
+    "dev": "pnpm run -r --parallel dev"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "packageManager": "pnpm@10.6.1"
+}
