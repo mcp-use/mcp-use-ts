@@ -21,7 +21,7 @@ export * from './src/managers/tools/index.js'
 export { type ObservabilityConfig, ObservabilityManager } from './src/observability/index.js'
 
 // Export server utilities
-export { create, McpServer } from './src/server/index.js'
+export { createMCPServer, McpServer } from './src/server/index.js'
 
 export type {
   InputDefinition,

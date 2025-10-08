@@ -16,15 +16,14 @@
   ],
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc && npm run build:pages",
-    "build:pages": "tsx scripts/build.mts",
-    "dev": "concurrently \"tsx src/server.ts\" \"tsx scripts/build.mts --watch\"",
+    "build": "tsc && mcp-use build",
+    "dev": "concurrently \"tsx src/server.ts\" \"tsx mcp-use build --watch\"",
     "start": "node dist/server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.0",
-    "mcp-use": "file:../"
+    "mcp-use": "workspace:*"
   },
   "devDependencies": {
     "@types/cors": "^2.8.0",
@@ -32,6 +31,7 @@
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "@mcp-use/cli": "workspace:*",
     "concurrently": "^8.0.0",
     "esbuild": "^0.23.0",
     "globby": "^14.0.2",

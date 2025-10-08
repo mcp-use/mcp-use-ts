@@ -56,7 +56,7 @@ program
         start: 'node dist/index.js'
       },
       dependencies: {
-        'mcp-use-ts': '^0.1.20'
+        'mcp-use': '^0.1.20'
       },
       devDependencies: options.typescript ? {
         '@types/node': '^20.0.0',
@@ -71,7 +71,7 @@ program
     fs.ensureDirSync(srcDir);
 
     const ext = options.typescript ? 'ts' : 'js';
-    const indexContent = `import { MCPClient } from 'mcp-use-ts';
+    const indexContent = `import { MCPClient } from 'mcp-use';
 
 async function main() {
   const client = new MCPClient({

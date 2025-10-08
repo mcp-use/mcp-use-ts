@@ -10,7 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "mcp-use-ts": "workspace:*"
+    "mcp-use": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

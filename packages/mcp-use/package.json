@@ -1,5 +1,5 @@
 {
-  "name": "mcp-use-ts",
+  "name": "mcp-use",
   "type": "module",
   "version": "0.2.0",
   "packageManager": "pnpm@10.6.1",

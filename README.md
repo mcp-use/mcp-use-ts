@@ -4,7 +4,7 @@ This is a monorepo containing multiple packages for the MCP-Use ecosystem.
 
 ## Packages
 
-- **`mcp-use-ts`** - Core MCP integration library
+- **`mcp-use`** - Core MCP integration library
 - **`@mcp-use/inspector`** - MCP Inspector package for debugging and inspecting MCP servers
 - **`@mcp-use/cli`** - Command-line interface for MCP
 - **`create-mcp-use-app`** - Create new MCP-Use applications with one command
@@ -41,8 +41,8 @@ npm login
 #### Option 1: Publish from package directory
 
 ```bash
-# Publish mcp-use-ts
-cd packages/mcp-use-ts
+# Publish mcp-use
+cd packages/mcp-use
 pnpm publish --access public
 
 # Publish inspector
@@ -62,7 +62,7 @@ pnpm publish --access public
 
 ```bash
 # Publish specific package from root
-pnpm --filter mcp-use-ts publish --access public
+pnpm --filter mcp-use publish --access public
 pnpm --filter @mcp-use/inspector publish --access public
 pnpm --filter @mcp-use/cli publish --access public
 pnpm --filter create-mcp-use-app publish --access public
@@ -81,7 +81,7 @@ pnpm -r publish --access public
 
 ```bash
 # Bump version for specific package
-pnpm --filter mcp-use-ts version patch
+pnpm --filter mcp-use version patch
 pnpm --filter @mcp-use/inspector version minor
 pnpm --filter @mcp-use/cli version major
 ```

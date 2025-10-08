@@ -1,4 +1,4 @@
-export { create, McpServer } from './mcp-server.js'
+export { createMCPServer, McpServer } from './mcp-server.js'
 export type {
   InputDefinition,
   PromptDefinition,
