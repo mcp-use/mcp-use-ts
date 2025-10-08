@@ -23,6 +23,21 @@ export { type ObservabilityConfig, ObservabilityManager } from './src/observabil
 // Export telemetry utilities
 export { setTelemetrySource, Telemetry } from './src/telemetry/index.js'
 
+// Export server utilities
+export { McpServer, create } from './src/server/index.js'
+export type { 
+  ServerConfig, 
+  ResourceHandler, 
+  TemplateHandler, 
+  ToolHandler, 
+  PromptHandler,
+  ResourceDefinition,
+  TemplateDefinition,
+  ToolDefinition,
+  PromptDefinition,
+  InputDefinition
+} from './src/server/types.js'
+
 // Re-export message classes to ensure a single constructor instance is shared by consumers
 export { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
 

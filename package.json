@@ -34,6 +34,10 @@
     "./browser": {
       "types": "./dist/src/browser.d.ts",
       "import": "./dist/src/browser.js"
+    },
+    "./server": {
+      "types": "./dist/src/server/index.d.ts",
+      "import": "./dist/src/server/index.js"
     }
   },
   "main": "./dist/index.js",
@@ -42,6 +46,9 @@
   "files": [
     "dist"
   ],
+  "bin": {
+    "create-mcp-app": "./dist/src/cli/create-mcp-app.js"
+  },
   "engines": {
     "node": ">=22.0.0"
   },
@@ -49,7 +56,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "rm -rf dist && tsc && cp -r src/cli/templates dist/src/cli/",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "test": "vitest",
@@ -101,10 +108,13 @@
     "@modelcontextprotocol/sdk": "1.12.1",
     "@scarf/scarf": "^1.4.0",
     "ai": "^4.3.19",
+    "commander": "^14.0.1",
     "dotenv": "^16.5.0",
     "langchain": "^0.3.27",
     "lodash-es": "^4.17.21",
     "posthog-node": "^5.1.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
     "uuid": "^11.1.0",
     "winston": "^3.17.0",
     "winston-transport-browserconsole": "^1.0.5",

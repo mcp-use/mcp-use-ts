@@ -1,0 +1,24 @@
+{
+  "name": "my-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server: my-mcp-server",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/server.ts",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "mcp-use": "latest",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["mcp", "server", "api", "http", "ai", "tools"],
+  "author": "",
+  "license": "MIT"
+}

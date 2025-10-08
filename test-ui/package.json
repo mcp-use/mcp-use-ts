@@ -1,0 +1,43 @@
+{
+  "name": "test-ui",
+  "version": "1.0.0",
+  "description": "MCP server: test-ui",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc && npm run build:pages",
+    "build:pages": "tsx scripts/build.mts",
+    "dev": "concurrently \"tsx src/server.ts\" \"tsx scripts/build.mts --watch\"",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "mcp-use": "latest",
+    "express": "^4.18.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@types/express": "^4.17.0",
+    "@types/cors": "^2.8.0",
+    "concurrently": "^8.0.0",
+    "esbuild": "^0.23.0",
+    "globby": "^14.0.2",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "server",
+    "ui",
+    "react",
+    "widgets",
+    "ai",
+    "tools"
+  ],
+  "author": "",
+  "license": "MIT"
+}
