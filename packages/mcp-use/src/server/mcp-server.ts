@@ -11,6 +11,7 @@ import { z } from 'zod'
 export class McpServer {
   private server: OfficialMcpServer
   private config: ServerConfig
+  private expressApp?: any
 
   constructor(config: ServerConfig) {
     this.config = config
@@ -56,7 +57,7 @@ export class McpServer {
       toolName,
       definition.description || 'Resource Template',
       this.createInputSchema(definition.uriTemplate),
-      async (params) => {
+      async (params: any) => {
         const content = await definition.fn(params as Record<string, string>)
         return {
           content: [
@@ -81,7 +82,7 @@ export class McpServer {
       definition.name,
       definition.description || definition.name,
       inputSchema,
-      async (params) => {
+      async (params: any) => {
         const result = await definition.fn(params)
         return {
           content: [
@@ -106,7 +107,7 @@ export class McpServer {
       definition.name,
       definition.description || definition.name,
       argsSchema,
-      async (params) => {
+      async (params: any) => {
         const result = await definition.fn(params)
         return {
           messages: [
@@ -125,14 +126,83 @@ export class McpServer {
   }
 
   /**
-   * Start the MCP server
+   * Set the Express app for SSE transport
    */
-  async serve(): Promise<void> {
-    // The MCP server needs to be connected to a transport
-    // For now, we'll use stdio transport by default
-    const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js')
-    const transport = new StdioServerTransport()
-    await this.server.connect(transport)
+  setExpressApp(app: any): this {
+    this.expressApp = app
+    return this
+  }
+
+  /**
+   * Start the MCP server with configurable transport
+   * @param options - Transport options (defaults to HTTP)
+   */
+  async serve(options?: { transport?: 'http' | 'stdio', port?: number, endpoint?: string }): Promise<void> {
+    const transport = options?.transport || (process.env.MCP_TRANSPORT as 'http' | 'stdio') || 'http'
+
+    if (transport === 'stdio') {
+      // Use stdio transport (for traditional MCP clients)
+      const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js')
+      const stdioTransport = new StdioServerTransport()
+      await this.server.connect(stdioTransport)
+      console.log('📡 MCP server connected via stdio transport')
+    } else {
+      // Default to StreamableHTTPServerTransport (for HTTP/web access)
+      const { StreamableHTTPServerTransport } = await import('@modelcontextprotocol/sdk/server/streamableHttp.js')
+      const endpoint = options?.endpoint || '/mcp'
+
+      if (!this.expressApp) {
+        // Create a standalone Express server if no app provided
+        const express = await import('express')
+        this.expressApp = express.default()
+
+        // Enable CORS
+        this.expressApp.use((req: any, res: any, next: any) => {
+          res.header('Access-Control-Allow-Origin', '*')
+          res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+          res.header('Access-Control-Allow-Headers', 'Content-Type')
+          next()
+        })
+
+        const port = options?.port || 3001
+        this.expressApp.listen(port, () => {
+          console.log(`📡 MCP HTTP server listening on http://localhost:${port}${endpoint}`)
+        })
+      }
+
+      console.log(`📡 Registering HTTP endpoints on Express app...`)
+
+      // Create StreamableHTTPServerTransport in stateless mode
+      const httpTransport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined // Stateless mode
+      })
+
+      // Connect the MCP server to the transport
+      await this.server.connect(httpTransport)
+
+      // Add HTTP endpoints for StreamableHTTPServerTransport
+      const express = await import('express')
+
+      // GET endpoint for SSE streaming
+      this.expressApp.get(endpoint, async (req: any, res: any) => {
+        console.log(`📡 HTTP GET request received at ${endpoint}`)
+        await httpTransport.handleRequest(req, res)
+      })
+
+      // POST endpoint for messages
+      this.expressApp.post(endpoint, express.json(), async (req: any, res: any) => {
+        console.log(`📡 HTTP POST request received at ${endpoint}`)
+        await httpTransport.handleRequest(req, res, req.body)
+      })
+
+      // DELETE endpoint for session cleanup (if using stateful mode)
+      this.expressApp.delete(endpoint, async (req: any, res: any) => {
+        console.log(`📡 HTTP DELETE request received at ${endpoint}`)
+        await httpTransport.handleRequest(req, res)
+      })
+
+      console.log(`📡 MCP server HTTP endpoints registered at ${endpoint}`)
+    }
   }
 
   /**

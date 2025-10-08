@@ -52,6 +52,9 @@ app.get('/mcp-use/widgets/:widget', (req, res, next) => {
   res.sendFile(filePath, err => (err ? next() : undefined))
 })
 
+// Pass the Express app to MCP for SSE transport
+mcp.setExpressApp(app)
+
 // Start Express server
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
@@ -69,7 +72,9 @@ mcp.resource({
       name: 'ui-mcp-server',
       version: '1.0.0',
       status: 'running',
+      transport: process.env.MCP_TRANSPORT || 'http',
       uiEndpoint: `http://localhost:${PORT}/mcp-use/widgets`,
+      mcpEndpoint: process.env.MCP_TRANSPORT === 'stdio' ? 'stdio' : `http://localhost:${PORT}/mcp`,
       availableWidgets: ['kanban-board', 'todo-list', 'data-visualization'],
       timestamp: new Date().toISOString(),
     }, null, 2)
@@ -250,7 +255,20 @@ console.log(`🌐 UI Server: http://localhost:${PORT}`)
 console.log('📦 Resources: ui://status, ui://widget/kanban-board, ui://widget/todo-list, ui://widget/data-visualization')
 console.log('🛠️  Tools: show-kanban, show-todo-list, show-data-viz')
 console.log('💬 Prompts: ui-development')
-console.log('✅ Server ready!')
 
-// Start the MCP server
-mcp.serve().catch(console.error)
+// Start the MCP server with HTTP by default (use MCP_TRANSPORT=stdio env var for stdio)
+console.log('📡 Setting up MCP server...')
+mcp.serve({
+  transport: (process.env.MCP_TRANSPORT as 'http' | 'stdio') || 'http',
+  endpoint: '/mcp'
+}).then(() => {
+  const transport = process.env.MCP_TRANSPORT || 'http'
+  if (transport === 'http') {
+    console.log(`📡 MCP server accessible at: http://localhost:${PORT}/mcp`)
+    console.log('✅ Server ready! Connect with MCP clients via HTTP (StreamableHTTP transport)')
+  } else {
+    console.log('✅ Server ready! Connect with MCP clients via stdio')
+  }
+}).catch((error) => {
+  console.error('❌ Failed to start MCP server:', error)
+})
