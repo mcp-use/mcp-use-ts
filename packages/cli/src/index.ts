@@ -13,9 +13,10 @@ program
   .command('build')
   .description('Build MCP UI widgets')
   .option('-p, --path <path>', 'Path to project directory', process.cwd())
+  .option('-w, --watch', 'Watch for changes and rebuild')
   .action(async (options) => {
     try {
-      await buildWidgets(options.path);
+      await buildWidgets(options.path, options.watch);
     } catch (error) {
       console.error('Build failed:', error);
       process.exit(1);
