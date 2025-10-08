@@ -181,6 +181,9 @@ const MCPTools: React.FC = () => {
             <p style={{ margin: '0', color: '#155724' }}>
               Found {tools.length} tools, {resources.length} resources, {prompts.length} prompts
             </p>
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.9em', color: '#6c757d' }}>
+              Note: HTTP transport failed (404), successfully connected via SSE fallback
+            </p>
           </div>
 
           <button
@@ -260,10 +263,25 @@ const MCPTools: React.FC = () => {
           </div>
 
           {/* Resources List */}
-          {resources.length > 0 && (
-            <div style={{ marginTop: '30px' }}>
-              <h3>Available Resources ({resources.length})</h3>
-              {resources.map((resource, index) => (
+          <div style={{ marginTop: '30px' }}>
+            <h3>Available Resources ({resources.length})</h3>
+            {resources.length === 0 ? (
+              <div
+                style={{
+                  padding: '10px',
+                  backgroundColor: '#fff3cd',
+                  border: '1px solid #ffc107',
+                  borderRadius: '4px',
+                  color: '#856404',
+                }}
+              >
+                <strong>ℹ️ Resources not supported</strong>
+                <p style={{ margin: '5px 0 0 0', fontSize: '0.9em' }}>
+                  This MCP server does not support the resources/list method.
+                </p>
+              </div>
+            ) : (
+              resources.map((resource, index) => (
                 <div
                   key={index}
                   style={{
@@ -277,15 +295,30 @@ const MCPTools: React.FC = () => {
                   <strong>{resource.name || resource.uri}</strong>
                   {resource.description && <p style={{ margin: '5px 0 0 0', fontSize: '0.9em' }}>{resource.description}</p>}
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
 
           {/* Prompts List */}
-          {prompts.length > 0 && (
-            <div style={{ marginTop: '30px' }}>
-              <h3>Available Prompts ({prompts.length})</h3>
-              {prompts.map((prompt, index) => (
+          <div style={{ marginTop: '30px' }}>
+            <h3>Available Prompts ({prompts.length})</h3>
+            {prompts.length === 0 ? (
+              <div
+                style={{
+                  padding: '10px',
+                  backgroundColor: '#fff3cd',
+                  border: '1px solid #ffc107',
+                  borderRadius: '4px',
+                  color: '#856404',
+                }}
+              >
+                <strong>ℹ️ Prompts not supported</strong>
+                <p style={{ margin: '5px 0 0 0', fontSize: '0.9em' }}>
+                  This MCP server does not support the prompts/list method.
+                </p>
+              </div>
+            ) : (
+              prompts.map((prompt, index) => (
                 <div
                   key={index}
                   style={{
@@ -299,9 +332,9 @@ const MCPTools: React.FC = () => {
                   <strong>{prompt.name}</strong>
                   {prompt.description && <p style={{ margin: '5px 0 0 0', fontSize: '0.9em' }}>{prompt.description}</p>}
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
 
           {/* Tool Result Display */}
           {toolResult && (
@@ -378,8 +411,9 @@ const ReactExample: React.FC = () => {
           <li>✅ Automatic OAuth flow handling with popup support</li>
           <li>✅ Fallback manual authentication link if popup is blocked</li>
           <li>✅ Auto-reconnect on connection loss</li>
-          <li>✅ Support for tools, resources, and prompts</li>
+          <li>✅ Support for tools, resources, and prompts (when supported by server)</li>
           <li>✅ HTTP transport with SSE fallback</li>
+          <li>✅ Graceful handling of unsupported server methods</li>
         </ul>
         <p>
           <strong>Note:</strong> The Linear MCP server requires OAuth authentication. The hook will automatically
