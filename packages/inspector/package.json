@@ -11,13 +11,28 @@
     "debug",
     "tools"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    }
+  },
+  "main": "./dist/server/index.js",
+  "types": "./dist/server/index.d.ts",
+  "bin": {
+    "mcp-inspect": "./dist/cli/inspect.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
     "dev:client": "vite",
-    "dev:server": "tsx watch src/server/index.ts",
+    "dev:server": "tsx watch src/server/standalone.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
+    "start": "node dist/server/standalone.js",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
@@ -28,6 +43,9 @@
     "lint:yarn": "yarn eslint . --fix",
     "lint:npm": "npm run lint:fix",
     "lint:pnpm": "pnpm lint:fix"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.5",
@@ -43,6 +61,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "express": "^4.18.0",
     "framer-motion": "^12.23.22",
     "hono": "^4.0.0",
     "lucide-react": "^0.545.0",
@@ -59,6 +78,7 @@
     "@antfu/eslint-config": "^5.4.1",
     "@eslint-react/eslint-plugin": "^1.38.4",
     "@radix-ui/react-slot": "^1.2.3",
+    "@types/express": "^4.17.0",
     "@types/node": "^24.7.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",

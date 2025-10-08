@@ -1,10 +1,15 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "rootDir": "src/server",
+    "rootDir": "src",
+    "moduleResolution": "node",
+    "allowImportingTsExtensions": false,
+    "declaration": true,
+    "declarationMap": true,
     "noEmit": false,
-    "outDir": "dist/server"
+    "outDir": "dist",
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["src/server/**/*"],
+  "include": ["src/server/**/*", "src/cli/**/*"],
   "exclude": ["src/client/**/*", "src/shared/**/*"]
 }

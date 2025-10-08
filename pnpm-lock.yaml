@@ -12,6 +12,10 @@ patchedDependencies:
 importers:
 
   .:
+    dependencies:
+      '@eslint/js':
+        specifier: ^9.37.0
+        version: 9.37.0
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -144,6 +148,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      express:
+        specifier: ^4.18.0
+        version: 4.21.2
       framer-motion:
         specifier: ^12.23.22
         version: 12.23.22(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -187,6 +194,9 @@ importers:
       '@radix-ui/react-slot':
         specifier: ^1.2.3
         version: 1.2.3(@types/react@19.2.2)(react@19.2.0)
+      '@types/express':
+        specifier: ^4.17.0
+        version: 4.17.23
       '@types/node':
         specifier: ^24.7.0
         version: 24.7.0
@@ -244,6 +254,9 @@ importers:
       '@mcp-ui/server':
         specifier: ^5.11.0
         version: 5.11.0(patch_hash=5d24b4104a7d6d537b7de1dc183b27e42d9c1b3fde96a28dbeb722713ba85f11)
+      '@mcp-use/inspector':
+        specifier: workspace:*
+        version: link:../inspector
       '@modelcontextprotocol/sdk':
         specifier: 1.12.1
         version: 1.12.1
@@ -393,6 +406,9 @@ importers:
       '@mcp-ui/server':
         specifier: ^5.11.0
         version: 5.11.0(patch_hash=5d24b4104a7d6d537b7de1dc183b27e42d9c1b3fde96a28dbeb722713ba85f11)
+      '@mcp-use/inspector':
+        specifier: workspace:*
+        version: link:../packages/inspector
       cors:
         specifier: ^2.8.5
         version: 2.8.5
@@ -400,7 +416,7 @@ importers:
         specifier: ^4.18.0
         version: 4.21.2
       mcp-use:
-        specifier: ../packages/mcp-use
+        specifier: workspace:*
         version: link:../packages/mcp-use
     devDependencies:
       '@mcp-use/cli':
@@ -4892,12 +4908,15 @@ packages:
     engines: {node: '>=22.0.0'}
     hasBin: true
     peerDependencies:
+      '@mcp-use/inspector': workspace:*
       cors: ^2.8.5
       express: ^4.18.2
       langfuse: ^3.32.0
       langfuse-langchain: ^3.38.4
       react: ^18.0.0
     peerDependenciesMeta:
+      '@mcp-use/inspector':
+        optional: true
       cors:
         optional: true
       express:

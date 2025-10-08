@@ -84,9 +84,10 @@ function StatusDot({ status }: { status: string }) {
 export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { connections } = useMcpContext()
+  const { connections, addConnection } = useMcpContext()
   const [activeTab, setActiveTab] = useState('tools')
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null)
+  const [configLoaded, setConfigLoaded] = useState(false)
 
   const tabs = [
     { id: 'tools', label: 'Tools', icon: Wrench },
@@ -100,6 +101,32 @@ export function Layout({ children }: LayoutProps) {
   }
 
   const selectedServer = connections.find(c => c.id === selectedServerId)
+
+  // Load config and auto-connect if URL is provided
+  useEffect(() => {
+    if (configLoaded)
+      return
+
+    fetch('/inspector/config.json')
+      .then(res => res.json())
+      .then((config: { autoConnectUrl: string | null }) => {
+        setConfigLoaded(true)
+        if (config.autoConnectUrl) {
+          // Check if we already have this server
+          const existing = connections.find(c => c.url === config.autoConnectUrl)
+          if (!existing) {
+            // Auto-connect to the local server
+            addConnection({
+              name: 'Local MCP Server',
+              url: config.autoConnectUrl,
+            })
+          }
+        }
+      })
+      .catch(() => {
+        setConfigLoaded(true)
+      })
+  }, [configLoaded, connections, addConnection])
 
   // Handle navigation logic based on current route and server selection
   useEffect(() => {

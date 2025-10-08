@@ -1,9 +1,10 @@
 # MCP Inspector
 
-A web-based interface for connecting to and managing MCP (Model Context Protocol) servers using the `useMcp` React hook.
+A web-based interface for connecting to and managing MCP (Model Context Protocol) servers. The inspector is automatically mounted at `/inspector` for all MCP servers created with `createMCPServer`, similar to how FastAPI provides automatic Swagger docs at `/docs`.
 
 ## Features
 
+- **Automatic Mounting**: No configuration needed - the inspector is automatically available at `/inspector`
 - **Server Management**: Add, connect to, and manage multiple MCP servers simultaneously
 - **Real-time Connection Status**: See live connection states and errors
 - **OAuth Authentication**: Automatic OAuth flow handling with popup support
@@ -12,6 +13,48 @@ A web-based interface for connecting to and managing MCP (Model Context Protocol
 - **Browser-Compatible**: Works entirely in the browser using the `useMcp` React hook
 - **Multiple Connection Types**: Support for HTTP/SSE and WebSocket connections
 - **Persistent Storage**: Connections are saved to localStorage and automatically reconnect
+
+## Quick Start
+
+### As Embedded Inspector (Recommended)
+
+The inspector is automatically available when you create an MCP server:
+
+```typescript
+import { createMCPServer } from 'mcp-use'
+
+const server = createMCPServer('my-server', {
+  version: '1.0.0',
+  description: 'My awesome MCP server'
+})
+
+// Define your tools, resources, and prompts...
+
+server.listen(3000)
+// Inspector UI automatically available at http://localhost:3000/inspector
+// Auto-connects to http://localhost:3000/mcp
+```
+
+That's it! No additional setup required. The inspector:
+
+- Automatically mounts at `/inspector`
+- Auto-connects to your local MCP server
+- Provides a seamless debugging experience
+
+### As Standalone CLI Tool
+
+Inspect any remote MCP server:
+
+```bash
+# Inspect a remote server
+npx mcp-inspect --url https://mcp.linear.app/sse
+
+# Custom port
+npx mcp-inspect --url http://localhost:3000/mcp --port 8080
+
+# Run without auto-connect
+npx mcp-inspect
+```
 
 ## Usage
 
@@ -103,17 +146,39 @@ The `useMcp` hook automatically handles:
 - Error handling and retry logic
 - Session persistence via localStorage
 
+## Manual Mounting (Advanced)
+
+If you need to customize the mount path or use the inspector in a custom Express app:
+
+```typescript
+import { mountInspector } from '@mcp-use/inspector'
+import express from 'express'
+
+const app = express()
+
+// Mount at custom path
+mountInspector(app, '/my-custom-inspector-path')
+
+app.listen(3000)
+```
+
 ## Development
 
 To run the inspector in development mode:
 
 ```bash
 cd packages/inspector
-yarn install
-yarn dev
+pnpm install
+pnpm build  # Build the inspector UI and server
 ```
 
-The inspector will be available at `http://localhost:5173`.
+For standalone development of the inspector UI:
+
+```bash
+pnpm dev  # Runs both client and server in development mode
+```
+
+The standalone inspector will be available at `http://localhost:5173`.
 
 ### Project Structure
 

@@ -16,6 +16,8 @@ export class McpServer {
   private config: ServerConfig
   private app: Express
   private mcpMounted = false
+  private inspectorMounted = false
+  private serverPort?: number
 
   constructor(config: ServerConfig) {
     this.config = config
@@ -192,11 +194,37 @@ export class McpServer {
    */
   async listen(port?: number): Promise<void> {
     await this.mountMcp()
-    const serverPort = port || 3001
-    this.app.listen(serverPort, () => {
-      console.log(`📡 Server listening on http://localhost:${serverPort}`)
-      console.log(`📡 MCP endpoints available at http://localhost:${serverPort}/mcp`)
+    this.serverPort = port || 3001
+    
+    // Mount inspector after we know the port
+    this.mountInspector()
+    
+    this.app.listen(this.serverPort, () => {
+      console.log(`📡 Server listening on http://localhost:${this.serverPort}`)
+      console.log(`📡 MCP endpoints available at http://localhost:${this.serverPort}/mcp`)
     })
+  }
+
+  /**
+   * Mount MCP Inspector UI at /inspector
+   */
+  private mountInspector(): void {
+    if (this.inspectorMounted) return
+    
+    try {
+      // Try to dynamically import the inspector package
+      import('@mcp-use/inspector').then(({ mountInspector }) => {
+        // Auto-connect to the local MCP server at /mcp
+        const mcpServerUrl = `http://localhost:${this.serverPort}/mcp`
+        mountInspector(this.app, '/inspector', mcpServerUrl)
+        this.inspectorMounted = true
+      }).catch(() => {
+        // Inspector package not installed, skip mounting silently
+        // This allows the server to work without the inspector in production
+      })
+    } catch {
+      // Inspector not available, skip
+    }
   }
 
   /**

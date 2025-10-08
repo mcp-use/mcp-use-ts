@@ -16,12 +16,13 @@
   ],
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc && mcp-use build",
-    "dev": "concurrently \"tsx src/server.ts\" \"mcp-use build --watch\"",
-    "start": "node dist/server.js"
+    "build": "mcp-use build",
+    "dev": "mcp-use dev",
+    "start": "mcp-use start"
   },
   "dependencies": {
     "@mcp-ui/server": "^5.11.0",
+    "@mcp-use/inspector": "workspace:*",
     "cors": "^2.8.5",
     "express": "^4.18.0",
     "mcp-use": "workspace:*"

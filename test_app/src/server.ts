@@ -1,6 +1,8 @@
 import { createMCPServer } from 'mcp-use'
 import { createUIResource } from '@mcp-ui/server';
+
 // Create an MCP server (which is also an Express app)
+// The MCP Inspector is automatically mounted at /inspector
 const server = createMCPServer('ui-mcp-server', {
   version: '1.0.0',
   description: 'An MCP server with React UI widgets',
@@ -152,6 +154,7 @@ console.log('📋 Server: ui-mcp-server v1.0.0')
 console.log('📦 Resources: ui://status, ui://widget/kanban-board, ui://widget/todo-list, ui://widget/data-visualization')
 console.log('🛠️  Tools: show-kanban, show-todo-list, show-data-viz')
 console.log('💬 Prompts: ui-development')
+console.log(`🔍 Inspector UI: http://localhost:${PORT}/inspector`)
 
 // Start the server (MCP endpoints auto-mounted at /mcp)
 server.listen(PORT)
