@@ -6,12 +6,16 @@ settings:
 
 patchedDependencies:
   '@mcp-ui/server@5.11.0':
-    hash: 5d24b4104a7d6d537b7de1dc183b27e42d9c1b3fde96a28dbeb722713ba85f11
+    hash: q4o7znptjmfaz7quhzmm6hp4jy
     path: patches/@mcp-ui__server@5.11.0.patch
 
 importers:
 
   .:
+    dependencies:
+      '@eslint/js':
+        specifier: ^9.37.0
+        version: 9.37.0
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -243,7 +247,7 @@ importers:
         version: 0.6.13(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))(ws@8.18.2)
       '@mcp-ui/server':
         specifier: ^5.11.0
-        version: 5.11.0(patch_hash=5d24b4104a7d6d537b7de1dc183b27e42d9c1b3fde96a28dbeb722713ba85f11)
+        version: 5.11.0(patch_hash=q4o7znptjmfaz7quhzmm6hp4jy)
       '@modelcontextprotocol/sdk':
         specifier: 1.12.1
         version: 1.12.1
@@ -392,7 +396,7 @@ importers:
     dependencies:
       '@mcp-ui/server':
         specifier: ^5.11.0
-        version: 5.11.0(patch_hash=5d24b4104a7d6d537b7de1dc183b27e42d9c1b3fde96a28dbeb722713ba85f11)
+        version: 5.11.0(patch_hash=q4o7znptjmfaz7quhzmm6hp4jy)
       cors:
         specifier: ^2.8.5
         version: 2.8.5
@@ -400,7 +404,7 @@ importers:
         specifier: ^4.18.0
         version: 4.21.2
       mcp-use:
-        specifier: ../packages/mcp-use
+        specifier: workspace:*
         version: link:../packages/mcp-use
     devDependencies:
       '@mcp-use/cli':
@@ -7696,7 +7700,7 @@ snapshots:
       '@langchain/core': 0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))
       js-tiktoken: 1.0.20
 
-  '@mcp-ui/server@5.11.0(patch_hash=5d24b4104a7d6d537b7de1dc183b27e42d9c1b3fde96a28dbeb722713ba85f11)':
+  '@mcp-ui/server@5.11.0(patch_hash=q4o7znptjmfaz7quhzmm6hp4jy)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.12.1
     transitivePeerDependencies:
@@ -11673,7 +11677,7 @@ snapshots:
       '@langchain/anthropic': 0.3.28(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))
       '@langchain/core': 0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))
       '@langchain/openai': 0.6.13(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))(ws@8.18.2)
-      '@mcp-ui/server': 5.11.0(patch_hash=5d24b4104a7d6d537b7de1dc183b27e42d9c1b3fde96a28dbeb722713ba85f11)
+      '@mcp-ui/server': 5.11.0(patch_hash=q4o7znptjmfaz7quhzmm6hp4jy)
       '@modelcontextprotocol/sdk': 1.12.1
       '@scarf/scarf': 1.4.0
       ai: 4.3.19(react@18.3.1)(zod@3.25.48)
