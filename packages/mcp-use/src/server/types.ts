@@ -1,4 +1,4 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import type { CallToolResult, GetPromptResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 export interface ServerConfig {
   name: string
   version: string
@@ -43,7 +43,9 @@ export interface PromptDefinition {
   fn: PromptHandler
 }
 
-export type ResourceHandler = () => Promise<string>
-export type TemplateHandler = (params: Record<string, string>) => Promise<string>
-export type ToolHandler = (params: Record<string, any>) => Promise<CallToolResult>
-export type PromptHandler = (params: Record<string, any>) => Promise<string>
+import type { Variables } from '@modelcontextprotocol/sdk/shared/uriTemplate.js'
+
+export type ResourceHandler = () => Promise<ReadResourceResult>
+export type TemplateHandler = (uri: URL, variables: Variables) => Promise<ReadResourceResult>
+export type ToolHandler<TInput = Record<string, any>> = (params: TInput) => Promise<CallToolResult>
+export type PromptHandler<TInput = Record<string, any>> = (params: TInput) => Promise<GetPromptResult>
