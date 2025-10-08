@@ -31,7 +31,9 @@ server.tool({
       },
       encoding: 'text',
     })
-    return uiResource
+    return {
+      content: [uiResource]
+    }
   },
 })
 
@@ -54,6 +56,7 @@ server.resource({
     }, null, 2)
   },
 })
+
 
 // MCP Resource for Kanban Board widget
 server.resource({
@@ -116,10 +119,24 @@ server.tool({
     const { tasks } = params
     try {
       const taskData = JSON.parse(tasks)
-      return `Displayed Kanban board with ${taskData.length || 0} tasks at http://localhost:${PORT}/mcp-use/widgets/kanban-board`
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Displayed Kanban board with ${taskData.length || 0} tasks at http://localhost:${PORT}/mcp-use/widgets/kanban-board`
+          }
+        ]
+      }
     }
     catch (error) {
-      return `Error parsing tasks: ${error instanceof Error ? error.message : 'Invalid JSON'}`
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error parsing tasks: ${error instanceof Error ? error.message : 'Invalid JSON'}`
+          }
+        ]
+      }
     }
   },
 })
@@ -140,10 +157,24 @@ server.tool({
     const { todos } = params
     try {
       const todoData = JSON.parse(todos)
-      return `Displayed Todo list with ${todoData.length || 0} items at http://localhost:${PORT}/mcp-use/widgets/todo-list`
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Displayed Todo list with ${todoData.length || 0} items at http://localhost:${PORT}/mcp-use/widgets/todo-list`
+          }
+        ]
+      }
     }
     catch (error) {
-      return `Error parsing todos: ${error instanceof Error ? error.message : 'Invalid JSON'}`
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error parsing todos: ${error instanceof Error ? error.message : 'Invalid JSON'}`
+          }
+        ]
+      }
     }
   },
 })
