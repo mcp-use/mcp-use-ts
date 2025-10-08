@@ -30,8 +30,6 @@ export type {
   ResourceDefinition,
   ResourceHandler,
   ServerConfig,
-  TemplateDefinition,
-  TemplateHandler,
   ToolDefinition,
   ToolHandler,
 } from './src/server/types.js'

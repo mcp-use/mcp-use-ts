@@ -244,7 +244,8 @@ export class McpServer {
     // POST endpoint for messages
     this.app.post(endpoint, express.json(), async (req, res) => {
       const method = req.body?.method || 'unknown'
-      console.log(`[MCP] POST ${endpoint} → ${method}`)
+      const id = req.body?.id || 'no-id'
+      console.log(`[MCP] POST ${endpoint} → ${method} (id: ${id})`)
       await httpTransport.handleRequest(req, res, req.body)
     })
 

@@ -6,8 +6,6 @@ export type {
   ResourceDefinition,
   ResourceHandler,
   ServerConfig,
-  TemplateDefinition,
-  TemplateHandler,
   ToolDefinition,
   ToolHandler,
 } from './types.js'
