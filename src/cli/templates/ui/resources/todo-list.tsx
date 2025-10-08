@@ -109,7 +109,7 @@ const TodoList: React.FC<TodoListProps> = ({ initialTodos = [] }) => {
     })
   }
 
-  const getPriorityColor = (priority: Todo['priority']) => {
+  const _getPriorityColor = (priority: Todo['priority']) => {
     switch (priority) {
       case 'high': return '#e74c3c'
       case 'medium': return '#f39c12'

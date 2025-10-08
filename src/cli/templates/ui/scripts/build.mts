@@ -66,7 +66,7 @@ async function main() {
     console.log(`🔨 Building ${baseName}...`)
 
     // Build JS/CSS chunks for this page
-    const result = await build({
+    const _result = await build({
       entryPoints: [entry],
       bundle: true,
       splitting: true,

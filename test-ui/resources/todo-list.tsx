@@ -109,14 +109,14 @@ const TodoList: React.FC<TodoListProps> = ({ initialTodos = [] }) => {
     })
   }
 
-  const getPriorityColor = (priority: Todo['priority']) => {
-    switch (priority) {
-      case 'high': return '#e74c3c'
-      case 'medium': return '#f39c12'
-      case 'low': return '#27ae60'
-      default: return '#95a5a6'
-    }
-  }
+  // const getPriorityColor = (priority: Todo['priority']) => {
+  //   switch (priority) {
+  //     case 'high': return '#e74c3c'
+  //     case 'medium': return '#f39c12'
+  //     case 'low': return '#27ae60'
+  //     default: return '#95a5a6'
+  //   }
+  // }
 
   const getPriorityIcon = (priority: Todo['priority']) => {
     switch (priority) {

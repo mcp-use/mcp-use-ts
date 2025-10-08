@@ -45,12 +45,12 @@ program
         try {
           execSync('pnpm install', { cwd: projectPath, stdio: 'inherit' })
         }
-        catch (error) {
+        catch {
           console.log('⚠️  pnpm not found, trying npm...')
           try {
             execSync('npm install', { cwd: projectPath, stdio: 'inherit' })
           }
-          catch (npmError) {
+          catch {
             console.log('⚠️  npm install failed, please run "npm install" manually')
           }
         }

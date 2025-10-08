@@ -162,7 +162,7 @@ mcp.tool({
   ],
   fn: async ({ data, chartType = 'bar' }: { data: string, chartType?: string }) => {
     try {
-      const chartData = JSON.parse(data)
+      const _chartData = JSON.parse(data)
       return `Displayed ${chartType} chart with data at http://localhost:${PORT}/mcp-use/widgets/data-visualization`
     }
     catch (error) {

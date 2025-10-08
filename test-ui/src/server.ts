@@ -40,7 +40,7 @@ app.get('/mcp-use/widgets/assets/*', (req, res, next) => {
     }
     next()
   }
-  catch (error) {
+  catch {
     next()
   }
 })
@@ -190,7 +190,7 @@ mcp.tool({
   fn: async (params: Record<string, any>) => {
     const { data, chartType = 'bar' } = params
     try {
-      const chartData = JSON.parse(data)
+      const _chartData = JSON.parse(data)
       return `Displayed ${chartType} chart with data at http://localhost:${PORT}/mcp-use/widgets/data-visualization`
     }
     catch (error) {

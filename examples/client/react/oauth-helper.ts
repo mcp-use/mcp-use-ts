@@ -179,7 +179,7 @@ export class OAuthHelper {
   /**
    * Discover OAuth configuration from a server
    */
-  async discoverOAuthConfig(serverUrl: string): Promise<OAuthDiscovery> {
+  async discoverOAuthConfig(serverUrl: string): Promise<OAuthDiscovery | undefined> {
     try {
       const discoveryUrl = `${serverUrl}/.well-known/oauth-authorization-server`
       const response = await fetch(discoveryUrl)
@@ -199,7 +199,7 @@ export class OAuthHelper {
   /**
    * Register a new OAuth client dynamically
    */
-  async registerClient(serverUrl: string): Promise<ClientRegistration> {
+  async registerClient(_serverUrl: string): Promise<ClientRegistration> {
     if (!this.discovery) {
       throw new Error('OAuth discovery not performed. Call discoverOAuthConfig first.')
     }
