@@ -14,7 +14,7 @@
     "composite": true
   },
   "references": [
-    { "path": "./packages/mcp-use-ts" },
+    { "path": "./packages/mcp-use" },
     { "path": "./packages/inspector" },
     { "path": "./packages/cli" },
     { "path": "./packages/create-mcp-use-app" }

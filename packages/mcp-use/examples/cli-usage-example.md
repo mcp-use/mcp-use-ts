@@ -298,10 +298,12 @@ You can create your own templates by:
 ### Common Issues
 
 1. **"Cannot find module 'mcp-use/server'"**
+
    - Make sure you've installed dependencies: `npm install`
    - Check that mcp-use is in your package.json
 
 2. **"Template not found"**
+
    - Use one of the available templates: basic, filesystem, api
    - Check the template name spelling
 

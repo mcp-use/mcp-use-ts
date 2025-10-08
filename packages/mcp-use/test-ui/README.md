@@ -327,14 +327,17 @@ export default defineConfig({
 ### Common Issues
 
 1. **"Cannot find module" errors**
+
    - Make sure all dependencies are installed: `npm install`
    - Check that TypeScript paths are correct
 
 2. **Hot reloading not working**
+
    - Ensure Vite dev server is running on port 3001
    - Check that the widget HTML file exists
 
 3. **Widget not loading**
+
    - Verify the widget is added to vite.config.ts
    - Check that the MCP resource is properly configured
 

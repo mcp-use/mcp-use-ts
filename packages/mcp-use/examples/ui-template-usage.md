@@ -504,16 +504,19 @@ const MyWidget: React.FC = () => {
 ### Common Issues
 
 1. **Hot reloading not working**
+
    - Check that Vite dev server is running on port 3001
    - Verify the widget HTML file exists
    - Check browser console for errors
 
 2. **Widget not loading**
+
    - Ensure the widget is added to vite.config.ts
    - Check that the MCP resource is properly configured
    - Verify the HTML entry point exists
 
 3. **Build errors**
+
    - Run `npm run build` to see detailed errors
    - Check that all imports are correct
    - Verify TypeScript configuration
