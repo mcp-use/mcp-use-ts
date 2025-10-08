@@ -1,6 +1,4 @@
 import { resolve } from 'node:path'
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
-import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
@@ -14,8 +12,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'mcp-use/browser': resolve(__dirname, '../../dist/src/browser.js'),
-      'mcp-use': resolve(__dirname, '../../dist/src'),
+      'mcp-use/browser': resolve(__dirname, '../../../dist/src/browser.js'),
+      'mcp-use/react': resolve(__dirname, '../../../dist/src/react/index.js'),
     },
   },
   define: {
@@ -35,11 +33,7 @@ export default defineConfig({
         global: 'globalThis',
       },
       plugins: [
-        NodeGlobalsPolyfillPlugin({
-          process: true,
-          buffer: true,
-        }),
-        NodeModulesPolyfillPlugin(),
+        
       ],
     },
   },

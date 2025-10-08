@@ -35,6 +35,10 @@
       "types": "./dist/src/browser.d.ts",
       "import": "./dist/src/browser.js"
     },
+    "./react": {
+      "types": "./dist/src/react/index.d.ts",
+      "import": "./dist/src/react/index.js"
+    },
     "./server": {
       "types": "./dist/src/server/index.d.ts",
       "import": "./dist/src/server/index.js"
@@ -56,7 +60,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc && cp -r src/cli/templates dist/src/cli/",
+    "build": "rm -rf dist && tsc",
     "test": "vitest",
     "test:run": "vitest run",
     "test:simple": "vitest run tests/stream_events_simple.test.ts",
@@ -90,7 +94,8 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "langfuse": "^3.32.0",
-    "langfuse-langchain": "^3.38.4"
+    "langfuse-langchain": "^3.38.4",
+    "react": "^18.0.0"
   },
   "peerDependenciesMeta": {
     "cors": {
@@ -119,6 +124,7 @@
     "langchain": "^0.3.27",
     "lodash-es": "^4.17.21",
     "posthog-node": "^5.1.1",
+    "strict-url-sanitise": "^0.0.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "uuid": "^11.1.0",
@@ -134,6 +140,7 @@
     "@types/express": "^4.17.21",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.19.8",
+    "@types/react": "^19.2.2",
     "@types/ws": "^8.18.1",
     "cors": "^2.8.5",
     "eslint": "^9.28.0",
@@ -141,6 +148,7 @@
     "express": "^4.18.2",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.11",
+    "react": "^19.2.0",
     "typescript": "^5.8.3",
     "vitest": "^2.1.9"
   },
