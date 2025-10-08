@@ -1,5 +1,5 @@
 // Removed unused import
-
+import type {UIResource} from '@mcp-ui/server'
 export interface ServerConfig {
   name: string
   version: string
@@ -46,5 +46,5 @@ export interface PromptDefinition {
 
 export type ResourceHandler = () => Promise<string>
 export type TemplateHandler = (params: Record<string, string>) => Promise<string>
-export type ToolHandler = (params: Record<string, any>) => Promise<string>
+export type ToolHandler = (params: Record<string, any>) => Promise<string| UIResource>
 export type PromptHandler = (params: Record<string, any>) => Promise<string>
