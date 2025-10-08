@@ -98,8 +98,6 @@ async function buildWidget(entry: string, projectPath: string, minify = true) {
 }
 
 export async function buildWidgets(projectPath: string, watch = false) {
-  console.log(`🔨 Building UI widgets with esbuild${watch ? ' (watch mode)' : ''}...`)
-
   const srcDir = path.join(projectPath, SRC_DIR)
   const outDir = path.join(projectPath, OUT_DIR)
 
@@ -108,10 +106,15 @@ export async function buildWidgets(projectPath: string, watch = false) {
 
   // Find all TSX entries
   const entries = await globby([`${srcDir}/**/*.tsx`])
-  console.log(`📦 Found ${entries.length} widget files`)
+  
+  if (!watch) {
+    console.log(`Building ${entries.length} widget files...`)
+  }
 
   if (watch) {
-    // Watch mode
+    // Watch mode - create contexts for each entry but don't log individual watching messages
+    const contexts = []
+    
     for (const entry of entries) {
       const relativePath = path.relative(projectPath, entry)
       const route = toRoute(relativePath)
@@ -128,7 +131,7 @@ export async function buildWidgets(projectPath: string, watch = false) {
         sourcemap: true,
         minify: false,
         outdir: path.join(pageOutDir, 'assets'),
-        logLevel: 'info',
+        logLevel: 'silent',
         loader: {
           '.svg': 'file',
           '.png': 'file',
@@ -169,21 +172,22 @@ export async function buildWidgets(projectPath: string, watch = false) {
         }],
       })
 
-      await ctx.watch()
-      console.log(`👀 Watching ${baseName}...`)
+      contexts.push(ctx)
     }
 
-    console.log('👀 Watching for changes... Press Ctrl+C to stop.')
+    // Start watching all contexts
+    for (const ctx of contexts) {
+      await ctx.watch()
+    }
   }
   else {
     // Build once
     for (const entry of entries) {
-      console.log(`🔨 Building ${path.parse(entry).name}...`)
       const { baseName, route } = await buildWidget(entry, projectPath)
-      console.log(`✅ Built ${baseName} -> ${route}`)
+      console.log(`\x1b[32m✓\x1b[0m Built ${baseName} -> ${route}`)
     }
 
-    console.log('🎉 Build complete!')
+    console.log('Build complete!')
   }
 }
 

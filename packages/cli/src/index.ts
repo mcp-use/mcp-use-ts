@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('mcp-use')
   .description('MCP CLI tool')
-  .version('0.1.0');
+  .version('2.0.1');
 
 // Helper to check if server is ready
 async function waitForServer(port: number, maxAttempts = 30): Promise<boolean> {
@@ -35,7 +35,7 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
     const proc = spawn(command, args, {
       cwd,
       stdio: 'inherit',
-      shell: true,
+      shell: false,
     });
 
     proc.on('error', reject);
@@ -57,10 +57,12 @@ program
     try {
       const projectPath = path.resolve(options.path);
       
+      console.log('\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: 2.0.1\x1b[0m\n');
+      
       // Run tsc first
-      console.log('🔨 Building TypeScript...');
+      console.log('Building TypeScript...');
       await runCommand('npx', ['tsc'], projectPath);
-      console.log('✅ TypeScript build complete!');
+      console.log('\x1b[32m✓\x1b[0m TypeScript build complete!');
       
       // Then build widgets
       await buildWidgets(projectPath, false);
@@ -81,7 +83,7 @@ program
       const projectPath = path.resolve(options.path);
       const port = parseInt(options.port, 10);
       
-      console.log('🚀 Starting development mode...\n');
+      console.log('\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: 2.0.1\x1b[0m\n');
 
       // Find the main source file
       let serverFile = 'src/server.ts';
@@ -95,22 +97,20 @@ program
       const processes: any[] = [];
       
       // 1. TypeScript watch
-      console.log('📦 Starting TypeScript compiler in watch mode...');
       const tscProc = spawn('npx', ['tsc', '--watch'], {
         cwd: projectPath,
         stdio: 'pipe',
-        shell: true,
+        shell: false,
       });
       tscProc.stdout?.on('data', (data) => {
         const output = data.toString();
         if (output.includes('Watching for file changes')) {
-          console.log('✅ TypeScript compiler watching...');
+          console.log('\x1b[32m✓\x1b[0m TypeScript compiler watching...');
         }
       });
       processes.push(tscProc);
 
       // 2. Widget builder watch - run in background
-      console.log('🎨 Starting widget builder in watch mode...');
       buildWidgets(projectPath, true).catch((error) => {
         console.error('Widget builder failed:', error);
       });
@@ -119,31 +119,34 @@ program
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // 3. Server with tsx
-      console.log(`🌐 Starting server at http://localhost:${port}...`);
       const serverProc = spawn('npx', ['tsx', 'watch', serverFile], {
         cwd: projectPath,
-        stdio: 'inherit',
-        shell: true,
+        stdio: 'pipe',
+        shell: false,
         env: { ...process.env, PORT: String(port) },
       });
       processes.push(serverProc);
 
       // Auto-open inspector if enabled
       if (options.open) {
-        console.log('⏳ Waiting for server to be ready...');
+        const startTime = Date.now();
         const ready = await waitForServer(port);
         if (ready) {
           const inspectorUrl = `http://localhost:${port}/inspector`;
-          console.log(`\n🔍 Opening inspector at ${inspectorUrl}...\n`);
+          const mcpUrl = `http://localhost:${port}/mcp`;
+          const readyTime = Date.now() - startTime;
+          console.log(`\n\x1b[32m✓\x1b[0m Ready in ${readyTime}ms`);
+          console.log(`Local:    http://localhost:${port}`);
+          console.log(`Network:  http://localhost:${port}`);
+          console.log(`MCP:      ${mcpUrl}`);
+          console.log(`Inspector: ${inspectorUrl}\n`);
           await open(inspectorUrl);
-        } else {
-          console.log('\n⚠️  Server did not start in time, skipping auto-open');
         }
       }
 
       // Handle cleanup
       const cleanup = () => {
-        console.log('\n\n🛑 Shutting down...');
+        console.log('\n\nShutting down...');
         processes.forEach(proc => proc.kill());
         process.exit(0);
       };
@@ -169,6 +172,8 @@ program
       const projectPath = path.resolve(options.path);
       const port = parseInt(options.port, 10);
 
+      console.log('\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: 2.0.1\x1b[0m\n');
+
       // Find the built server file
       let serverFile = 'dist/server.js';
       try {
@@ -177,7 +182,7 @@ program
         serverFile = 'dist/index.js';
       }
 
-      console.log('🚀 Starting production server...');
+      console.log('Starting production server...');
       const serverProc = spawn('node', [serverFile], {
         cwd: projectPath,
         stdio: 'inherit',
@@ -186,7 +191,7 @@ program
 
       // Handle cleanup
       const cleanup = () => {
-        console.log('\n\n🛑 Shutting down...');
+        console.log('\n\nShutting down...');
         serverProc.kill();
         process.exit(0);
       };
