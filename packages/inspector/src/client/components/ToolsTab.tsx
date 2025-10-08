@@ -1,15 +1,22 @@
-import { useState, useCallback } from 'react'
+import type { Tool } from '@modelcontextprotocol/sdk/types.js'
+import { Check, Copy, Play, Search } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Play, Copy, Check } from 'lucide-react'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 
 interface ToolsTabProps {
   tools: Tool[]
@@ -31,6 +38,16 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
   const [results, setResults] = useState<ToolResult[]>([])
   const [isExecuting, setIsExecuting] = useState(false)
   const [copiedResult, setCopiedResult] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState('tools')
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-focus the search input when the component mounts
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }, [])
 
   const handleToolSelect = useCallback((tool: Tool) => {
     setSelectedTool(tool)
@@ -41,15 +58,20 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
         const typedProp = prop as any
         if (typedProp.default !== undefined) {
           initialArgs[key] = typedProp.default
-        } else if (typedProp.type === 'string') {
+        }
+        else if (typedProp.type === 'string') {
           initialArgs[key] = ''
-        } else if (typedProp.type === 'number') {
+        }
+        else if (typedProp.type === 'number') {
           initialArgs[key] = 0
-        } else if (typedProp.type === 'boolean') {
+        }
+        else if (typedProp.type === 'boolean') {
           initialArgs[key] = false
-        } else if (typedProp.type === 'array') {
+        }
+        else if (typedProp.type === 'array') {
           initialArgs[key] = []
-        } else if (typedProp.type === 'object') {
+        }
+        else if (typedProp.type === 'object') {
           initialArgs[key] = {}
         }
       })
@@ -58,22 +80,24 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
   }, [])
 
   const handleArgChange = useCallback((key: string, value: string) => {
-    setToolArgs(prev => {
+    setToolArgs((prev) => {
       const newArgs = { ...prev }
-      
+
       // Try to parse as JSON first, fallback to string
       try {
         newArgs[key] = JSON.parse(value)
-      } catch {
+      }
+      catch {
         newArgs[key] = value
       }
-      
+
       return newArgs
     })
   }, [])
 
   const executeTool = useCallback(async () => {
-    if (!selectedTool || !isConnected) return
+    if (!selectedTool || !isConnected)
+      return
 
     setIsExecuting(true)
     const startTime = Date.now()
@@ -87,7 +111,8 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
         timestamp: startTime,
       }
       setResults(prev => [newResult, ...prev])
-    } catch (error) {
+    }
+    catch (error) {
       const newResult: ToolResult = {
         toolName: selectedTool.name,
         args: toolArgs,
@@ -96,25 +121,39 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
         timestamp: startTime,
       }
       setResults(prev => [newResult, ...prev])
-    } finally {
+    }
+    finally {
       setIsExecuting(false)
     }
   }, [selectedTool, toolArgs, callTool, isConnected])
 
   const copyResult = useCallback(async (index: number) => {
     const result = results[index]
-    const textToCopy = result.error 
-      ? `Error: ${result.error}` 
+    const textToCopy = result.error
+      ? `Error: ${result.error}`
       : JSON.stringify(result.result, null, 2)
-    
+
     try {
       await navigator.clipboard.writeText(textToCopy)
       setCopiedResult(index)
       setTimeout(() => setCopiedResult(null), 2000)
-    } catch (err) {
+    }
+    catch (err) {
       console.error('Failed to copy:', err)
     }
   }, [results])
+
+  // Filter tools based on search query
+  const filteredTools = useMemo(() => {
+    if (!searchQuery.trim())
+      return tools
+
+    const query = searchQuery.toLowerCase()
+    return tools.filter(tool =>
+      tool.name.toLowerCase().includes(query)
+      || tool.description?.toLowerCase().includes(query),
+    )
+  }, [tools, searchQuery])
 
   const renderInputField = (key: string, prop: any) => {
     const value = toolArgs[key]
@@ -133,7 +172,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
               id={key}
               type="checkbox"
               checked={Boolean(value)}
-              onChange={(e) => handleArgChange(key, e.target.checked.toString())}
+              onChange={e => handleArgChange(key, e.target.checked.toString())}
               className="rounded border-gray-300"
               aria-label={`${key} checkbox`}
             />
@@ -153,7 +192,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
           <Textarea
             id={key}
             value={stringValue}
-            onChange={(e) => handleArgChange(key, e.target.value)}
+            onChange={e => handleArgChange(key, e.target.value)}
             placeholder={typedProp?.description || `Enter ${key}`}
             className="min-h-[100px]"
           />
@@ -173,7 +212,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
         <Input
           id={key}
           value={stringValue}
-          onChange={(e) => handleArgChange(key, e.target.value)}
+          onChange={e => handleArgChange(key, e.target.value)}
           placeholder={typedProp?.description || `Enter ${key}`}
         />
         {typedProp?.description && (
@@ -184,182 +223,215 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
   }
 
   return (
-    <div className="h-full flex gap-6">
-      {/* Left side - Tools list */}
-      <div className="w-1/3 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Tools</h2>
-          <Badge variant="secondary">{tools.length} available</Badge>
-        </div>
-        
-        <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
-          {tools.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No tools available</p>
-              <p className="text-sm">Connect to a server to see tools</p>
+    <ResizablePanelGroup direction="horizontal" className="h-full">
+      <ResizablePanel defaultSize={60}>
+        {/* Left pane: Tools list with search */}
+        <div className="flex flex-col h-full bg-gray-50 border-r p-6 bg-white">
+          <div className="p-0 ">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 rounded-full">
+                <TabsTrigger value="tools">
+                  Tools
+                  <Badge className="ml-2" variant="outline">{filteredTools.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="saved">Saved Requests</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="mt-4 relative">
+              <Search className="absolute left-3 top-1/2 border-none transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Search tools by name or description "
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-10 bg-zinc-100 hover:bg-zinc-200 transition-all border-none rounded-full"
+              />
             </div>
-          ) : (
-            tools.map((tool) => (
-              <Card 
-                key={tool.name}
-                className={cn(
-                  "cursor-pointer transition-all hover:shadow-md",
-                  selectedTool?.name === tool.name && "ring-2 ring-blue-500"
-                )}
-                onClick={() => handleToolSelect(tool)}
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">{tool.name}</CardTitle>
-                  {tool.description && (
-                    <CardDescription className="text-xs">
-                      {tool.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-              </Card>
-            ))
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* Right side - Tool editor and results */}
-      <div className="flex-1 space-y-4">
-        {selectedTool ? (
-          <>
-            {/* Tool details and form */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {selectedTool.name}
-                  <Badge variant="outline">{selectedTool.name}</Badge>
-                </CardTitle>
-                {selectedTool.description && (
-                  <CardDescription>{selectedTool.description}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedTool.inputSchema?.properties ? (
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Parameters</h4>
-                    <div className="grid gap-4">
-                      {Object.entries(selectedTool.inputSchema.properties).map(([key, prop]) => 
-                        renderInputField(key, prop)
-                      )}
-                    </div>
-                    <Button 
-                      onClick={executeTool}
-                      disabled={!isConnected || isExecuting}
-                      className="w-full"
-                    >
-                      {isExecuting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                          Executing...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Execute Tool
-                        </>
-                      )}
-                    </Button>
+          <div className="flex-1 overflow-y-auto overflow-x-visible mt-6 space-y-5 p-2">
+            {filteredTools.length === 0
+              ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No tools available</p>
+                    <p className="text-sm">Connect to a server to see tools</p>
                   </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-gray-500">This tool has no parameters</p>
-                    <Button 
-                      onClick={executeTool}
-                      disabled={!isConnected || isExecuting}
-                      className="mt-4"
-                    >
-                      {isExecuting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                          Executing...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Execute Tool
-                        </>
+                )
+              : (
+                  filteredTools.map(tool => (
+                    <div
+                      key={tool.name}
+                      className={cn(
+                        'cursor-pointer transition-all rounded-md border-none hover:bg-zinc-100 shadow-none p-2',
+                        selectedTool?.name === tool.name && 'ring-2 ring-zinc-200 bg-zinc-100',
                       )}
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Results */}
-            {results.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Execution Results</CardTitle>
-                  <CardDescription>
-                    Results from tool executions (most recent first)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                    {results.map((result, index) => (
-                      <div key={index} className="border rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={result.error ? "destructive" : "default"}>
-                              {result.toolName}
-                            </Badge>
-                            <span className="text-xs text-gray-500">
-                              {new Date(result.timestamp).toLocaleTimeString()}
-                            </span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyResult(index)}
-                          >
-                            {copiedResult === index ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                        
-                        {result.error ? (
-                          <div className="bg-red-50 border border-red-200 rounded p-3">
-                            <p className="text-red-800 font-medium">Error:</p>
-                            <p className="text-red-700 text-sm">{result.error}</p>
-                          </div>
-                        ) : (
-                          <div className="bg-gray-50 rounded">
-                            <SyntaxHighlighter
-                              language="json"
-                              style={tomorrow}
-                              customStyle={{
-                                margin: 0,
-                                borderRadius: '0.375rem',
-                                fontSize: '0.875rem',
-                              }}
-                            >
-                              {JSON.stringify(result.result, null, 2)}
-                            </SyntaxHighlighter>
+                      onClick={() => handleToolSelect(tool)}
+                    >
+                      <div className="px-2">
+                        <div className="text-sm font-medium">{tool.name}</div>
+                        {tool.description && (
+                          <div className="text-xs">
+                            {tool.description}
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <p className="text-gray-500 text-lg">Select a tool to get started</p>
-              <p className="text-gray-400 text-sm">Choose a tool from the list to configure and execute it</p>
-            </div>
+                    </div>
+                  ))
+                )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </ResizablePanel>
+      <ResizableHandle />
+      <ResizablePanel defaultSize={40}>
+
+        <ResizablePanelGroup direction="vertical">
+          <ResizablePanel defaultSize={40}>
+
+            {/* Right pane: Tool form */}
+            <div className="flex flex-col h-full bg-white">
+              {selectedTool
+                ? (
+                    <div className="flex flex-col h-full">
+                      <div className="p-4 border-b bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{selectedTool.name}</Badge>
+                            <Button
+                              onClick={executeTool}
+                              disabled={!isConnected || isExecuting}
+                              size="sm"
+                            >
+                              {isExecuting
+                                ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                                      Executing...
+                                    </>
+                                  )
+                                : (
+                                    <>
+                                      <Play className="h-4 w-4 mr-2" />
+                                      Execute
+                                    </>
+                                  )}
+                            </Button>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            Save
+                          </Button>
+                        </div>
+                        {selectedTool.description && (
+                          <p className="text-sm text-gray-600 mt-2">{selectedTool.description}</p>
+                        )}
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto p-4">
+                        {selectedTool.inputSchema?.properties
+                          ? (
+                              <div className="space-y-4">
+                                {Object.entries(selectedTool.inputSchema.properties).map(([key, prop]) =>
+                                  renderInputField(key, prop),
+                                )}
+                              </div>
+                            )
+                          : (
+                              <div className="text-center py-8">
+                                <p className="text-gray-500">This tool has no parameters</p>
+                              </div>
+                            )}
+                      </div>
+                    </div>
+                  )
+                : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <p className="text-gray-500 text-lg">Select a tool to get started</p>
+                        <p className="text-gray-400 text-sm">Choose a tool from the list to configure and execute it</p>
+                      </div>
+                    </div>
+                  )}
+            </div>
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel defaultSize={60}>
+
+            {/* Bottom section: Results */}
+            <div className="flex flex-col h-full bg-white border-t">
+              <div className="p-4 border-b bg-gray-50">
+                <h3 className="font-semibold">Response</h3>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4">
+                {results.length > 0
+                  ? (
+                      <div className="space-y-4">
+                        {results.map((result, index) => (
+                          <div key={index} className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant={result.error ? 'destructive' : 'default'}>
+                                  {result.toolName}
+                                </Badge>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(result.timestamp).toLocaleTimeString()}
+                                </span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyResult(index)}
+                              >
+                                {copiedResult === index
+                                  ? (
+                                      <Check className="h-4 w-4" />
+                                    )
+                                  : (
+                                      <Copy className="h-4 w-4" />
+                                    )}
+                              </Button>
+                            </div>
+
+                            {result.error
+                              ? (
+                                  <div className="bg-red-50 border border-red-200 rounded p-3">
+                                    <p className="text-red-800 font-medium">Error:</p>
+                                    <p className="text-red-700 text-sm">{result.error}</p>
+                                  </div>
+                                )
+                              : (
+                                  <div className="bg-gray-50 rounded">
+                                    <SyntaxHighlighter
+                                      language="json"
+                                      style={tomorrow}
+                                      customStyle={{
+                                        margin: 0,
+                                        borderRadius: '0.375rem',
+                                        fontSize: '0.875rem',
+                                      }}
+                                    >
+                                      {JSON.stringify(result.result, null, 2)}
+                                    </SyntaxHighlighter>
+                                  </div>
+                                )}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <p className="text-gray-500">No results yet</p>
+                          <p className="text-gray-400 text-sm">Execute a tool to see results here</p>
+                        </div>
+                      </div>
+                    )}
+              </div>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+
+      </ResizablePanel>
+    </ResizablePanelGroup>
   )
 }

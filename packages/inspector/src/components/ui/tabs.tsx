@@ -74,59 +74,88 @@ const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
     const { activeValue } = useTabs()
     const [indicatorStyle, setIndicatorStyle] = React.useState({ width: 0, left: 0 })
     const containerRef = React.useRef<HTMLDivElement>(null)
+    const resizeObserverRef = React.useRef<ResizeObserver | null>(null)
+    const debounceTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
     const childrenArray = React.Children.toArray(children)
     const activeIndex = childrenArray.findIndex(
       child => React.isValidElement(child) && (child.props as { value: string }).value === activeValue,
     )
 
-    React.useEffect(() => {
-      const updateIndicator = () => {
-        const container = containerRef.current
-        if (!container)
-          return
+    // Debounced update function
+    const updateIndicator = React.useCallback(() => {
+      const container = containerRef.current
+      if (!container)
+        return
 
-        const triggers = container.querySelectorAll('button')
-        const activeTrigger = triggers[activeIndex] as HTMLElement
+      const triggers = container.querySelectorAll('button')
+      const activeTrigger = triggers[activeIndex] as HTMLElement
 
-        if (activeTrigger) {
-          const containerRect = container.getBoundingClientRect()
-          const triggerRect = activeTrigger.getBoundingClientRect()
+      if (activeTrigger) {
+        const containerRect = container.getBoundingClientRect()
+        const triggerRect = activeTrigger.getBoundingClientRect()
 
-          setIndicatorStyle({
-            width: triggerRect.width,
-            left: triggerRect.left - containerRect.left,
-          })
-        }
+        setIndicatorStyle({
+          width: triggerRect.width,
+          left: triggerRect.left - containerRect.left,
+        })
       }
+    }, [activeIndex])
 
+    // Debounced version of updateIndicator
+    const debouncedUpdateIndicator = React.useCallback(() => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
+      }
+      debounceTimeoutRef.current = setTimeout(updateIndicator, 16) // ~60fps
+    }, [updateIndicator])
+
+    // Update indicator when active tab changes
+    React.useEffect(() => {
       // Use a small delay to ensure DOM is updated
       const timeoutId = setTimeout(updateIndicator, 10)
       return () => clearTimeout(timeoutId)
-    }, [activeIndex])
+    }, [updateIndicator])
 
+    // Set up ResizeObserver for the container
+    React.useEffect(() => {
+      const container = containerRef.current
+      if (!container)
+        return
+
+      // Create ResizeObserver to watch for container size changes
+      resizeObserverRef.current = new ResizeObserver(() => {
+        debouncedUpdateIndicator()
+      })
+
+      resizeObserverRef.current.observe(container)
+
+      // Also observe all button elements for size changes
+      const triggers = container.querySelectorAll('button')
+      triggers.forEach((trigger) => {
+        if (resizeObserverRef.current) {
+          resizeObserverRef.current.observe(trigger)
+        }
+      })
+
+      return () => {
+        if (resizeObserverRef.current) {
+          resizeObserverRef.current.disconnect()
+        }
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current)
+        }
+      }
+    }, [debouncedUpdateIndicator])
+
+    // Fallback window resize listener for broader compatibility
     React.useEffect(() => {
       const handleResize = () => {
-        const container = containerRef.current
-        if (!container)
-          return
-
-        const triggers = container.querySelectorAll('button')
-        const activeTrigger = triggers[activeIndex] as HTMLElement
-
-        if (activeTrigger) {
-          const containerRect = container.getBoundingClientRect()
-          const triggerRect = activeTrigger.getBoundingClientRect()
-
-          setIndicatorStyle({
-            width: triggerRect.width,
-            left: triggerRect.left - containerRect.left,
-          })
-        }
+        debouncedUpdateIndicator()
       }
 
       window.addEventListener('resize', handleResize)
       return () => window.removeEventListener('resize', handleResize)
-    }, [activeIndex])
+    }, [debouncedUpdateIndicator])
 
     // Apply dynamic styles using data attributes
     React.useEffect(() => {
