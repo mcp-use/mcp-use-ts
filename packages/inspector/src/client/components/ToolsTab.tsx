@@ -6,7 +6,6 @@ import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -17,6 +16,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { isMcpUIResource, McpUIRenderer } from './McpUIRenderer'
 
 interface ToolsTabProps {
   tools: Tool[]
@@ -226,7 +226,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
     <ResizablePanelGroup direction="horizontal" className="h-full">
       <ResizablePanel defaultSize={60}>
         {/* Left pane: Tools list with search */}
-        <div className="flex flex-col h-full bg-gray-50 border-r p-6 bg-white">
+        <div className="flex flex-col h-full border-r p-6 bg-white">
           <div className="p-0 ">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2 bg-zinc-100 rounded-full">
@@ -399,21 +399,75 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                                     <p className="text-red-700 text-sm">{result.error}</p>
                                   </div>
                                 )
-                              : (
-                                  <div className="bg-gray-50 rounded">
-                                    <SyntaxHighlighter
-                                      language="json"
-                                      style={tomorrow}
-                                      customStyle={{
-                                        margin: 0,
-                                        borderRadius: '0.375rem',
-                                        fontSize: '0.875rem',
-                                      }}
-                                    >
-                                      {JSON.stringify(result.result, null, 2)}
-                                    </SyntaxHighlighter>
-                                  </div>
-                                )}
+                              : (() => {
+                                  // Check if result contains MCP UI resources
+                                  const content = result.result?.content || []
+                                  const mcpUIResources = content.filter((item: any) =>
+                                    item.type === 'resource' && isMcpUIResource(item.resource)
+                                  )
+
+                                  if (mcpUIResources.length > 0) {
+                                    return (
+                                      <div className="space-y-4">
+                                        {mcpUIResources.map((item: any, idx: number) => (
+                                          <div key={idx} className="border rounded-lg overflow-hidden">
+                                            <div className="bg-gray-100 px-3 py-2 text-xs text-gray-600 border-b">
+                                              <span className="font-medium">MCP UI Resource:</span> {item.resource.uri || 'No URI'}
+                                            </div>
+                            <McpUIRenderer
+                              resource={item.resource}
+                              onUIAction={(_action) => {
+                                // Handle UI actions here if needed
+                              }}
+                              className="p-4"
+                            />
+                                          </div>
+                                        ))}
+                                        {/* Show JSON for non-UI content */}
+                                        {content.filter((item: any) =>
+                                          !(item.type === 'resource' && isMcpUIResource(item.resource))
+                                        ).length > 0 && (
+                                          <div className="bg-gray-50 rounded">
+                                            <SyntaxHighlighter
+                                              language="json"
+                                              style={tomorrow}
+                                              customStyle={{
+                                                margin: 0,
+                                                borderRadius: '0.375rem',
+                                                fontSize: '0.875rem',
+                                              }}
+                                            >
+                                              {JSON.stringify(
+                                                content.filter((item: any) =>
+                                                  !(item.type === 'resource' && isMcpUIResource(item.resource))
+                                                ),
+                                                null,
+                                                2
+                                              )}
+                                            </SyntaxHighlighter>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  }
+
+                                  // Default: show JSON
+                                  return (
+                                    <div className="bg-gray-50 rounded">
+                                      <SyntaxHighlighter
+                                        language="json"
+                                        style={tomorrow}
+                                        customStyle={{
+                                          margin: 0,
+                                          borderRadius: '0.375rem',
+                                          fontSize: '0.875rem',
+                                        }}
+                                      >
+                                        {JSON.stringify(result.result, null, 2)}
+                                      </SyntaxHighlighter>
+                                    </div>
+                                  )
+                                })()}
                           </div>
                         ))}
                       </div>

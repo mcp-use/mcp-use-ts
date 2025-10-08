@@ -1,0 +1,374 @@
+import type { Resource } from '@modelcontextprotocol/sdk/types.js'
+import { Copy, Download, FileText, Search } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/lib/utils'
+import { isMcpUIResource, McpUIRenderer } from './McpUIRenderer'
+
+interface ResourcesTabProps {
+  resources: Resource[]
+  readResource: (uri: string) => Promise<any>
+  isConnected: boolean
+}
+
+interface ResourceResult {
+  uri: string
+  result: any
+  error?: string
+  timestamp: number
+}
+
+export function ResourcesTab({ resources, readResource, isConnected }: ResourcesTabProps) {
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
+  const [results, setResults] = useState<ResourceResult[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [_copiedResult, _setCopiedResult] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState('resources')
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-focus the search input when the component mounts
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }, [])
+
+  const handleResourceSelect = useCallback((resource: Resource) => {
+    setSelectedResource(resource)
+  }, [])
+
+  const handleReadResource = useCallback(async () => {
+    if (!selectedResource || !isConnected)
+      return
+
+    setIsLoading(true)
+    const timestamp = Date.now()
+
+    try {
+      const result = await readResource(selectedResource.uri)
+      setResults(prev => [{
+        uri: selectedResource.uri,
+        result,
+        timestamp,
+      }, ...prev])
+    }
+    catch (error) {
+      setResults(prev => [{
+        uri: selectedResource.uri,
+        result: null,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp,
+      }, ...prev])
+    }
+    finally {
+      setIsLoading(false)
+    }
+  }, [selectedResource, readResource, isConnected])
+
+  const handleCopyResult = useCallback((index: number) => {
+    const result = results[index]
+    const resultText = result.error ? result.error : JSON.stringify(result.result, null, 2)
+    navigator.clipboard.writeText(resultText)
+    _setCopiedResult(index)
+    setTimeout(() => _setCopiedResult(null), 2000)
+  }, [results])
+
+  const handleDownloadResult = useCallback((index: number) => {
+    const result = results[index]
+    const resultText = result.error ? result.error : JSON.stringify(result.result, null, 2)
+    const blob = new Blob([resultText], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${selectedResource?.name || 'resource'}-${index}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [results, selectedResource])
+
+  const filteredResources = useMemo(() => {
+    if (!searchQuery)
+      return resources
+    return resources.filter(resource =>
+      resource.name.toLowerCase().includes(searchQuery.toLowerCase())
+      || resource.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      || resource.uri.toLowerCase().includes(searchQuery.toLowerCase()),
+    )
+  }, [resources, searchQuery])
+
+  const getResourceIcon = (mimeType?: string) => {
+    if (!mimeType)
+      return <FileText className="h-4 w-4" />
+
+    if (mimeType.startsWith('image/')) {
+      return <div className="h-4 w-4 bg-green-500 rounded" />
+    }
+    if (mimeType.startsWith('video/')) {
+      return <div className="h-4 w-4 bg-purple-500 rounded" />
+    }
+    if (mimeType.startsWith('audio/')) {
+      return <div className="h-4 w-4 bg-blue-500 rounded" />
+    }
+    if (mimeType.includes('json')) {
+      return <div className="h-4 w-4 bg-yellow-500 rounded" />
+    }
+    if (mimeType.includes('text')) {
+      return <FileText className="h-4 w-4 text-blue-500" />
+    }
+
+    return <FileText className="h-4 w-4" />
+  }
+
+  const getResourceType = (mimeType?: string) => {
+    if (!mimeType)
+      return 'Unknown'
+    return mimeType.split('/')[0].charAt(0).toUpperCase() + mimeType.split('/')[0].slice(1)
+  }
+
+  return (
+    <ResizablePanelGroup direction="horizontal" className="h-full">
+      <ResizablePanel defaultSize={60}>
+        {/* Left pane: Resources list with search */}
+        <div className="flex flex-col h-full border-r p-6 bg-white">
+          <div className="p-0 ">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 rounded-full">
+                <TabsTrigger value="resources">
+                  Resources
+                  <Badge className="ml-2" variant="outline">{filteredResources.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="saved">Saved Requests</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="mt-4 relative">
+              <Search className="absolute left-3 top-1/2 border-none transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Search resources by name, description, or URI"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-10 bg-zinc-100 hover:bg-zinc-200 transition-all border-none rounded-full"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto overflow-x-visible mt-6 space-y-5 p-2">
+            {filteredResources.length === 0
+              ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium">No resources found</p>
+                    <p className="text-sm">
+                      {searchQuery ? 'Try adjusting your search terms' : 'This server has no resources available'}
+                    </p>
+                  </div>
+                )
+              : (
+                  filteredResources.map(resource => (
+                    <Card
+                      key={resource.uri}
+                      className={cn(
+                        'cursor-pointer transition-all hover:shadow-md',
+                        selectedResource?.uri === resource.uri && 'ring-2 ring-blue-500 shadow-md',
+                      )}
+                      onClick={() => handleResourceSelect(resource)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              {getResourceIcon(resource.mimeType)}
+                              <CardTitle className="text-base font-medium truncate">
+                                {resource.name}
+                              </CardTitle>
+                            </div>
+                            <CardDescription className="text-sm text-gray-600 mt-1 line-clamp-2">
+                              {resource.description || 'No description available'}
+                            </CardDescription>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {getResourceType(resource.mimeType)}
+                              </Badge>
+                              <span className="text-xs text-gray-500 truncate">
+                                {resource.uri}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))
+                )}
+          </div>
+        </div>
+      </ResizablePanel>
+
+      <ResizableHandle withHandle />
+
+      <ResizablePanel defaultSize={40}>
+        {/* Right pane: Resource details and content */}
+        <div className="flex flex-col h-full bg-white p-6">
+          {selectedResource ? (
+            <>
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  {getResourceIcon(selectedResource.mimeType)}
+                  <h3 className="text-lg font-semibold">{selectedResource.name}</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-2">
+                  {selectedResource.description || 'No description available'}
+                </p>
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge variant="secondary" className="text-xs">
+                    {getResourceType(selectedResource.mimeType)}
+                  </Badge>
+                  <span className="text-xs text-gray-500">
+                    {selectedResource.uri}
+                  </span>
+                </div>
+
+                {/* Show MCP UI resource directly if it's available */}
+                {isMcpUIResource(selectedResource) && (selectedResource.text || selectedResource.blob) ? (
+                  <div className="border rounded-lg overflow-hidden mb-4">
+                    <div className="bg-gray-100 px-3 py-2 text-xs text-gray-600 border-b">
+                      <span className="font-medium">MCP UI Resource Preview</span>
+                    </div>
+                    <McpUIRenderer
+                      resource={selectedResource}
+                      onUIAction={(_action) => {
+                        // Handle UI actions here if needed
+                      }}
+                      className="p-4"
+                    />
+                  </div>
+                ) : (
+                  <Button
+                    onClick={handleReadResource}
+                    disabled={!isConnected || isLoading}
+                    className="w-full"
+                  >
+                    {isLoading
+                      ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                            Loading...
+                          </>
+                        )
+                      : (
+                          <>
+                            <Download className="h-4 w-4 mr-2" />
+                            Read Resource
+                          </>
+                        )}
+                  </Button>
+                )}
+              </div>
+
+              {results.length > 0 && (
+                <div className="flex-1 overflow-hidden">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Content</h4>
+                  <div className="space-y-3 overflow-y-auto max-h-96">
+                    {results.map((result, index) => (
+                      <div key={index} className="border rounded-lg p-3 bg-gray-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-700">
+                            {result.uri}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleCopyResult(index)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDownloadResult(index)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Download className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500 mb-2">
+                          {new Date(result.timestamp).toLocaleString()}
+                        </div>
+                        {result.error ? (
+                          <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                            {result.error}
+                          </div>
+                        ) : (() => {
+                          // Check if the result is an MCP UI resource
+                          const resource = result.result
+                          if (resource && isMcpUIResource(resource)) {
+                            return (
+                              <div className="border rounded-lg overflow-hidden">
+                                <div className="bg-gray-100 px-3 py-2 text-xs text-gray-600 border-b">
+                                  <span className="font-medium">MCP UI Resource</span>
+                                </div>
+                                <McpUIRenderer
+                                  resource={resource}
+                                  onUIAction={(_action) => {
+                                    // Handle UI actions here if needed
+                                  }}
+                                  className="p-4"
+                                />
+                              </div>
+                            )
+                          }
+
+                          // Default: show JSON
+                          return (
+                            <div className="max-h-64 overflow-y-auto">
+                              <SyntaxHighlighter
+                                language="json"
+                                style={tomorrow}
+                                className="text-xs rounded"
+                                customStyle={{
+                                  margin: 0,
+                                  background: 'transparent',
+                                }}
+                              >
+                                {JSON.stringify(result.result, null, 2)}
+                              </SyntaxHighlighter>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">Select a resource</p>
+                <p className="text-sm">Choose a resource from the list to see details and read its content</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
+  )
+}

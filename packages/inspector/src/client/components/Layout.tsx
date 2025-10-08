@@ -25,6 +25,8 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
 import { useMcpContext } from '../context/McpContext'
+import { PromptsTab } from './PromptsTab'
+import { ResourcesTab } from './ResourcesTab'
 import { ServerIcon } from './ServerIcon'
 import { ToolsTab } from './ToolsTab'
 
@@ -311,9 +313,25 @@ export function Layout({ children }: LayoutProps) {
                   isConnected={selectedServer.state === 'ready'}
                 />
               )
-            : (
-                children
-              )}
+            : selectedServer && activeTab === 'prompts'
+              ? (
+                  <PromptsTab
+                    prompts={selectedServer.prompts}
+                    callPrompt={selectedServer.callTool} // Using callTool for now, should be callPrompt when available
+                    isConnected={selectedServer.state === 'ready'}
+                  />
+                )
+              : selectedServer && activeTab === 'resources'
+                ? (
+                    <ResourcesTab
+                      resources={selectedServer.resources}
+                      readResource={(uri: string) => selectedServer.callTool('read_resource', { uri })} // Using callTool for now, should be readResource when available
+                      isConnected={selectedServer.state === 'ready'}
+                    />
+                  )
+                : (
+                    children
+                  )}
         </main>
       </div>
     </TooltipProvider>

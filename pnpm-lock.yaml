@@ -118,6 +118,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.19.5
         version: 1.19.5(hono@4.9.10)
+      '@mcp-ui/client':
+        specifier: ^5.12.1
+        version: 5.12.1(@preact/signals-core@1.12.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@modelcontextprotocol/sdk':
         specifier: 1.12.1
         version: 1.12.1
@@ -1694,6 +1697,12 @@ packages:
     peerDependencies:
       '@langchain/core': '>=0.2.21 <0.4.0'
 
+  '@mcp-ui/client@5.12.1':
+    resolution: {integrity: sha512-xCHFIpuDxlLNDdNPJs6N3MkV/8oLWJ6XsG54pm+5TNF3PRPUpNDwPjF9T+hYzy4WOVcmR+kumaKgyuLMuLwkVQ==}
+    peerDependencies:
+      react: ^18 || ^19
+      react-dom: ^18 || ^19
+
   '@mcp-ui/server@5.11.0':
     resolution: {integrity: sha512-DLakzSNA17XsViC+YYQxy2ViVtdJu0SDxQeAIviguXFq58qACvDC5tMFTNn2c0vMB5qfXqz0HLZImE3hHd3C8g==}
 
@@ -1815,6 +1824,31 @@ packages:
 
   '@posthog/core@1.2.1':
     resolution: {integrity: sha512-zNw96BipqM5/Tf161Q8/K5zpwGY3ezfb2wz+Yc3fIT5OQHW8eEzkQldPgtFKMUkqImc73ukEa2IdUpS6vEGH7w==}
+
+  '@preact/signals-core@1.12.1':
+    resolution: {integrity: sha512-BwbTXpj+9QutoZLQvbttRg5x3l5468qaV2kufh+51yha1c53ep5dY4kTuZR35+3pAZxpfQerGJiQqg34ZNZ6uA==}
+
+  '@quilted/events@2.1.3':
+    resolution: {integrity: sha512-4fHaSLND8rmZ+tce9/4FNmG5UWTRpFtM54kOekf3tLON4ZLLnYzjjldELD35efd7+lT5+E3cdkacqc56d+kCrQ==}
+    engines: {node: '>=14.0.0'}
+
+  '@quilted/threads@3.3.1':
+    resolution: {integrity: sha512-0ASnjTH+hOu1Qwzi9NnsVcsbMhWVx8pEE8SXIHknqcc/1rXAU0QlKw9ARq0W43FAdzyVeuXeXtZN27ZC0iALKg==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@preact/signals-core': ^1.8.0
+    peerDependenciesMeta:
+      '@preact/signals-core':
+        optional: true
+
+  '@r2wc/core@1.3.0':
+    resolution: {integrity: sha512-aPBnND92Itl+SWWbWyyxdFFF0+RqKB6dptGHEdiPB8ZvnHWHlVzOfEvbEcyUYGtB6HBdsfkVuBiaGYyBFVTzVQ==}
+
+  '@r2wc/react-to-web-component@2.1.0':
+    resolution: {integrity: sha512-m/PzgUOEiL1HxmvfP5LgBLqB7sHeRj+d1QAeZklwS4OEI2HUU+xTpT3hhJipH5DQoFInDqDTfe0lNFFKcrqk4w==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
 
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
@@ -2171,6 +2205,31 @@ packages:
 
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
+
+  '@remote-dom/core@1.10.0':
+    resolution: {integrity: sha512-tbFpqWjUozYG8Z3k5H6N3Bc7z7Q/1e6zdLgIVqudkM42rwIzr1saisDBtSsA1EcLAI4bDSrD9J1HqEcp0wtBsw==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@preact/signals-core': ^1.3.0
+      preact: '*'
+    peerDependenciesMeta:
+      '@preact/signals-core':
+        optional: true
+      preact:
+        optional: true
+
+  '@remote-dom/polyfill@1.5.0':
+    resolution: {integrity: sha512-RCoOZ2x3jK9REmw0PHr7JPsDHVlq+R7Ify+eovk+etOhufy8JhG9XuPi61rjl7nmgKsVn5RFTtJ8+cWk77J+ow==}
+    engines: {node: '>=14.0.0'}
+
+  '@remote-dom/react@1.2.2':
+    resolution: {integrity: sha512-PkvioODONTr1M0StGDYsR4Ssf5M0Rd4+IlWVvVoK3Zrw8nr7+5mJkgNofaj/z7i8Aep78L28PCW8/WduUt4unA==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      react: ^17.0.0 || ^18.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
@@ -4376,6 +4435,9 @@ packages:
   hono@4.9.10:
     resolution: {integrity: sha512-AlI15ijFyKTXR7eHo7QK7OR4RoKIedZvBuRjO8iy4zrxvlY5oFCdiRG/V/lFJHCNXJ0k72ATgnyzx8Yqa5arug==}
     engines: {node: '>=16.9.0'}
+
+  htm@3.1.1:
+    resolution: {integrity: sha512-983Vyg8NwUE7JkZ6NmOqpCZ+sh1bKv2iYTlUkzlWmA5JD2acKoxd4KVxbMmxX/85mtfdnDmTFoNKcg5DGAvxNQ==}
 
   http-errors@2.0.0:
     resolution: {integrity: sha512-FtwrG/euBzaEjYeRqOgly7G0qviiXoJWnvEH2Z1plBdXgbyjv34pHTSb9zoeHMyDy33+DWy5Wt9Wo+TURtOYSQ==}
@@ -7763,6 +7825,20 @@ snapshots:
       '@langchain/core': 0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))
       js-tiktoken: 1.0.20
 
+  '@mcp-ui/client@5.12.1(@preact/signals-core@1.12.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.12.1
+      '@quilted/threads': 3.3.1(@preact/signals-core@1.12.1)
+      '@r2wc/react-to-web-component': 2.1.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@remote-dom/core': 1.10.0(@preact/signals-core@1.12.1)
+      '@remote-dom/react': 1.2.2(@preact/signals-core@1.12.1)(react@19.2.0)
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
+    transitivePeerDependencies:
+      - '@preact/signals-core'
+      - preact
+      - supports-color
+
   '@mcp-ui/server@5.11.0(patch_hash=5d24b4104a7d6d537b7de1dc183b27e42d9c1b3fde96a28dbeb722713ba85f11)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.12.1
@@ -7878,6 +7954,26 @@ snapshots:
   '@pkgr/core@0.2.7': {}
 
   '@posthog/core@1.2.1': {}
+
+  '@preact/signals-core@1.12.1': {}
+
+  '@quilted/events@2.1.3':
+    dependencies:
+      '@preact/signals-core': 1.12.1
+
+  '@quilted/threads@3.3.1(@preact/signals-core@1.12.1)':
+    dependencies:
+      '@quilted/events': 2.1.3
+    optionalDependencies:
+      '@preact/signals-core': 1.12.1
+
+  '@r2wc/core@1.3.0': {}
+
+  '@r2wc/react-to-web-component@2.1.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      '@r2wc/core': 1.3.0
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
 
   '@radix-ui/number@1.1.1': {}
 
@@ -8229,6 +8325,26 @@ snapshots:
       '@types/react-dom': 19.2.1(@types/react@19.2.2)
 
   '@radix-ui/rect@1.1.1': {}
+
+  '@remote-dom/core@1.10.0(@preact/signals-core@1.12.1)':
+    dependencies:
+      '@remote-dom/polyfill': 1.5.0
+      htm: 3.1.1
+    optionalDependencies:
+      '@preact/signals-core': 1.12.1
+
+  '@remote-dom/polyfill@1.5.0': {}
+
+  '@remote-dom/react@1.2.2(@preact/signals-core@1.12.1)(react@19.2.0)':
+    dependencies:
+      '@remote-dom/core': 1.10.0(@preact/signals-core@1.12.1)
+      '@types/react': 18.3.26
+      htm: 3.1.1
+    optionalDependencies:
+      react: 19.2.0
+    transitivePeerDependencies:
+      - '@preact/signals-core'
+      - preact
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
@@ -11240,6 +11356,8 @@ snapshots:
   highlightjs-vue@1.0.0: {}
 
   hono@4.9.10: {}
+
+  htm@3.1.1: {}
 
   http-errors@2.0.0:
     dependencies:
