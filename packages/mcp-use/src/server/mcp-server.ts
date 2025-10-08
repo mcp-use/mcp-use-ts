@@ -8,6 +8,8 @@ import type {
 import { McpServer as OfficialMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import express, { type Express } from 'express'
+import { existsSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 
 export class McpServer {
   private server: OfficialMcpServer
@@ -30,6 +32,9 @@ export class McpServer {
       res.header('Access-Control-Allow-Headers', 'Content-Type')
       next()
     })
+
+    // Setup default widget serving routes
+    this.setupWidgetRoutes()
 
     // Proxy all Express methods to the underlying app
     return new Proxy(this, {
@@ -197,6 +202,47 @@ export class McpServer {
     this.app.listen(serverPort, () => {
       console.log(`📡 Server listening on http://localhost:${serverPort}`)
       console.log(`📡 MCP endpoints available at http://localhost:${serverPort}/mcp`)
+    })
+  }
+
+  /**
+   * Setup default widget serving routes
+   */
+  private setupWidgetRoutes(): void {
+    // Serve static assets (JS, CSS) from the assets directory
+    this.app.get('/mcp-use/widgets/:widget/assets/*', (req, res, next) => {
+      const widget = req.params.widget
+      const assetFile = (req.params as any)[0]
+      const assetPath = join(process.cwd(), 'dist', 'resources', 'mcp-use', 'widgets', widget, 'assets', assetFile)
+      res.sendFile(assetPath, err => (err ? next() : undefined))
+    })
+
+    // Handle assets served from the wrong path (browser resolves ./assets/ relative to /mcp-use/widgets/)
+    this.app.get('/mcp-use/widgets/assets/*', (req, res, next) => {
+      const assetFile = (req.params as any)[0]
+      // Try to find which widget this asset belongs to by checking all widget directories
+      const widgetsDir = join(process.cwd(), 'dist', 'resources', 'mcp-use', 'widgets')
+
+      try {
+        const widgets = readdirSync(widgetsDir)
+        for (const widget of widgets) {
+          const assetPath = join(widgetsDir, widget, 'assets', assetFile)
+          if (existsSync(assetPath)) {
+            return res.sendFile(assetPath)
+          }
+        }
+        next()
+      }
+      catch {
+        next()
+      }
+    })
+
+    // Serve each widget's index.html at its route
+    // e.g. GET /mcp-use/widgets/kanban-board -> dist/resources/mcp-use/widgets/kanban-board/index.html
+    this.app.get('/mcp-use/widgets/:widget', (req, res, next) => {
+      const filePath = join(process.cwd(), 'dist', 'resources', 'mcp-use', 'widgets', req.params.widget, 'index.html')
+      res.sendFile(filePath, err => (err ? next() : undefined))
     })
   }
 
