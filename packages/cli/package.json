@@ -1,10 +1,36 @@
 {
   "name": "@mcp-use/cli",
   "version": "2.0.0",
-  "description": "MCP CLI package",
+  "description": "Build tool for MCP UI widgets - bundles React components into standalone HTML pages for Model Context Protocol servers",
+  "author": "mcp-use, Inc.",
+  "license": "MIT",
+  "homepage": "https://github.com/mcp-use/mcp-use-ts#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mcp-use/mcp-use-ts.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/mcp-use/mcp-use-ts/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "cli",
+    "build-tool",
+    "widget",
+    "ui",
+    "react",
+    "esbuild",
+    "bundler",
+    "typescript"
+  ],
   "bin": {
     "mcp-use": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
