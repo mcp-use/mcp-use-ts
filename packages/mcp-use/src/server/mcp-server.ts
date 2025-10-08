@@ -237,24 +237,25 @@ export class McpServer {
 
     // GET endpoint for SSE streaming
     this.app.get(endpoint, async (req, res) => {
-      console.log(`📡 HTTP GET request received at ${endpoint}`)
+      console.log(`[MCP] GET ${endpoint}`)
       await httpTransport.handleRequest(req, res)
     })
 
     // POST endpoint for messages
     this.app.post(endpoint, express.json(), async (req, res) => {
-      console.log(`📡 HTTP POST request received at ${endpoint}`)
+      const method = req.body?.method || 'unknown'
+      console.log(`[MCP] POST ${endpoint} → ${method}`)
       await httpTransport.handleRequest(req, res, req.body)
     })
 
     // DELETE endpoint for session cleanup
     this.app.delete(endpoint, async (req, res) => {
-      console.log(`📡 HTTP DELETE request received at ${endpoint}`)
+      console.log(`[MCP] DELETE ${endpoint}`)
       await httpTransport.handleRequest(req, res)
     })
 
     this.mcpMounted = true
-    console.log(`📡 MCP server mounted at ${endpoint}`)
+    console.log(`[MCP] Server mounted at ${endpoint}`)
   }
 
   /**
@@ -286,8 +287,8 @@ export class McpServer {
     this.mountInspector()
     
     this.app.listen(this.serverPort, () => {
-      console.log(`📡 Server listening on http://localhost:${this.serverPort}`)
-      console.log(`📡 MCP endpoints available at http://localhost:${this.serverPort}/mcp`)
+      console.log(`[SERVER] Listening on http://localhost:${this.serverPort}`)
+      console.log(`[MCP] Endpoints: http://localhost:${this.serverPort}/mcp`)
     })
   }
 
