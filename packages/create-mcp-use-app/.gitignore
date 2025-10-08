@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Dependencies
-*.tsbuildinfo
+tsconfig.tsbuildinfo
 dist/
 node_modules/
 .pnp
