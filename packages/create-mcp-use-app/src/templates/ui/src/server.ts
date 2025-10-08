@@ -1,43 +1,40 @@
-import { join } from 'node:path'
-import cors from 'cors'
-import express from 'express'
-import { create } from 'mcp-use'
-
-// Create an MCP server with UI support
-const mcp = create('ui-mcp-server', {
+import { createMCPServer } from 'mcp-use'
+import { createUIResource } from '@mcp-ui/server';
+// Create an MCP server (which is also an Express app)
+const server = createMCPServer('ui-mcp-server', {
   version: '1.0.0',
   description: 'An MCP server with React UI widgets',
 })
 
-// Express server for serving UI resources
-const app = express()
-app.use(cors())
-app.use(express.json())
-
-// Serve UI widgets using file-based routing
-app.use('/mcp-use/widgets', express.static(join(process.cwd(), 'dist', 'resources', 'mcp-use', 'widgets'), {
-  maxAge: '1y',
-  immutable: true,
-}))
-
-// Serve each widget's index.html at its route
-// e.g. GET /mcp-use/widgets/kanban-board -> dist/resources/mcp-use/widgets/kanban-board/index.html
-app.get('/mcp-use/widgets/:widget', (req, res, next) => {
-  const filePath = join(process.cwd(), 'dist', 'resources', 'mcp-use', 'widgets', req.params.widget, 'index.html')
-  res.sendFile(filePath, err => (err ? next() : undefined))
-})
-
-// Pass the Express app to MCP for SSE transport
-mcp.setExpressApp(app)
-
-// Start Express server
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`🌐 UI server running on http://localhost:${PORT}`)
+
+
+server.tool({
+  name: 'test-tool',
+  description: 'Test tool',
+  inputs: [
+    {
+      name: 'test',
+      type: 'string',
+      description: 'Test input',
+      required: true,
+    },
+  ],
+  fn: async () => {
+    const uiResource = createUIResource({
+      uri: 'ui://widget/kanban-board',
+      content: {
+        type: 'externalUrl',
+        iframeUrl: 'http://localhost:3000/mcp-use/widgets/kanban-board'
+      },
+      encoding: 'text',
+    })
+    return uiResource
+  },
 })
 
 // MCP Resource for server status
-mcp.resource({
+server.resource({
   uri: 'ui://status',
   name: 'UI Server Status',
   description: 'Status of the UI MCP server',
@@ -57,7 +54,7 @@ mcp.resource({
 })
 
 // MCP Resource for Kanban Board widget
-mcp.resource({
+server.resource({
   uri: 'ui://widget/kanban-board',
   name: 'Kanban Board Widget',
   description: 'Interactive Kanban board widget',
@@ -72,7 +69,7 @@ mcp.resource({
 })
 
 // MCP Resource for Todo List widget
-mcp.resource({
+server.resource({
   uri: 'ui://widget/todo-list',
   name: 'Todo List Widget',
   description: 'Interactive todo list widget',
@@ -87,7 +84,7 @@ mcp.resource({
 })
 
 // MCP Resource for Data Visualization widget
-mcp.resource({
+server.resource({
   uri: 'ui://widget/data-visualization',
   name: 'Data Visualization Widget',
   description: 'Interactive data visualization widget',
@@ -102,7 +99,7 @@ mcp.resource({
 })
 
 // Tool for showing Kanban Board
-mcp.tool({
+server.tool({
   name: 'show-kanban',
   description: 'Display an interactive Kanban board',
   inputs: [
@@ -113,7 +110,8 @@ mcp.tool({
       required: true,
     },
   ],
-  fn: async ({ tasks }: { tasks: string }) => {
+  fn: async (params: Record<string, any>) => {
+    const { tasks } = params
     try {
       const taskData = JSON.parse(tasks)
       return `Displayed Kanban board with ${taskData.length || 0} tasks at http://localhost:${PORT}/mcp-use/widgets/kanban-board`
@@ -125,7 +123,7 @@ mcp.tool({
 })
 
 // Tool for showing Todo List
-mcp.tool({
+server.tool({
   name: 'show-todo-list',
   description: 'Display an interactive todo list',
   inputs: [
@@ -136,7 +134,8 @@ mcp.tool({
       required: true,
     },
   ],
-  fn: async ({ todos }: { todos: string }) => {
+  fn: async (params: Record<string, any>) => {
+    const { todos } = params
     try {
       const todoData = JSON.parse(todos)
       return `Displayed Todo list with ${todoData.length || 0} items at http://localhost:${PORT}/mcp-use/widgets/todo-list`
@@ -147,100 +146,12 @@ mcp.tool({
   },
 })
 
-// Tool for showing Data Visualization
-mcp.tool({
-  name: 'show-data-viz',
-  description: 'Display an interactive data visualization',
-  inputs: [
-    {
-      name: 'data',
-      type: 'string',
-      description: 'JSON string of data to visualize',
-      required: true,
-    },
-    {
-      name: 'chartType',
-      type: 'string',
-      description: 'Type of chart (bar, line, pie)',
-      required: false,
-    },
-  ],
-  fn: async ({ data, chartType = 'bar' }: { data: string, chartType?: string }) => {
-    try {
-      const _chartData = JSON.parse(data)
-      return `Displayed ${chartType} chart with data at http://localhost:${PORT}/mcp-use/widgets/data-visualization`
-    }
-    catch (error) {
-      return `Error parsing data: ${error instanceof Error ? error.message : 'Invalid JSON'}`
-    }
-  },
-})
-
-// Prompt for UI development
-mcp.prompt({
-  name: 'ui-development',
-  description: 'Generate UI development prompts',
-  args: [
-    {
-      name: 'component',
-      type: 'string',
-      description: 'Component name to develop',
-      required: true,
-    },
-    {
-      name: 'framework',
-      type: 'string',
-      description: 'UI framework (react, vue, svelte)',
-      required: false,
-    },
-  ],
-  fn: async ({ component, framework = 'react' }: { component: string, framework?: string }) => {
-    return `# ${framework} Component Development
-
-## Component: ${component}
-
-### Development Setup
-1. Create your component in \`resources/${component}.tsx\`
-2. Add an HTML entry point in \`resources/${component}.html\`
-3. Run \`yarn dev\` to start development server
-4. Visit http://localhost:3001/${component}.html for hot reloading
-
-### Best Practices
-- Use TypeScript for type safety
-- Implement proper error boundaries
-- Add loading states
-- Make components responsive
-- Test with different data sets
-
-### MCP Integration
-- Use \`ui://widget/${component}\` as the resource URI
-- Implement proper data binding
-- Add interactive features
-- Ensure accessibility compliance`
-  },
-})
 
 console.log('🚀 Starting UI MCP Server...')
 console.log('📋 Server: ui-mcp-server v1.0.0')
-console.log(`🌐 UI Server: http://localhost:${PORT}`)
 console.log('📦 Resources: ui://status, ui://widget/kanban-board, ui://widget/todo-list, ui://widget/data-visualization')
 console.log('🛠️  Tools: show-kanban, show-todo-list, show-data-viz')
 console.log('💬 Prompts: ui-development')
 
-// Start the MCP server with HTTP by default (use MCP_TRANSPORT=stdio env var for stdio)
-console.log('📡 Setting up MCP server...')
-mcp.serve({
-  transport: process.env.MCP_TRANSPORT as 'http' | 'stdio' || 'http',
-  endpoint: '/mcp'
-}).then(() => {
-  const transport = process.env.MCP_TRANSPORT || 'http'
-  if (transport === 'http') {
-    console.log(`📡 MCP server accessible at: http://localhost:${PORT}/mcp`)
-    console.log('✅ Server ready! Connect with MCP clients via HTTP (StreamableHTTP transport)')
-  }
-  else {
-    console.log('✅ Server ready! Connect with MCP clients via stdio')
-  }
-}).catch((error) => {
-  console.error('❌ Failed to start MCP server:', error)
-})
+// Start the server (MCP endpoints auto-mounted at /mcp)
+server.listen(PORT)

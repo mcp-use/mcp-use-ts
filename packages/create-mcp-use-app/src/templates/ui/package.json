@@ -1,24 +1,33 @@
 {
-  "name": "my-mcp-server",
+  "name": "test-ui",
   "type": "module",
   "version": "1.0.0",
-  "description": "MCP server: my-mcp-server",
+  "description": "MCP server: test-ui",
   "author": "",
   "license": "MIT",
-  "keywords": ["mcp", "server", "ui", "react", "widgets", "ai", "tools"],
+  "keywords": [
+    "mcp",
+    "server",
+    "ui",
+    "react",
+    "widgets",
+    "ai",
+    "tools"
+  ],
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc && npm run build:pages",
-    "build:pages": "tsx scripts/build.mts",
-    "dev": "concurrently \"tsx src/server.ts\" \"tsx scripts/build.mts --watch\"",
+    "build": "tsc && mcp-use build",
+    "dev": "concurrently \"tsx src/server.ts\" \"mcp-use build --watch\"",
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@mcp-ui/server": "^5.11.0",
     "cors": "^2.8.5",
     "express": "^4.18.0",
-    "mcp-use": "latest"
+    "mcp-use": "workspace:*"
   },
   "devDependencies": {
+    "@mcp-use/cli": "workspace:*",
     "@types/cors": "^2.8.0",
     "@types/express": "^4.17.0",
     "@types/node": "^20.0.0",

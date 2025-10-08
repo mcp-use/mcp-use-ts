@@ -130,6 +130,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialTasks = [] }) => {
               }}
             />
             <select
+              title="Priority"
               value={newTask.priority}
               onChange={e => setNewTask({ ...newTask, priority: e.target.value as Task['priority'] })}
               style={{
