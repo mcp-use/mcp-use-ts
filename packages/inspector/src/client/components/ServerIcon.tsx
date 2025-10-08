@@ -37,7 +37,7 @@ export function ServerIcon({
 
       try {
         const encodedUrl = encodeURIComponent(serverUrl)
-        const proxyUrl = `/api/favicon/${encodedUrl}`
+        const proxyUrl = `/inspector/api/favicon/${encodedUrl}`
 
         // Test if favicon exists
         const response = await fetch(proxyUrl)

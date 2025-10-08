@@ -97,7 +97,7 @@ export function Layout({ children }: LayoutProps) {
 
   const handleServerSelect = (serverId: string) => {
     setSelectedServerId(serverId)
-    navigate(`/servers/${serverId}`)
+    navigate(`/servers/${encodeURIComponent(serverId)}`)
   }
 
   const selectedServer = connections.find(c => c.id === selectedServerId)
@@ -116,10 +116,7 @@ export function Layout({ children }: LayoutProps) {
           const existing = connections.find(c => c.url === config.autoConnectUrl)
           if (!existing) {
             // Auto-connect to the local server
-            addConnection({
-              name: 'Local MCP Server',
-              url: config.autoConnectUrl,
-            })
+            addConnection(config.autoConnectUrl, 'Local MCP Server')
           }
         }
       })
@@ -134,8 +131,9 @@ export function Layout({ children }: LayoutProps) {
     const serverIdFromRoute = location.pathname.split('/servers/')[1]
 
     if (isServerRoute && serverIdFromRoute) {
-      // If we're on a server route, set the selected server
-      setSelectedServerId(serverIdFromRoute)
+      // Decode the server ID from the route
+      const decodedServerId = decodeURIComponent(serverIdFromRoute)
+      setSelectedServerId(decodedServerId)
     }
     else if (!isServerRoute) {
       // If we're not on a server route, clear the selected server

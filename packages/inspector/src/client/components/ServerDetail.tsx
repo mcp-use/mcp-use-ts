@@ -9,7 +9,8 @@ import { useMcpContext } from '../context/McpContext'
 export function ServerDetail() {
   const { serverId } = useParams()
   const { getConnection } = useMcpContext()
-  const connection = getConnection(serverId || '')
+  const decodedServerId = serverId ? decodeURIComponent(serverId) : ''
+  const connection = getConnection(decodedServerId)
 
   const [selectedTool, setSelectedTool] = useState<string | null>(null)
   const [toolInput, setToolInput] = useState('{}')

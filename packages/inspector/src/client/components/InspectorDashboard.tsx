@@ -130,7 +130,7 @@ export function InspectorDashboard() {
             />
             <div className="flex space-x-2">
               <Input
-                placeholder="Enter server URL (e.g., https://mcp.linear.app/sse)"
+                placeholder="Enter server URL"
                 value={newServerUrl}
                 onChange={e => setNewServerUrl(e.target.value)}
                 onKeyPress={e => e.key === 'Enter' && handleAddConnection()}
@@ -199,7 +199,9 @@ export function InspectorDashboard() {
                           </div>
                           {connection.error && (
                             <div className="text-sm text-red-600 mt-2">
-                              Error: {connection.error}
+                              Error:
+                              {' '}
+                              {connection.error}
                             </div>
                           )}
                           {connection.state === 'pending_auth' && connection.authUrl && (
@@ -236,7 +238,7 @@ export function InspectorDashboard() {
                           )}
                         </div>
                         <Button asChild variant="outline" size="sm">
-                          <Link to={`/servers/${connection.id}`}>
+                          <Link to={`/servers/${encodeURIComponent(connection.id)}`}>
                             Inspect
                           </Link>
                         </Button>

@@ -8,7 +8,7 @@ import { McpProvider } from './context/McpContext'
 function App() {
   return (
     <McpProvider>
-      <Router>
+      <Router basename="/inspector">
         <Layout>
           <Routes>
             <Route path="/" element={<InspectorDashboard />} />

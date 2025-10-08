@@ -43,6 +43,69 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
     })
   })
 
+  // Favicon proxy endpoint
+  app.get(`${basePath}/api/favicon/:url`, async (req: Request, res: Response) => {
+    const url = req.params.url
+
+    if (!url) {
+      res.status(400).json({ error: 'URL parameter is required' })
+      return
+    }
+
+    try {
+      // Decode the URL
+      const decodedUrl = decodeURIComponent(url)
+
+      // Add protocol if missing
+      let fullUrl = decodedUrl
+      if (!decodedUrl.startsWith('http://') && !decodedUrl.startsWith('https://')) {
+        fullUrl = `https://${decodedUrl}`
+      }
+
+      // Validate URL
+      const urlObj = new URL(fullUrl)
+
+      // Try to fetch favicon from common locations
+      const faviconUrls = [
+        `${urlObj.origin}/favicon.ico`,
+        `${urlObj.origin}/favicon.png`,
+        `${urlObj.origin}/apple-touch-icon.png`,
+      ]
+
+      for (const faviconUrl of faviconUrls) {
+        try {
+          const response = await fetch(faviconUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; MCP-Inspector/1.0)',
+            },
+          })
+
+          if (response.ok) {
+            const contentType = response.headers.get('content-type') || 'image/x-icon'
+            const buffer = await response.arrayBuffer()
+
+            res.setHeader('Content-Type', contentType)
+            res.setHeader('Cache-Control', 'public, max-age=86400')
+            res.setHeader('Access-Control-Allow-Origin', '*')
+            res.send(Buffer.from(buffer))
+            return
+          }
+        }
+        catch {
+          // Continue to next URL
+          continue
+        }
+      }
+
+      // If no favicon found, return 404
+      res.status(404).json({ error: 'No favicon found' })
+    }
+    catch (error) {
+      console.error('Favicon proxy error:', error)
+      res.status(400).json({ error: 'Invalid URL or fetch failed' })
+    }
+  })
+
   // Serve static assets
   app.use(`${basePath}/assets`, (_req: Request, res: Response) => {
     const assetPath = join(clientDistPath, 'assets', _req.path)

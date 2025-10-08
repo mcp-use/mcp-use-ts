@@ -104,10 +104,30 @@ export function McpProvider({ children }: { children: ReactNode }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        setSavedConnections(parsed)
+        // Validate and filter out invalid connections
+        const validConnections = Array.isArray(parsed) 
+          ? parsed.filter((conn: any) => {
+              // Ensure connection has valid structure with string url and id
+              return conn 
+                && typeof conn === 'object'
+                && typeof conn.id === 'string' 
+                && typeof conn.url === 'string'
+                && typeof conn.name === 'string'
+            })
+          : []
+        
+        // If we filtered out any invalid connections, update localStorage
+        if (validConnections.length !== parsed.length) {
+          console.warn('Cleaned up invalid connections from localStorage')
+          localStorage.setItem('mcp-inspector-connections', JSON.stringify(validConnections))
+        }
+        
+        setSavedConnections(validConnections)
       }
       catch (error) {
         console.error('Failed to parse saved connections:', error)
+        // Clear corrupted localStorage
+        localStorage.removeItem('mcp-inspector-connections')
       }
     }
   }, [])
