@@ -154,8 +154,8 @@ importers:
         specifier: ^0.545.0
         version: 0.545.0(react@19.2.0)
       mcp-use:
-        specifier: ^0.2.0
-        version: 0.2.0(@opentelemetry/api@1.9.0)(axios@1.9.0)(langfuse-langchain@3.38.5(langchain@0.3.27(@langchain/anthropic@0.3.28(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))))(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))(@opentelemetry/api@1.9.0)(axios@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))(ws@8.18.2)))(langfuse@3.38.5)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))(react@19.2.0)
+        specifier: workspace:*
+        version: link:../mcp-use
       motion:
         specifier: ^12.23.22
         version: 12.23.22(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -4673,18 +4673,6 @@ packages:
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
-
-  mcp-use@0.2.0:
-    resolution: {integrity: sha512-n7VcubkmndzO9caqKJa4vxP+Q17AeXmuRaMw6n6GfJZtYlZs5vW4IRIHPht9Qz1xkC3+g1sN5YcPYWnNmJ8R3g==}
-    engines: {node: '>=22.0.0'}
-    peerDependencies:
-      langfuse: ^3.32.0
-      langfuse-langchain: ^3.38.4
-    peerDependenciesMeta:
-      langfuse:
-        optional: true
-      langfuse-langchain:
-        optional: true
 
   mcp-use@file:packages/mcp-use:
     resolution: {directory: packages/mcp-use, type: directory}
@@ -11347,55 +11335,6 @@ snapshots:
   markdown-table@3.0.4: {}
 
   math-intrinsics@1.1.0: {}
-
-  mcp-use@0.2.0(@opentelemetry/api@1.9.0)(axios@1.9.0)(langfuse-langchain@3.38.5(langchain@0.3.27(@langchain/anthropic@0.3.28(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))))(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))(@opentelemetry/api@1.9.0)(axios@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))(ws@8.18.2)))(langfuse@3.38.5)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))(react@19.2.0):
-    dependencies:
-      '@dmitryrechkin/json-schema-to-zod': 1.0.1
-      '@langchain/anthropic': 0.3.28(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))
-      '@langchain/core': 0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))
-      '@langchain/openai': 0.6.13(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))(ws@8.18.2)
-      '@modelcontextprotocol/sdk': 1.12.1
-      '@scarf/scarf': 1.4.0
-      ai: 4.3.19(react@19.2.0)(zod@3.25.48)
-      dotenv: 16.5.0
-      langchain: 0.3.27(@langchain/anthropic@0.3.28(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))))(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))(@opentelemetry/api@1.9.0)(axios@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))(ws@8.18.2)
-      lodash-es: 4.17.21
-      posthog-node: 5.9.1
-      uuid: 11.1.0
-      winston: 3.17.0
-      winston-transport-browserconsole: 1.0.5
-      ws: 8.18.2
-      zod: 3.25.48
-      zod-to-json-schema: 3.24.6(zod@3.25.48)
-    optionalDependencies:
-      langfuse: 3.38.5
-      langfuse-langchain: 3.38.5(langchain@0.3.27(@langchain/anthropic@0.3.28(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))))(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))(@opentelemetry/api@1.9.0)(axios@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))(ws@8.18.2))
-    transitivePeerDependencies:
-      - '@langchain/aws'
-      - '@langchain/cerebras'
-      - '@langchain/cohere'
-      - '@langchain/deepseek'
-      - '@langchain/google-genai'
-      - '@langchain/google-vertexai'
-      - '@langchain/google-vertexai-web'
-      - '@langchain/groq'
-      - '@langchain/mistralai'
-      - '@langchain/ollama'
-      - '@langchain/xai'
-      - '@opentelemetry/api'
-      - '@opentelemetry/exporter-trace-otlp-proto'
-      - '@opentelemetry/sdk-trace-base'
-      - axios
-      - bufferutil
-      - cheerio
-      - encoding
-      - handlebars
-      - openai
-      - peggy
-      - react
-      - supports-color
-      - typeorm
-      - utf-8-validate
 
   mcp-use@file:packages/mcp-use(@opentelemetry/api@1.9.0)(@types/node@24.7.0)(axios@1.9.0)(cors@2.8.5)(express@4.21.2)(langfuse-langchain@3.38.5(langchain@0.3.27(@langchain/anthropic@0.3.28(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))))(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48)))(@opentelemetry/api@1.9.0)(axios@1.9.0)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))(ws@8.18.2)))(langfuse@3.38.5)(openai@5.12.2(ws@8.18.2)(zod@3.25.48))(react@18.3.1)(typescript@5.9.3):
     dependencies:

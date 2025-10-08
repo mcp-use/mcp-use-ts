@@ -46,7 +46,7 @@
     "framer-motion": "^12.23.22",
     "hono": "^4.0.0",
     "lucide-react": "^0.545.0",
-    "mcp-use": "^0.2.0",
+    "mcp-use": "workspace:*",
     "motion": "^12.23.22",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
