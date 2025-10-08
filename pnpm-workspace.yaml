@@ -1,3 +1,4 @@
 packages:
   - 'packages/*'
   - 'packages/mcp-use/examples/client/react'
+  - 'test_app'
