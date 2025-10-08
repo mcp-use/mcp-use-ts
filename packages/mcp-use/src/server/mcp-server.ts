@@ -237,7 +237,7 @@ export class McpServer {
 /**
  * Create a new MCP server instance
  */
-export function create(name: string, config: Partial<ServerConfig> = {}): McpServer {
+export function createMCPServer(name: string, config: Partial<ServerConfig> = {}): McpServer {
   return new McpServer({
     name,
     version: config.version || '1.0.0',

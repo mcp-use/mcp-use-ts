@@ -2,10 +2,10 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import cors from 'cors'
 import express from 'express'
-import { create } from '../../dist/index.js'
+import { createMCPServer } from 'mcp-use'
 
 // Create an MCP server with UI support
-const mcp = create('ui-mcp-server', {
+const mcp = createMCPServer('ui-mcp-server', {
   version: '1.0.0',
   description: 'An MCP server with React UI widgets',
 })
