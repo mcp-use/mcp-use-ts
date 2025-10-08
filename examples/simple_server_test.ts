@@ -3,7 +3,7 @@ import { create } from 'mcp-use/server'
 // Create an MCP server
 const mcp = create('test-server', {
   version: '0.1.0',
-  description: 'A simple test MCP server'
+  description: 'A simple test MCP server',
 })
 
 // Define a simple resource
@@ -14,7 +14,7 @@ mcp.resource({
   mimeType: 'text/plain',
   fn: async () => {
     return 'Hello, World!'
-  }
+  },
 })
 
 // Define a simple tool
@@ -26,12 +26,12 @@ mcp.tool({
       name: 'message',
       type: 'string',
       description: 'Message to echo',
-      required: true
-    }
+      required: true,
+    },
   ],
   fn: async ({ message }) => {
     return `Echo: ${message}`
-  }
+  },
 })
 
 // Define a simple prompt
@@ -43,12 +43,12 @@ mcp.prompt({
       name: 'name',
       type: 'string',
       description: 'Name to greet',
-      required: true
-    }
+      required: true,
+    },
   ],
   fn: async ({ name }) => {
     return `Hello, ${name}! Nice to meet you.`
-  }
+  },
 })
 
 console.log('🚀 Starting MCP server...')

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 interface DataPoint {
@@ -12,9 +12,9 @@ interface DataVisualizationProps {
   chartType?: 'bar' | 'line' | 'pie'
 }
 
-const DataVisualization: React.FC<DataVisualizationProps> = ({ 
-  initialData = [], 
-  chartType = 'bar' 
+const DataVisualization: React.FC<DataVisualizationProps> = ({
+  initialData = [],
+  chartType = 'bar',
 }) => {
   const [data, setData] = useState<DataPoint[]>(initialData)
   const [currentChartType, setCurrentChartType] = useState<'bar' | 'line' | 'pie'>(chartType)
@@ -25,15 +25,17 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
     const urlParams = new URLSearchParams(window.location.search)
     const dataParam = urlParams.get('data')
     const typeParam = urlParams.get('chartType')
-    
+
     if (dataParam) {
       try {
         const parsedData = JSON.parse(decodeURIComponent(dataParam))
         setData(parsedData)
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Error parsing data from URL:', error)
       }
-    } else {
+    }
+    else {
       // Default data for demo
       setData([
         { label: 'January', value: 65, color: '#3498db' },
@@ -41,7 +43,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
         { label: 'March', value: 80, color: '#2ecc71' },
         { label: 'April', value: 81, color: '#f39c12' },
         { label: 'May', value: 56, color: '#9b59b6' },
-        { label: 'June', value: 55, color: '#1abc9c' }
+        { label: 'June', value: 55, color: '#1abc9c' },
       ])
     }
 
@@ -55,7 +57,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
       const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22']
       const newPoint: DataPoint = {
         ...newDataPoint,
-        color: colors[data.length % colors.length]
+        color: colors[data.length % colors.length],
       }
       setData([...data, newPoint])
       setNewDataPoint({ label: '', value: 0 })
@@ -76,7 +78,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
 
   const renderBarChart = () => {
     const maxValue = getMaxValue()
-    
+
     return (
       <div style={{ padding: '20px' }}>
         <h3 style={{ marginBottom: '20px', color: '#2c3e50' }}>Bar Chart</h3>
@@ -91,7 +93,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
                   borderRadius: '4px 4px 0 0',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
-                  position: 'relative'
+                  position: 'relative',
                 }}
                 title={`${point.label}: ${point.value}`}
               >
@@ -105,18 +107,20 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
                   padding: '2px 6px',
                   borderRadius: '4px',
                   fontSize: '12px',
-                  whiteSpace: 'nowrap'
-                }}>
+                  whiteSpace: 'nowrap',
+                }}
+                >
                   {point.value}
                 </div>
               </div>
-              <div style={{ 
-                marginTop: '10px', 
-                fontSize: '12px', 
+              <div style={{
+                marginTop: '10px',
+                fontSize: '12px',
                 textAlign: 'center',
                 color: '#7f8c8d',
-                wordBreak: 'break-word'
-              }}>
+                wordBreak: 'break-word',
+              }}
+              >
                 {point.label}
               </div>
             </div>
@@ -131,14 +135,14 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
     const width = 600
     const height = 300
     const padding = 40
-    
+
     const points = data.map((point, index) => ({
       x: padding + (index * (width - 2 * padding)) / (data.length - 1),
-      y: padding + ((maxValue - point.value) / maxValue) * (height - 2 * padding)
+      y: padding + ((maxValue - point.value) / maxValue) * (height - 2 * padding),
     }))
 
-    const pathData = points.map((point, index) => 
-      `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
+    const pathData = points.map((point, index) =>
+      `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`,
     ).join(' ')
 
     return (
@@ -157,7 +161,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               strokeWidth="1"
             />
           ))}
-          
+
           {/* Line */}
           <path
             d={pathData}
@@ -165,7 +169,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
             stroke="#3498db"
             strokeWidth="3"
           />
-          
+
           {/* Data points */}
           {points.map((point, index) => (
             <circle
@@ -180,7 +184,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               title={`${data[index].label}: ${data[index].value}`}
             />
           ))}
-          
+
           {/* Labels */}
           {data.map((point, index) => (
             <text
@@ -202,7 +206,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
   const renderPieChart = () => {
     const total = getTotalValue()
     let currentAngle = 0
-    
+
     return (
       <div style={{ padding: '20px' }}>
         <h3 style={{ marginBottom: '20px', color: '#2c3e50' }}>Pie Chart</h3>
@@ -214,28 +218,28 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               const startAngle = currentAngle
               const endAngle = currentAngle + angle
               currentAngle += angle
-              
+
               const centerX = 150
               const centerY = 150
               const radius = 120
-              
+
               const startAngleRad = (startAngle - 90) * (Math.PI / 180)
               const endAngleRad = (endAngle - 90) * (Math.PI / 180)
-              
+
               const x1 = centerX + radius * Math.cos(startAngleRad)
               const y1 = centerY + radius * Math.sin(startAngleRad)
               const x2 = centerX + radius * Math.cos(endAngleRad)
               const y2 = centerY + radius * Math.sin(endAngleRad)
-              
+
               const largeArcFlag = angle > 180 ? 1 : 0
-              
+
               const pathData = [
                 `M ${centerX} ${centerY}`,
                 `L ${x1} ${y1}`,
                 `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-                'Z'
+                'Z',
               ].join(' ')
-              
+
               return (
                 <path
                   key={index}
@@ -249,31 +253,36 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               )
             })}
           </svg>
-          
+
           <div style={{ flex: '1' }}>
             <h4 style={{ marginBottom: '15px', color: '#2c3e50' }}>Legend</h4>
             {data.map((point, index) => (
-              <div key={index} style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                marginBottom: '8px',
-                padding: '8px',
-                background: '#f8f9fa',
-                borderRadius: '4px'
-              }}>
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '8px',
+                  padding: '8px',
+                  background: '#f8f9fa',
+                  borderRadius: '4px',
+                }}
+              >
                 <div style={{
                   width: '16px',
                   height: '16px',
                   background: point.color || '#3498db',
                   borderRadius: '2px',
-                  marginRight: '10px'
-                }} />
+                  marginRight: '10px',
+                }}
+                />
                 <span style={{ flex: '1', fontSize: '14px' }}>{point.label}</span>
-                <span style={{ 
-                  fontSize: '14px', 
-                  fontWeight: 'bold', 
-                  color: '#2c3e50' 
-                }}>
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: '#2c3e50',
+                }}
+                >
                   {point.value}
                 </span>
               </div>
@@ -288,25 +297,26 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
     <div style={{ padding: '20px' }}>
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ margin: '0 0 20px 0', color: '#2c3e50' }}>Data Visualization</h1>
-        
+
         {/* Controls */}
-        <div style={{ 
-          background: 'white', 
-          padding: '20px', 
-          borderRadius: '8px', 
+        <div style={{
+          background: 'white',
+          padding: '20px',
+          borderRadius: '8px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          marginBottom: '20px'
-        }}>
+          marginBottom: '20px',
+        }}
+        >
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '20px' }}>
             <div>
               <label style={{ marginRight: '10px', fontWeight: 'bold', color: '#2c3e50' }}>Chart Type:</label>
               <select
                 value={currentChartType}
-                onChange={(e) => setCurrentChartType(e.target.value as typeof currentChartType)}
+                onChange={e => setCurrentChartType(e.target.value as typeof currentChartType)}
                 style={{
                   padding: '8px 12px',
                   border: '1px solid #ddd',
-                  borderRadius: '4px'
+                  borderRadius: '4px',
                 }}
               >
                 <option value="bar">Bar Chart</option>
@@ -315,30 +325,30 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               </select>
             </div>
           </div>
-          
+
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               type="text"
               placeholder="Label"
               value={newDataPoint.label}
-              onChange={(e) => setNewDataPoint({ ...newDataPoint, label: e.target.value })}
+              onChange={e => setNewDataPoint({ ...newDataPoint, label: e.target.value })}
               style={{
                 padding: '8px 12px',
                 border: '1px solid #ddd',
                 borderRadius: '4px',
-                minWidth: '120px'
+                minWidth: '120px',
               }}
             />
             <input
               type="number"
               placeholder="Value"
               value={newDataPoint.value}
-              onChange={(e) => setNewDataPoint({ ...newDataPoint, value: Number(e.target.value) })}
+              onChange={e => setNewDataPoint({ ...newDataPoint, value: Number(e.target.value) })}
               style={{
                 padding: '8px 12px',
                 border: '1px solid #ddd',
                 borderRadius: '4px',
-                minWidth: '100px'
+                minWidth: '100px',
               }}
             />
             <button
@@ -349,7 +359,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Add Data Point
@@ -358,39 +368,44 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
         </div>
 
         {/* Chart */}
-        <div style={{ 
-          background: 'white', 
-          borderRadius: '8px', 
+        <div style={{
+          background: 'white',
+          borderRadius: '8px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          overflow: 'hidden'
-        }}>
-          {data.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '40px 20px',
-              color: '#7f8c8d',
-              fontStyle: 'italic'
-            }}>
-              No data to visualize. Add some data points above!
-            </div>
-          ) : (
-            <>
-              {currentChartType === 'bar' && renderBarChart()}
-              {currentChartType === 'line' && renderLineChart()}
-              {currentChartType === 'pie' && renderPieChart()}
-            </>
-          )}
+          overflow: 'hidden',
+        }}
+        >
+          {data.length === 0
+            ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px 20px',
+                  color: '#7f8c8d',
+                  fontStyle: 'italic',
+                }}
+                >
+                  No data to visualize. Add some data points above!
+                </div>
+              )
+            : (
+                <>
+                  {currentChartType === 'bar' && renderBarChart()}
+                  {currentChartType === 'line' && renderLineChart()}
+                  {currentChartType === 'pie' && renderPieChart()}
+                </>
+              )}
         </div>
 
         {/* Data table */}
         {data.length > 0 && (
-          <div style={{ 
-            background: 'white', 
-            borderRadius: '8px', 
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             marginTop: '20px',
-            overflow: 'hidden'
-          }}>
+            overflow: 'hidden',
+          }}
+          >
             <div style={{ padding: '20px', borderBottom: '1px solid #ecf0f1' }}>
               <h3 style={{ margin: '0', color: '#2c3e50' }}>Data Table</h3>
             </div>
@@ -411,7 +426,8 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
                       <td style={{ padding: '12px' }}>{point.label}</td>
                       <td style={{ padding: '12px', fontWeight: 'bold' }}>{point.value}</td>
                       <td style={{ padding: '12px' }}>
-                        {((point.value / getTotalValue()) * 100).toFixed(1)}%
+                        {((point.value / getTotalValue()) * 100).toFixed(1)}
+                        %
                       </td>
                       <td style={{ padding: '12px' }}>
                         <div style={{
@@ -419,8 +435,9 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
                           height: '20px',
                           background: point.color || '#3498db',
                           borderRadius: '2px',
-                          display: 'inline-block'
-                        }} />
+                          display: 'inline-block',
+                        }}
+                        />
                       </td>
                       <td style={{ padding: '12px' }}>
                         <button
@@ -432,7 +449,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
                             borderRadius: '4px',
                             padding: '4px 8px',
                             cursor: 'pointer',
-                            fontSize: '12px'
+                            fontSize: '12px',
                           }}
                         >
                           Remove

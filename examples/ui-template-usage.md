@@ -19,6 +19,7 @@ npm run dev
 ```
 
 This will start:
+
 - **MCP Server** on `http://localhost:3000`
 - **Vite Dev Server** on `http://localhost:3001` (with hot reloading)
 
@@ -27,6 +28,7 @@ This will start:
 ### 1. Widget Development
 
 Visit your widgets during development:
+
 - Kanban Board: `http://localhost:3001/kanban-board.html`
 - Todo List: `http://localhost:3001/todo-list.html`
 - Data Visualization: `http://localhost:3001/data-visualization.html`
@@ -42,7 +44,7 @@ import { createRoot } from 'react-dom/client'
 
 const MyWidget: React.FC = () => {
   const [count, setCount] = useState(0)
-  
+
   return (
     <div style={{ padding: '20px' }}>
       <h1>Count: {count}</h1>
@@ -76,12 +78,14 @@ npm start
 ### 1. Kanban Board
 
 **Features:**
+
 - Drag and drop tasks between columns
 - Add/remove tasks with priority levels
 - Assignee management
 - Real-time updates
 
 **Usage:**
+
 ```typescript
 // MCP Tool
 mcp.tool({
@@ -117,6 +121,7 @@ const tasks = [
 ### 2. Todo List
 
 **Features:**
+
 - Add/complete/delete todos
 - Filter by status (all/active/completed)
 - Sort by priority, due date, or creation time
@@ -124,6 +129,7 @@ const tasks = [
 - Categories and due dates
 
 **Usage:**
+
 ```typescript
 // MCP Tool
 mcp.tool({
@@ -159,6 +165,7 @@ const todos = [
 ### 3. Data Visualization
 
 **Features:**
+
 - Bar charts, line charts, and pie charts
 - Add/remove data points dynamically
 - Interactive legends and tooltips
@@ -166,6 +173,7 @@ const todos = [
 - Multiple chart types with smooth transitions
 
 **Usage:**
+
 ```typescript
 // MCP Tool
 mcp.tool({
@@ -220,7 +228,7 @@ const MyCustomWidget: React.FC<MyWidgetProps> = ({ initialData = [] }) => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const dataParam = urlParams.get('data')
-    
+
     if (dataParam) {
       try {
         const parsedData = JSON.parse(decodeURIComponent(dataParam))
@@ -234,7 +242,7 @@ const MyCustomWidget: React.FC<MyWidgetProps> = ({ initialData = [] }) => {
   return (
     <div style={{ padding: '20px' }}>
       <h1>My Custom Widget</h1>
-      
+
       {loading ? (
         <div>Loading...</div>
       ) : (
@@ -263,29 +271,29 @@ if (container) {
 
 ```html
 <!-- resources/my-custom-widget.html -->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Custom Widget</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      background: #f5f5f5;
-    }
-    #my-custom-widget-root {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-  </style>
-</head>
-<body>
-  <div id="my-custom-widget-root"></div>
-  <script type="module" src="./my-custom-widget.tsx"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Custom Widget</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        background: #f5f5f5;
+      }
+      #my-custom-widget-root {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="my-custom-widget-root"></div>
+    <script type="module" src="./my-custom-widget.tsx"></script>
+  </body>
 </html>
 ```
 
@@ -349,7 +357,8 @@ mcp.tool({
     try {
       const widgetData = JSON.parse(data)
       return `Displayed custom widget with ${widgetData.length} items at http://localhost:${PORT}/mcp-use/widgets/my-custom-widget`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error parsing data: ${error instanceof Error ? error.message : 'Invalid JSON'}`
     }
   }
@@ -463,7 +472,7 @@ const MyWidget: React.FC = () => {
       // Load data
       const urlParams = new URLSearchParams(window.location.search)
       const dataParam = urlParams.get('data')
-      
+
       if (dataParam) {
         const parsedData = JSON.parse(decodeURIComponent(dataParam))
         setData(parsedData)

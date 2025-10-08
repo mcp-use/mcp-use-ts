@@ -1,7 +1,7 @@
 {
   "name": "mcp-use-react-example",
-  "version": "1.0.0",
   "type": "module",
+  "version": "1.0.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

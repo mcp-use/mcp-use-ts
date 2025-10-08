@@ -30,22 +30,26 @@ npx create-mcp-app my-server --no-install
 ### Available Templates
 
 #### 1. Basic Template (default)
+
 ```bash
 npx create-mcp-app my-server --template basic
 ```
 
 **Features:**
+
 - Simple echo tool
 - Server information resource
 - Greeting prompt
 - Perfect for learning MCP basics
 
 #### 2. Filesystem Template
+
 ```bash
 npx create-mcp-app my-server --template filesystem
 ```
 
 **Features:**
+
 - File reading and listing tools
 - Directory operations
 - File information tool
@@ -53,11 +57,13 @@ npx create-mcp-app my-server --template filesystem
 - Great for file management servers
 
 #### 3. API Template
+
 ```bash
 npx create-mcp-app my-server --template api
 ```
 
 **Features:**
+
 - HTTP GET/POST requests
 - Weather API integration
 - JSONPlaceholder API
@@ -80,11 +86,13 @@ my-server/
 ## Getting Started
 
 1. **Navigate to your project:**
+
    ```bash
    cd my-server
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    # or
@@ -94,6 +102,7 @@ my-server/
    ```
 
 3. **Run in development mode:**
+
    ```bash
    npm run dev
    ```
@@ -195,8 +204,8 @@ mcp.serve().catch(console.error)
 ### Filesystem Server Example
 
 ```typescript
+import { readdir, readFile } from 'node:fs/promises'
 import { create } from 'mcp-use/server'
-import { readFile, readdir } from 'fs/promises'
 
 const mcp = create('filesystem-server', {
   version: '1.0.0'
@@ -221,8 +230,8 @@ mcp.serve().catch(console.error)
 ### API Server Example
 
 ```typescript
-import { create } from 'mcp-use/server'
 import axios from 'axios'
+import { create } from 'mcp-use/server'
 
 const mcp = create('api-server', {
   version: '1.0.0'
@@ -268,11 +277,13 @@ You can create your own templates by:
 ### Publishing Your Server
 
 1. **Build your server:**
+
    ```bash
    npm run build
    ```
 
 2. **Test your server:**
+
    ```bash
    npm start
    ```

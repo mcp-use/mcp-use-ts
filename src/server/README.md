@@ -88,6 +88,7 @@ mcp.serve().catch(console.error)
 Creates a new MCP server instance.
 
 **Parameters:**
+
 - `name` (string): The server name
 - `config` (object, optional): Server configuration
   - `version` (string): Server version (default: '1.0.0')
@@ -100,6 +101,7 @@ Creates a new MCP server instance.
 Defines a resource that can be accessed by clients.
 
 **Parameters:**
+
 - `definition.uri` (string): The resource URI
 - `definition.name` (string, optional): Resource name
 - `definition.description` (string, optional): Resource description
@@ -111,6 +113,7 @@ Defines a resource that can be accessed by clients.
 Defines a tool that can be called by clients.
 
 **Parameters:**
+
 - `definition.name` (string): Tool name
 - `definition.description` (string, optional): Tool description
 - `definition.inputs` (array, optional): Input parameters
@@ -125,6 +128,7 @@ Defines a tool that can be called by clients.
 Defines a prompt template.
 
 **Parameters:**
+
 - `definition.name` (string): Prompt name
 - `definition.description` (string, optional): Prompt description
 - `definition.args` (array, optional): Prompt arguments (same structure as tool inputs)
@@ -135,6 +139,7 @@ Defines a prompt template.
 Defines a resource template with parameterized URIs.
 
 **Parameters:**
+
 - `definition.uriTemplate` (string): URI template with `{parameter}` placeholders
 - `definition.name` (string, optional): Template name
 - `definition.description` (string, optional): Template description
@@ -150,9 +155,9 @@ Starts the MCP server. Returns a Promise that resolves when the server is runnin
 ### File System Server
 
 ```typescript
+import { readdir, readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { create } from 'mcp-use/server'
-import { readFile, readdir } from 'fs/promises'
-import { join } from 'path'
 
 const mcp = create('filesystem-server', {
   version: '1.0.0'
@@ -243,8 +248,8 @@ mcp.serve().catch(console.error)
 The server uses stdio transport by default, but you can extend the `McpServer` class to use different transports:
 
 ```typescript
-import { McpServer } from 'mcp-use/server'
 import { WebSocketServerTransport } from '@modelcontextprotocol/sdk/server/websocket.js'
+import { McpServer } from 'mcp-use/server'
 
 class CustomMcpServer extends McpServer {
   async serveWithWebSocket(port: number) {
@@ -265,7 +270,8 @@ mcp.tool({
       // Some operation that might fail
       const result = await someRiskyOperation(input)
       return `Success: ${result}`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
   }
@@ -277,11 +283,11 @@ mcp.tool({
 The library provides full TypeScript support with proper type inference:
 
 ```typescript
-import type { 
-  ServerConfig, 
-  ResourceDefinition, 
-  ToolDefinition, 
-  PromptDefinition 
+import type {
+  PromptDefinition,
+  ResourceDefinition,
+  ServerConfig,
+  ToolDefinition
 } from 'mcp-use/server'
 
 const config: ServerConfig = {

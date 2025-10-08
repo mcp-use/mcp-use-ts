@@ -1,8 +1,11 @@
 {
   "name": "my-mcp-server",
+  "type": "module",
   "version": "1.0.0",
   "description": "MCP server: my-mcp-server",
-  "type": "module",
+  "author": "",
+  "license": "MIT",
+  "keywords": ["mcp", "server", "filesystem", "ai", "tools"],
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
@@ -16,8 +19,5 @@
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
-  },
-  "keywords": ["mcp", "server", "filesystem", "ai", "tools"],
-  "author": "",
-  "license": "MIT"
+  }
 }

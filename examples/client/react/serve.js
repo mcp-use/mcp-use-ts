@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
-import { createServer } from 'http'
-import { readFileSync, existsSync } from 'fs'
-import { join, extname } from 'path'
-import { fileURLToPath } from 'url'
-import { dirname } from 'path'
+import { existsSync, readFileSync } from 'node:fs'
+import { createServer } from 'node:http'
+import { dirname, extname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -21,12 +20,12 @@ const mimeTypes = {
   '.jpg': 'image/jpeg',
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
 }
 
 const server = createServer((req, res) => {
-  let filePath = join(distDir, req.url === '/' ? 'react_example.html' : req.url)
-  
+  const filePath = join(distDir, req.url === '/' ? 'react_example.html' : req.url)
+
   // Security check - prevent directory traversal
   if (!filePath.startsWith(distDir)) {
     res.writeHead(403)
@@ -44,10 +43,11 @@ const server = createServer((req, res) => {
     const content = readFileSync(filePath)
     const ext = extname(filePath)
     const contentType = mimeTypes[ext] || 'application/octet-stream'
-    
+
     res.writeHead(200, { 'Content-Type': contentType })
     res.end(content)
-  } catch (error) {
+  }
+  catch (error) {
     res.writeHead(500)
     res.end('Internal Server Error')
   }

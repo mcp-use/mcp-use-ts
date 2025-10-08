@@ -1,25 +1,25 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import { resolve } from 'node:path'
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
     commonjsOptions: {
-      transformMixedEsModules: true
-    }
+      transformMixedEsModules: true,
+    },
   },
   resolve: {
     alias: {
       'mcp-use/browser': resolve(__dirname, '../../dist/src/browser.js'),
       'mcp-use': resolve(__dirname, '../../dist/src'),
-    }
+    },
   },
   define: {
-    global: 'globalThis',
+    'global': 'globalThis',
     'process.env.DEBUG': 'undefined',
     'process.env.MCP_USE_ANONYMIZED_TELEMETRY': 'undefined',
     'process.env.MCP_USE_TELEMETRY_SOURCE': 'undefined',
@@ -32,15 +32,15 @@ export default defineConfig({
     include: ['react', 'react-dom'],
     esbuildOptions: {
       define: {
-        global: 'globalThis'
+        global: 'globalThis',
       },
       plugins: [
         NodeGlobalsPolyfillPlugin({
           process: true,
-          buffer: true
+          buffer: true,
         }),
-        NodeModulesPolyfillPlugin()
-      ]
-    }
-  }
+        NodeModulesPolyfillPlugin(),
+      ],
+    },
+  },
 })

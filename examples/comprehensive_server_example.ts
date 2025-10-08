@@ -1,11 +1,11 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { create } from 'mcp-use/server'
-import { readFileSync, readdirSync, statSync } from 'fs'
-import { join } from 'path'
 
 // Create a comprehensive MCP server
 const mcp = create('comprehensive-server', {
   version: '1.0.0',
-  description: 'A comprehensive MCP server demonstrating all features'
+  description: 'A comprehensive MCP server demonstrating all features',
 })
 
 // === RESOURCES ===
@@ -21,9 +21,9 @@ mcp.resource({
       name: 'comprehensive-server',
       version: '1.0.0',
       features: ['resources', 'tools', 'prompts', 'templates'],
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }, null, 2)
-  }
+  },
 })
 
 // File system resource
@@ -36,10 +36,11 @@ mcp.resource({
     try {
       const files = readdirSync('.')
       return files.join('\n')
-    } catch (error) {
+    }
+    catch (error) {
       return `Error reading directory: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
-  }
+  },
 })
 
 // === TOOLS ===
@@ -53,17 +54,18 @@ mcp.tool({
       name: 'path',
       type: 'string',
       description: 'Path to the file to read',
-      required: true
-    }
+      required: true,
+    },
   ],
   fn: async ({ path }) => {
     try {
       const content = readFileSync(path, 'utf-8')
       return `File contents of ${path}:\n\n${content}`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error reading file ${path}: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
-  }
+  },
 })
 
 // Directory listing tool
@@ -75,35 +77,36 @@ mcp.tool({
       name: 'path',
       type: 'string',
       description: 'Directory path to list',
-      required: true
+      required: true,
     },
     {
       name: 'include-hidden',
       type: 'boolean',
       description: 'Include hidden files',
-      required: false
-    }
+      required: false,
+    },
   ],
   fn: async ({ path, includeHidden = false }) => {
     try {
       const files = readdirSync(path)
-      const filteredFiles = includeHidden 
-        ? files 
+      const filteredFiles = includeHidden
+        ? files
         : files.filter(file => !file.startsWith('.'))
-      
-      const fileInfo = filteredFiles.map(file => {
+
+      const fileInfo = filteredFiles.map((file) => {
         const fullPath = join(path, file)
         const stats = statSync(fullPath)
         const type = stats.isDirectory() ? '[DIR]' : '[FILE]'
         const size = stats.isFile() ? ` (${stats.size} bytes)` : ''
         return `${type} ${file}${size}`
       })
-      
+
       return `Contents of ${path}:\n\n${fileInfo.join('\n')}`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error listing directory ${path}: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
-  }
+  },
 })
 
 // Calculator tool
@@ -115,18 +118,19 @@ mcp.tool({
       name: 'expression',
       type: 'string',
       description: 'Mathematical expression to evaluate',
-      required: true
-    }
+      required: true,
+    },
   ],
   fn: async ({ expression }) => {
     try {
       // Simple and safe evaluation (in production, use a proper math parser)
-      const result = Function(`"use strict"; return (${expression})`)()
+      const result = new Function(`"use strict"; return (${expression})`)()
       return `Result: ${expression} = ${result}`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error calculating "${expression}": ${error instanceof Error ? error.message : 'Invalid expression'}`
     }
-  }
+  },
 })
 
 // === PROMPTS ===
@@ -140,14 +144,14 @@ mcp.prompt({
       name: 'language',
       type: 'string',
       description: 'Programming language',
-      required: true
+      required: true,
     },
     {
       name: 'complexity',
       type: 'string',
       description: 'Code complexity level',
-      required: false
-    }
+      required: false,
+    },
   ],
   fn: async ({ language, complexity = 'medium' }) => {
     return `Please review this ${language} code and provide feedback on:
@@ -158,7 +162,7 @@ mcp.prompt({
 - ${complexity === 'high' ? 'Advanced optimization opportunities' : 'Basic improvements'}
 
 Focus on actionable suggestions that will help improve the code.`
-  }
+  },
 })
 
 // Documentation prompt
@@ -170,14 +174,14 @@ mcp.prompt({
       name: 'component',
       type: 'string',
       description: 'Component or function name',
-      required: true
+      required: true,
     },
     {
       name: 'type',
       type: 'string',
       description: 'Type of documentation',
-      required: false
-    }
+      required: false,
+    },
   ],
   fn: async ({ component, type = 'API' }) => {
     return `Generate comprehensive ${type} documentation for "${component}" including:
@@ -186,7 +190,7 @@ mcp.prompt({
 - Usage examples
 - Error handling
 - Related components or dependencies`
-  }
+  },
 })
 
 // === TEMPLATES ===
@@ -201,10 +205,11 @@ mcp.template({
     try {
       const content = readFileSync(filename, 'utf-8')
       return `Contents of ${filename}:\n\n${content}`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error reading file ${filename}: ${error instanceof Error ? error.message : 'File not found'}`
     }
-  }
+  },
 })
 
 // Directory template
@@ -217,10 +222,11 @@ mcp.template({
     try {
       const files = readdirSync(directory)
       return `Contents of ${directory}:\n\n${files.join('\n')}`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error reading directory ${directory}: ${error instanceof Error ? error.message : 'Directory not found'}`
     }
-  }
+  },
 })
 
 // === SERVER STARTUP ===

@@ -1,12 +1,12 @@
+import type {
+  PromptDefinition,
+  ResourceDefinition,
+  ServerConfig,
+  TemplateDefinition,
+  ToolDefinition,
+} from './types.js'
 import { McpServer as OfficialMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import type { 
-  ServerConfig, 
-  ResourceDefinition, 
-  TemplateDefinition, 
-  ToolDefinition, 
-  PromptDefinition 
-} from './types.js'
 
 export class McpServer {
   private server: OfficialMcpServer
@@ -16,7 +16,7 @@ export class McpServer {
     this.config = config
     this.server = new OfficialMcpServer({
       name: config.name,
-      version: config.version
+      version: config.version,
     })
   }
 
@@ -30,17 +30,17 @@ export class McpServer {
       {
         name: definition.name,
         description: definition.description,
-        mimeType: definition.mimeType
+        mimeType: definition.mimeType,
       },
       async () => ({
         contents: [
           {
             uri: definition.uri,
             mimeType: definition.mimeType || 'text/plain',
-            text: await definition.fn()
-          }
-        ]
-      })
+            text: await definition.fn(),
+          },
+        ],
+      }),
     )
     return this
   }
@@ -50,8 +50,8 @@ export class McpServer {
    */
   template(definition: TemplateDefinition): this {
     // For templates, we'll register them as tools that return resource content
-    const toolName = `template_${definition.uriTemplate.replace(/[^a-zA-Z0-9]/g, '_')}`
-    
+    const toolName = `template_${definition.uriTemplate.replace(/[^a-z0-9]/gi, '_')}`
+
     this.server.tool(
       toolName,
       definition.description || 'Resource Template',
@@ -62,11 +62,11 @@ export class McpServer {
           content: [
             {
               type: 'text',
-              text: content
-            }
-          ]
+              text: content,
+            },
+          ],
         }
-      }
+      },
     )
     return this
   }
@@ -76,7 +76,7 @@ export class McpServer {
    */
   tool(definition: ToolDefinition): this {
     const inputSchema = this.createToolInputSchema(definition.inputs || [])
-    
+
     this.server.tool(
       definition.name,
       definition.description || definition.name,
@@ -87,11 +87,11 @@ export class McpServer {
           content: [
             {
               type: 'text',
-              text: result
-            }
-          ]
+              text: result,
+            },
+          ],
         }
-      }
+      },
     )
     return this
   }
@@ -101,7 +101,7 @@ export class McpServer {
    */
   prompt(definition: PromptDefinition): this {
     const argsSchema = this.createPromptArgsSchema(definition.args || [])
-    
+
     this.server.prompt(
       definition.name,
       definition.description || definition.name,
@@ -114,12 +114,12 @@ export class McpServer {
               role: 'user',
               content: {
                 type: 'text',
-                text: result
-              }
-            }
-          ]
+                text: result,
+              },
+            },
+          ],
         }
-      }
+      },
     )
     return this
   }
@@ -141,21 +141,21 @@ export class McpServer {
   private createInputSchema(uriTemplate: string): Record<string, z.ZodSchema> {
     const params = this.extractTemplateParams(uriTemplate)
     const schema: Record<string, z.ZodSchema> = {}
-    
-    params.forEach(param => {
+
+    params.forEach((param) => {
       schema[param] = z.string()
     })
-    
+
     return schema
   }
 
   /**
    * Create input schema for tools
    */
-  private createToolInputSchema(inputs: Array<{ name: string; type: string; required?: boolean }>): Record<string, z.ZodSchema> {
+  private createToolInputSchema(inputs: Array<{ name: string, type: string, required?: boolean }>): Record<string, z.ZodSchema> {
     const schema: Record<string, z.ZodSchema> = {}
-    
-    inputs.forEach(input => {
+
+    inputs.forEach((input) => {
       let zodType: z.ZodSchema
       switch (input.type) {
         case 'string':
@@ -176,24 +176,24 @@ export class McpServer {
         default:
           zodType = z.any()
       }
-      
+
       if (!input.required) {
         zodType = zodType.optional()
       }
-      
+
       schema[input.name] = zodType
     })
-    
+
     return schema
   }
 
   /**
    * Create arguments schema for prompts
    */
-  private createPromptArgsSchema(inputs: Array<{ name: string; type: string; required?: boolean }>): Record<string, z.ZodSchema> {
+  private createPromptArgsSchema(inputs: Array<{ name: string, type: string, required?: boolean }>): Record<string, z.ZodSchema> {
     const schema: Record<string, z.ZodSchema> = {}
-    
-    inputs.forEach(input => {
+
+    inputs.forEach((input) => {
       let zodType: z.ZodSchema
       switch (input.type) {
         case 'string':
@@ -214,14 +214,14 @@ export class McpServer {
         default:
           zodType = z.any()
       }
-      
+
       if (!input.required) {
         zodType = zodType.optional()
       }
-      
+
       schema[input.name] = zodType
     })
-    
+
     return schema
   }
 
@@ -241,6 +241,6 @@ export function create(name: string, config: Partial<ServerConfig> = {}): McpSer
   return new McpServer({
     name,
     version: config.version || '1.0.0',
-    description: config.description
+    description: config.description,
   })
 }

@@ -1,10 +1,10 @@
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
 // Using: esbuild + node >= 18
 import { build } from 'esbuild'
 import { globby } from 'globby'
-import { promises as fs } from 'node:fs'
-import path from 'node:path'
 
-const ROUTE_PREFIX = '/mcp-use/widgets'           // <- MCP widget prefix
+const ROUTE_PREFIX = '/mcp-use/widgets' // <- MCP widget prefix
 const SRC_DIR = 'resources'
 const OUT_DIR = 'dist/resources'
 
@@ -20,7 +20,7 @@ function outDirForRoute(route: string) {
   return path.join(OUT_DIR, route.replace(/^\//, ''))
 }
 
-function htmlTemplate({ title, scriptPath }: { title: string; scriptPath: string }) {
+function htmlTemplate({ title, scriptPath }: { title: string, scriptPath: string }) {
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -49,7 +49,7 @@ function htmlTemplate({ title, scriptPath }: { title: string; scriptPath: string
 
 async function main() {
   console.log('🔨 Building UI widgets with esbuild...')
-  
+
   // Clean dist
   await fs.rm(OUT_DIR, { recursive: true, force: true })
 
@@ -96,8 +96,9 @@ async function main() {
 
     // Find the main entry file name
     const files = await fs.readdir(path.join(pageOutDir, 'assets'))
-    const mainJs = files.find(f => f.startsWith(baseName + '-') && f.endsWith('.js'))
-    if (!mainJs) throw new Error(`Failed to locate entry JS for ${entry}`)
+    const mainJs = files.find(f => f.startsWith(`${baseName}-`) && f.endsWith('.js'))
+    if (!mainJs)
+      throw new Error(`Failed to locate entry JS for ${entry}`)
 
     // Write an index.html that points to the entry
     await fs.mkdir(pageOutDir, { recursive: true })
@@ -107,7 +108,7 @@ async function main() {
         title: baseName,
         scriptPath: `./assets/${mainJs}`,
       }),
-      'utf8'
+      'utf8',
     )
 
     console.log(`✅ Built ${baseName} -> ${route}`)
@@ -116,7 +117,7 @@ async function main() {
   console.log('🎉 Build complete!')
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('❌ Build failed:', err)
   process.exit(1)
 })

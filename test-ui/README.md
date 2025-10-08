@@ -23,6 +23,7 @@ npm run dev
 ```
 
 This will start:
+
 - MCP server on port 3000
 - Vite dev server on port 3001 with hot reloading
 
@@ -39,15 +40,18 @@ npm start
 ## Available Widgets
 
 ### 1. Kanban Board (`/mcp-use/widgets/kanban-board`)
+
 Interactive Kanban board for task management.
 
 **Features:**
+
 - Drag and drop tasks between columns
 - Add/remove tasks
 - Priority levels and assignees
 - Real-time updates
 
 **Usage:**
+
 ```typescript
 mcp.tool({
   name: 'show-kanban',
@@ -59,9 +63,11 @@ mcp.tool({
 ```
 
 ### 2. Todo List (`/mcp-use/widgets/todo-list`)
+
 Interactive todo list with filtering and sorting.
 
 **Features:**
+
 - Add/complete/delete todos
 - Filter by status (all/active/completed)
 - Sort by priority, due date, or creation time
@@ -69,6 +75,7 @@ Interactive todo list with filtering and sorting.
 - Categories and due dates
 
 **Usage:**
+
 ```typescript
 mcp.tool({
   name: 'show-todo-list',
@@ -80,9 +87,11 @@ mcp.tool({
 ```
 
 ### 3. Data Visualization (`/mcp-use/widgets/data-visualization`)
+
 Interactive charts and data visualization.
 
 **Features:**
+
 - Bar charts, line charts, and pie charts
 - Add/remove data points
 - Interactive legends
@@ -90,6 +99,7 @@ Interactive charts and data visualization.
 - Multiple chart types
 
 **Usage:**
+
 ```typescript
 mcp.tool({
   name: 'show-data-viz',
@@ -108,18 +118,21 @@ mcp.tool({
 ### 1. Create a New Widget
 
 1. **Create the React component:**
+
    ```bash
    # Create resources/my-widget.tsx
    touch resources/my-widget.tsx
    ```
 
 2. **Create the HTML entry point:**
+
    ```bash
    # Create resources/my-widget.html
    touch resources/my-widget.html
    ```
 
 3. **Add to Vite config:**
+
    ```typescript
    // vite.config.ts
    rollupOptions: {
@@ -158,6 +171,7 @@ Changes to your React components will automatically reload!
 ### 3. Widget Development Best Practices
 
 #### Component Structure
+
 ```typescript
 import React, { useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -168,12 +182,12 @@ interface MyWidgetProps {
 
 const MyWidget: React.FC<MyWidgetProps> = ({ initialData = [] }) => {
   const [data, setData] = useState(initialData)
-  
+
   // Load data from URL parameters
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const dataParam = urlParams.get('data')
-    
+
     if (dataParam) {
       try {
         const parsedData = JSON.parse(decodeURIComponent(dataParam))
@@ -200,12 +214,14 @@ if (container) {
 ```
 
 #### Styling Guidelines
+
 - Use inline styles for simplicity
 - Follow the existing design system
 - Ensure responsive design
 - Use consistent color palette
 
 #### Data Handling
+
 - Accept data via URL parameters
 - Provide sensible defaults
 - Handle errors gracefully
@@ -392,7 +408,7 @@ const DataTable: React.FC = () => {
     // Load data from URL or use defaults
     const urlParams = new URLSearchParams(window.location.search)
     const dataParam = urlParams.get('data')
-    
+
     if (dataParam) {
       try {
         setData(JSON.parse(decodeURIComponent(dataParam)))

@@ -34,12 +34,15 @@ npm start
 ## Available Tools
 
 ### `read-file`
+
 Read the contents of a file.
 
 **Parameters:**
+
 - `path` (string, required): Path to the file to read
 
 **Example:**
+
 ```json
 {
   "path": "README.md"
@@ -47,13 +50,16 @@ Read the contents of a file.
 ```
 
 ### `list-directory`
+
 List files and directories in a path.
 
 **Parameters:**
+
 - `path` (string, required): Directory path to list
 - `include-hidden` (boolean, optional): Include hidden files
 
 **Example:**
+
 ```json
 {
   "path": "./src",
@@ -62,12 +68,15 @@ List files and directories in a path.
 ```
 
 ### `file-info`
+
 Get detailed information about a file or directory.
 
 **Parameters:**
+
 - `path` (string, required): Path to the file or directory
 
 **Example:**
+
 ```json
 {
   "path": "package.json"
@@ -77,11 +86,13 @@ Get detailed information about a file or directory.
 ## Available Resources
 
 ### `fs://current`
+
 Lists the contents of the current directory.
 
 ## Available Templates
 
 ### `file://{filename}`
+
 Template for accessing files by name.
 
 **Example:** `file://README.md` will read the README.md file.
@@ -101,7 +112,7 @@ Edit `src/server.ts` to customize the filesystem operations:
 
 ```typescript
 // Add path validation
-const validatePath = (path: string) => {
+function validatePath(path: string) {
   const resolved = resolve(path)
   const allowedDir = resolve('./allowed-directory')
   return resolved.startsWith(allowedDir)

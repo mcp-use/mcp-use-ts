@@ -1,13 +1,12 @@
-import { create } from 'mcp-use'
-import express from 'express'
+import { join } from 'node:path'
 import cors from 'cors'
-import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import express from 'express'
+import { create } from 'mcp-use'
 
 // Create an MCP server with UI support
 const mcp = create('ui-mcp-server', {
   version: '1.0.0',
-  description: 'An MCP server with React UI widgets'
+  description: 'An MCP server with React UI widgets',
 })
 
 // Express server for serving UI resources
@@ -47,9 +46,9 @@ mcp.resource({
       status: 'running',
       uiEndpoint: `http://localhost:${PORT}/mcp-use/widgets`,
       availableWidgets: ['kanban-board', 'todo-list', 'data-visualization'],
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }, null, 2)
-  }
+  },
 })
 
 // MCP Resource for Kanban Board widget
@@ -64,7 +63,7 @@ mcp.resource({
 <div id="kanban-root"></div>
 <script type="module" src="${widgetUrl}"></script>
     `.trim()
-  }
+  },
 })
 
 // MCP Resource for Todo List widget
@@ -79,7 +78,7 @@ mcp.resource({
 <div id="todo-root"></div>
 <script type="module" src="${widgetUrl}"></script>
     `.trim()
-  }
+  },
 })
 
 // MCP Resource for Data Visualization widget
@@ -94,7 +93,7 @@ mcp.resource({
 <div id="data-viz-root"></div>
 <script type="module" src="${widgetUrl}"></script>
     `.trim()
-  }
+  },
 })
 
 // Tool for showing Kanban Board
@@ -106,17 +105,18 @@ mcp.tool({
       name: 'tasks',
       type: 'string',
       description: 'JSON string of tasks to display',
-      required: true
-    }
+      required: true,
+    },
   ],
   fn: async ({ tasks }: { tasks: string }) => {
     try {
       const taskData = JSON.parse(tasks)
       return `Displayed Kanban board with ${taskData.length || 0} tasks at http://localhost:${PORT}/mcp-use/widgets/kanban-board`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error parsing tasks: ${error instanceof Error ? error.message : 'Invalid JSON'}`
     }
-  }
+  },
 })
 
 // Tool for showing Todo List
@@ -128,17 +128,18 @@ mcp.tool({
       name: 'todos',
       type: 'string',
       description: 'JSON string of todos to display',
-      required: true
-    }
+      required: true,
+    },
   ],
   fn: async ({ todos }: { todos: string }) => {
     try {
       const todoData = JSON.parse(todos)
       return `Displayed Todo list with ${todoData.length || 0} items at http://localhost:${PORT}/mcp-use/widgets/todo-list`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error parsing todos: ${error instanceof Error ? error.message : 'Invalid JSON'}`
     }
-  }
+  },
 })
 
 // Tool for showing Data Visualization
@@ -150,23 +151,24 @@ mcp.tool({
       name: 'data',
       type: 'string',
       description: 'JSON string of data to visualize',
-      required: true
+      required: true,
     },
     {
       name: 'chartType',
       type: 'string',
       description: 'Type of chart (bar, line, pie)',
-      required: false
-    }
+      required: false,
+    },
   ],
-  fn: async ({ data, chartType = 'bar' }: { data: string; chartType?: string }) => {
+  fn: async ({ data, chartType = 'bar' }: { data: string, chartType?: string }) => {
     try {
       const chartData = JSON.parse(data)
       return `Displayed ${chartType} chart with data at http://localhost:${PORT}/mcp-use/widgets/data-visualization`
-    } catch (error) {
+    }
+    catch (error) {
       return `Error parsing data: ${error instanceof Error ? error.message : 'Invalid JSON'}`
     }
-  }
+  },
 })
 
 // Prompt for UI development
@@ -178,16 +180,16 @@ mcp.prompt({
       name: 'component',
       type: 'string',
       description: 'Component name to develop',
-      required: true
+      required: true,
     },
     {
       name: 'framework',
       type: 'string',
       description: 'UI framework (react, vue, svelte)',
-      required: false
-    }
+      required: false,
+    },
   ],
-  fn: async ({ component, framework = 'react' }: { component: string; framework?: string }) => {
+  fn: async ({ component, framework = 'react' }: { component: string, framework?: string }) => {
     return `# ${framework} Component Development
 
 ## Component: ${component}
@@ -210,12 +212,12 @@ mcp.prompt({
 - Implement proper data binding
 - Add interactive features
 - Ensure accessibility compliance`
-  }
+  },
 })
 
 console.log('🚀 Starting UI MCP Server...')
 console.log('📋 Server: ui-mcp-server v1.0.0')
-console.log('🌐 UI Server: http://localhost:' + PORT)
+console.log(`🌐 UI Server: http://localhost:${PORT}`)
 console.log('📦 Resources: ui://status, ui://widget/kanban-board, ui://widget/todo-list, ui://widget/data-visualization')
 console.log('🛠️  Tools: show-kanban, show-todo-list, show-data-viz')
 console.log('💬 Prompts: ui-development')

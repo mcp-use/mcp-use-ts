@@ -34,13 +34,16 @@ npm start
 ## Available Tools
 
 ### `http-get`
+
 Make an HTTP GET request to any URL.
 
 **Parameters:**
+
 - `url` (string, required): URL to make the GET request to
 - `headers` (object, optional): Optional headers to include
 
 **Example:**
+
 ```json
 {
   "url": "https://api.github.com/users/octocat",
@@ -51,14 +54,17 @@ Make an HTTP GET request to any URL.
 ```
 
 ### `http-post`
+
 Make an HTTP POST request to any URL.
 
 **Parameters:**
+
 - `url` (string, required): URL to make the POST request to
 - `data` (object, required): Data to send in the request body
 - `headers` (object, optional): Optional headers to include
 
 **Example:**
+
 ```json
 {
   "url": "https://httpbin.org/post",
@@ -72,13 +78,16 @@ Make an HTTP POST request to any URL.
 ```
 
 ### `weather`
+
 Get weather information for a city.
 
 **Parameters:**
+
 - `city` (string, required): City name to get weather for
 - `apiKey` (string, optional): OpenWeatherMap API key
 
 **Example:**
+
 ```json
 {
   "city": "London",
@@ -89,13 +98,16 @@ Get weather information for a city.
 **Note:** Get a free API key at [OpenWeatherMap](https://openweathermap.org/api).
 
 ### `json-placeholder`
+
 Interact with JSONPlaceholder API for testing.
 
 **Parameters:**
+
 - `resource` (string, required): Resource type (posts, users, comments, albums, photos, todos)
 - `id` (string, optional): Specific ID (will list all if not provided)
 
 **Example:**
+
 ```json
 {
   "resource": "posts",
@@ -106,25 +118,30 @@ Interact with JSONPlaceholder API for testing.
 ## Available Resources
 
 ### `api://status`
+
 Current status and information about the API server.
 
 ## Available Prompts
 
 ### `api-docs`
+
 Generate API documentation for endpoints.
 
 **Parameters:**
+
 - `endpoint` (string, required): API endpoint to document
 - `method` (string, optional): HTTP method (default: GET)
 
 ## API Integrations
 
 ### Weather API
+
 - **Service**: OpenWeatherMap
 - **Free Tier**: 1,000 calls/day
 - **Signup**: [OpenWeatherMap](https://openweathermap.org/api)
 
 ### JSON Placeholder
+
 - **Service**: JSONPlaceholder
 - **Free**: Yes, no API key required
 - **Documentation**: [JSONPlaceholder](https://jsonplaceholder.typicode.com/)
@@ -160,7 +177,7 @@ if (!apiKey) {
 
 // Use in requests
 const response = await axios.get(url, {
-  headers: { 'Authorization': `Bearer ${apiKey}` }
+  headers: { Authorization: `Bearer ${apiKey}` }
 })
 ```
 
@@ -175,7 +192,8 @@ mcp.tool({
     try {
       const response = await axios.get(url, { timeout: 5000 })
       return `Success: ${response.status}`
-    } catch (error) {
+    }
+    catch (error) {
       if (axios.isAxiosError(error)) {
         return `HTTP Error: ${error.response?.status} - ${error.message}`
       }
