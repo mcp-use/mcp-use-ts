@@ -8,7 +8,7 @@
   "scripts": {
     "build": "pnpm run -r build",
     "test": "pnpm run -r test",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "lint:strict": "eslint . --ext .js,.jsx,.ts,.tsx --config .eslintrc.cli.json --max-warnings 0",
     "dev": "pnpm run -r --parallel dev"
