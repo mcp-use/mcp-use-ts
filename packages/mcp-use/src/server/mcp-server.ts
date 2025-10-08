@@ -550,3 +550,15 @@ export class McpServer {
 }
 
 export type McpServerInstance = Omit<McpServer, keyof Express> & Express
+
+/**
+ * Create a new MCP server instance
+ */
+export function createMCPServer(name: string, config: Partial<ServerConfig> = {}): McpServerInstance {
+  const instance = new McpServer({
+    name,
+    version: config.version || '1.0.0',
+    description: config.description,
+  })
+  return instance as unknown as McpServerInstance
+}
