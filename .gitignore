@@ -3,7 +3,11 @@
 # Dependencies
 *.tsbuildinfo
 dist/
-node_modules/
+node_modules
+package-lock.json
+yarn.lock
+# Keep only root pnpm-lock.yaml
+packages/*/pnpm-lock.yaml
 .pnp
 .pnp.js
 
