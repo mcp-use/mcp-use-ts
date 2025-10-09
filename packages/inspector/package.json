@@ -76,8 +76,7 @@
     "tailwind-merge": "^3.3.1"
   },
   "publishConfig": {
-    "access": "public",
-    "directory": "dist"
+    "access": "public"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^5.4.1",
