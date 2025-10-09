@@ -27,6 +27,10 @@
     "express": "^4.18.0",
     "mcp-use": "workspace:*"
   },
+  "private": true,
+  "publishConfig": {
+    "access": "restricted"
+  },
   "devDependencies": {
     "@mcp-use/cli": "workspace:*",
     "@types/cors": "^2.8.0",
