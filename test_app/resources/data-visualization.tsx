@@ -181,8 +181,9 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               stroke="white"
               strokeWidth="2"
               style={{ cursor: 'pointer' }}
-              title={`${data[index].label}: ${data[index].value}`}
-            />
+            >
+              <title>{`${data[index].label}: ${data[index].value}`}</title>
+            </circle>
           ))}
 
           {/* Labels */}
@@ -248,8 +249,9 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
                   stroke="white"
                   strokeWidth="2"
                   style={{ cursor: 'pointer' }}
-                  title={`${point.label}: ${point.value} (${(percentage * 100).toFixed(1)}%)`}
-                />
+                >
+                  <title>{`${point.label}: ${point.value} (${(percentage * 100).toFixed(1)}%)`}</title>
+                </path>
               )
             })}
           </svg>
