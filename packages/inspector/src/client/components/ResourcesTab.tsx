@@ -2,7 +2,7 @@ import type { Resource } from '@modelcontextprotocol/sdk/types.js'
 import { Copy, Download, FileText, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { usePrismTheme } from '@/client/hooks/usePrismTheme'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,7 @@ interface ResourceResult {
 }
 
 export function ResourcesTab({ resources, readResource, isConnected }: ResourcesTabProps) {
+  const { prismStyle } = usePrismTheme()
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
   const [results, setResults] = useState<ResourceResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -46,37 +47,47 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
     }
   }, [])
 
-  const handleResourceSelect = useCallback((resource: Resource) => {
+  const handleResourceSelect = useCallback(async (resource: Resource) => {
     setSelectedResource(resource)
-  }, [])
 
-  const handleReadResource = useCallback(async () => {
-    if (!selectedResource || !isConnected)
-      return
+    // Automatically read the resource when selected
+    if (isConnected) {
+      setIsLoading(true)
+      const timestamp = Date.now()
 
-    setIsLoading(true)
-    const timestamp = Date.now()
+      try {
+        const result = await readResource(resource.uri)
+        setResults(prev => [{
+          uri: resource.uri,
+          result,
+          timestamp,
+        }, ...prev])
+      }
+      catch (error) {
+        setResults(prev => [{
+          uri: resource.uri,
+          result: null,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp,
+        }, ...prev])
+      }
+      finally {
+        setIsLoading(false)
+      }
+    }
+  }, [readResource, isConnected])
 
-    try {
-      const result = await readResource(selectedResource.uri)
-      setResults(prev => [{
-        uri: selectedResource.uri,
-        result,
-        timestamp,
-      }, ...prev])
+  // Handle auto-selection from command palette
+  useEffect(() => {
+    const selectedResourceName = sessionStorage.getItem('selected-resources')
+    if (selectedResourceName && resources.length > 0) {
+      const resource = resources.find(r => r.name === selectedResourceName)
+      if (resource) {
+        handleResourceSelect(resource)
+        sessionStorage.removeItem('selected-resources')
+      }
     }
-    catch (error) {
-      setResults(prev => [{
-        uri: selectedResource.uri,
-        result: null,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp,
-      }, ...prev])
-    }
-    finally {
-      setIsLoading(false)
-    }
-  }, [selectedResource, readResource, isConnected])
+  }, [resources, handleResourceSelect])
 
   const handleCopyResult = useCallback((index: number) => {
     const result = results[index]
@@ -143,10 +154,10 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
     <ResizablePanelGroup direction="horizontal" className="h-full">
       <ResizablePanel defaultSize={60}>
         {/* Left pane: Resources list with search */}
-        <div className="flex flex-col h-full border-r p-6 bg-white">
+        <div className="flex flex-col h-full border-r dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800">
           <div className="p-0 ">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 rounded-full">
+              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 dark:bg-zinc-700 rounded-full">
                 <TabsTrigger value="resources">
                   Resources
                   <Badge className="ml-2" variant="outline">{filteredResources.length}</Badge>
@@ -162,7 +173,7 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
                 placeholder="Search resources by name, description, or URI"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-10 bg-zinc-100 hover:bg-zinc-200 transition-all border-none rounded-full"
+                className="pl-10 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-all border-none rounded-full"
               />
             </div>
           </div>
@@ -222,151 +233,144 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
 
       <ResizablePanel defaultSize={40}>
         {/* Right pane: Resource details and content */}
-        <div className="flex flex-col h-full bg-white p-6">
-          {selectedResource ? (
-            <>
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-2">
-                  {getResourceIcon(selectedResource.mimeType)}
-                  <h3 className="text-lg font-semibold">{selectedResource.name}</h3>
-                </div>
-                <p className="text-sm text-gray-600 mb-2">
-                  {selectedResource.description || 'No description available'}
-                </p>
-                <div className="flex items-center gap-2 mb-4">
-                  <Badge variant="secondary" className="text-xs">
-                    {getResourceType(selectedResource.mimeType)}
-                  </Badge>
-                  <span className="text-xs text-gray-500">
-                    {selectedResource.uri}
-                  </span>
-                </div>
-
-                {/* Show MCP UI resource directly if it's available */}
-                {isMcpUIResource(selectedResource) && (selectedResource.text || selectedResource.blob) ? (
-                  <div className="border rounded-lg overflow-hidden mb-4">
-                    <div className="bg-gray-100 px-3 py-2 text-xs text-gray-600 border-b">
-                      <span className="font-medium">MCP UI Resource Preview</span>
+        <div className="flex flex-col h-full bg-white dark:bg-zinc-800 p-6">
+          {selectedResource
+            ? (
+                <>
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      {getResourceIcon(selectedResource.mimeType)}
+                      <h3 className="text-lg font-semibold">{selectedResource.name}</h3>
                     </div>
-                    <McpUIRenderer
-                      resource={selectedResource}
-                      onUIAction={(_action) => {
-                        // Handle UI actions here if needed
-                      }}
-                      className="p-4"
-                    />
-                  </div>
-                ) : (
-                  <Button
-                    onClick={handleReadResource}
-                    disabled={!isConnected || isLoading}
-                    className="w-full"
-                  >
-                    {isLoading
+                    <p className="text-sm text-gray-600 mb-2">
+                      {selectedResource.description
+                        || 'No description available'}
+                    </p>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge variant="secondary" className="text-xs">
+                        {getResourceType(selectedResource.mimeType)}
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {selectedResource.uri}
+                      </span>
+                    </div>
+
+                    {/* Show MCP UI resource directly if it's available */}
+                    {isMcpUIResource(selectedResource) && (selectedResource.text || selectedResource.blob)
                       ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                            Loading...
-                          </>
-                        )
-                      : (
-                          <>
-                            <Download className="h-4 w-4 mr-2" />
-                            Read Resource
-                          </>
-                        )}
-                  </Button>
-                )}
-              </div>
-
-              {results.length > 0 && (
-                <div className="flex-1 overflow-hidden">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Content</h4>
-                  <div className="space-y-3 overflow-y-auto max-h-96">
-                    {results.map((result, index) => (
-                      <div key={index} className="border rounded-lg p-3 bg-gray-50">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">
-                            {result.uri}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleCopyResult(index)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDownloadResult(index)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Download className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-500 mb-2">
-                          {new Date(result.timestamp).toLocaleString()}
-                        </div>
-                        {result.error ? (
-                          <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                            {result.error}
-                          </div>
-                        ) : (() => {
-                          // Check if the result is an MCP UI resource
-                          const resource = result.result
-                          if (resource && isMcpUIResource(resource)) {
-                            return (
-                              <div className="border rounded-lg overflow-hidden">
-                                <div className="bg-gray-100 px-3 py-2 text-xs text-gray-600 border-b">
-                                  <span className="font-medium">MCP UI Resource</span>
-                                </div>
-                                <McpUIRenderer
-                                  resource={resource}
-                                  onUIAction={(_action) => {
-                                    // Handle UI actions here if needed
-                                  }}
-                                  className="p-4"
-                                />
-                              </div>
-                            )
-                          }
-
-                          // Default: show JSON
-                          return (
-                            <div className="max-h-64 overflow-y-auto">
-                              <SyntaxHighlighter
-                                language="json"
-                                style={tomorrow}
-                                className="text-xs rounded"
-                                customStyle={{
-                                  margin: 0,
-                                  background: 'transparent',
-                                }}
-                              >
-                                {JSON.stringify(result.result, null, 2)}
-                              </SyntaxHighlighter>
+                          <div className="border rounded-lg overflow-hidden mb-4">
+                            <div className="bg-gray-100 dark:bg-zinc-700 px-3 py-2 text-xs text-gray-600 dark:text-zinc-300 border-b dark:border-zinc-600">
+                              <span className="font-medium">MCP UI Resource Preview</span>
                             </div>
-                          )
-                        })()}
+                            <McpUIRenderer
+                              resource={selectedResource}
+                              onUIAction={(_action) => {
+                                // Handle UI actions here if needed
+                              }}
+                              className="p-4"
+                            />
+                          </div>
+                        )
+                      : null}
+                  </div>
+
+                  {(results.length > 0 || isLoading) && (
+                    <div className="flex-1 overflow-hidden">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">Content</h4>
+                      {isLoading && (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2" />
+                          <span className="text-sm text-gray-600">Loading resource...</span>
+                        </div>
+                      )}
+                      <div className="space-y-3 overflow-y-auto max-h-96">
+                        {results.map((result, index) => (
+                          <div key={index} className="border dark:border-zinc-700 rounded-lg p-3 bg-gray-50 dark:bg-zinc-700">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-700">
+                                {result.uri}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleCopyResult(index)}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDownloadResult(index)}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Download className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500 mb-2">
+                              {new Date(result.timestamp).toLocaleString()}
+                            </div>
+                            {result.error
+                              ? (
+                                  <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                                    {result.error}
+                                  </div>
+                                )
+                              : (() => {
+                                  // Check if the result is an MCP UI resource
+                                  const resource = result.result
+                                  if (resource && isMcpUIResource(resource)) {
+                                    return (
+                                      <div className="border rounded-lg overflow-hidden">
+                                        <div className="bg-gray-100 dark:bg-zinc-700 px-3 py-2 text-xs text-gray-600 dark:text-zinc-300 border-b dark:border-zinc-600">
+                                          <span className="font-medium">MCP UI Resource</span>
+                                        </div>
+                                        <McpUIRenderer
+                                          resource={resource}
+                                          onUIAction={(_action) => {
+                                            // Handle UI actions here if needed
+                                          }}
+                                          className="p-4"
+                                        />
+                                      </div>
+                                    )
+                                  }
+
+                                  // Default: show JSON
+                                  return (
+                                    <div className="max-h-64 overflow-y-auto">
+                                      <SyntaxHighlighter
+                                        language="json"
+                                        style={prismStyle}
+                                        className="text-xs rounded"
+                                        customStyle={{
+                                          margin: 0,
+                                          background: 'transparent',
+                                        }}
+                                      >
+                                        {JSON.stringify(result.result, null, 2)}
+                                      </SyntaxHighlighter>
+                                    </div>
+                                  )
+                                })()}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+                  )}
+                </>
+              )
+            : (
+                <div className="flex-1 flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium">Select a resource</p>
+                    <p className="text-sm">Choose a resource from the list to see details and read its content</p>
                   </div>
                 </div>
               )}
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">Select a resource</p>
-                <p className="text-sm">Choose a resource from the list to see details and read its content</p>
-              </div>
-            </div>
-          )}
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

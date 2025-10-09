@@ -77,7 +77,13 @@ export async function onMcpAuthorization() {
         window.close()
       } else {
         console.warn(`${logPrefix} No opener window detected. Redirecting to root.`)
-        window.location.href = '/' // Or a configured post-auth destination
+        // Try to determine the base path from the current URL
+        // e.g., if we're at /inspector/oauth/callback, redirect to /inspector
+        const pathParts = window.location.pathname.split('/').filter(Boolean)
+        const basePath = pathParts.length > 0 && pathParts[pathParts.length - 1] === 'callback'
+          ? '/' + pathParts.slice(0, -2).join('/')
+          : '/'
+        window.location.href = basePath || '/'
       }
       // Clean up state ONLY on success and after notifying opener
       localStorage.removeItem(stateKey)

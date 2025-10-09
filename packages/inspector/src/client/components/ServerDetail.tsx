@@ -53,7 +53,8 @@ export function ServerDetail() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <p className="text-muted-foreground">Server not found</p>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading server...</p>
         </div>
       </div>
     )

@@ -1,6 +1,6 @@
-import { useMcp } from 'mcp-use/react'
 import type { ReactNode } from 'react'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useMcp } from 'mcp-use/react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 interface MCPConnection {
   id: string
@@ -13,6 +13,7 @@ interface MCPConnection {
   error: string | null
   authUrl: string | null
   callTool: (toolName: string, args: any) => Promise<any>
+  readResource: (uri: string) => Promise<any>
   authenticate: () => void
   retry: () => void
   clearStorage: () => void
@@ -33,16 +34,23 @@ interface SavedConnection {
   name: string
 }
 
-function McpConnectionWrapper({ url, name, onUpdate, onRemove }: {
+function McpConnectionWrapper({ url, name, onUpdate, onRemove: _onRemove }: {
   url: string
   name: string
   onUpdate: (connection: MCPConnection) => void
   onRemove: () => void
 }) {
-  const mcpHook = useMcp({ url })
+  // Configure OAuth callback URL
+  // Use /oauth/callback (which redirects to /inspector/oauth/callback) for compatibility
+  // with existing OAuth app configurations
+  const callbackUrl = typeof window !== 'undefined'
+    ? new URL('/oauth/callback', window.location.origin).toString()
+    : '/oauth/callback'
+
+  const mcpHook = useMcp({ url, callbackUrl })
   const onUpdateRef = useRef(onUpdate)
   const prevConnectionRef = useRef<MCPConnection | null>(null)
-  
+
   // Keep ref up to date
   useEffect(() => {
     onUpdateRef.current = onUpdate
@@ -59,9 +67,10 @@ function McpConnectionWrapper({ url, name, onUpdate, onRemove }: {
       tools: mcpHook.tools,
       resources: mcpHook.resources,
       prompts: mcpHook.prompts,
-      error: mcpHook.error,
-      authUrl: mcpHook.authUrl,
+      error: mcpHook.error ?? null,
+      authUrl: mcpHook.authUrl ?? null,
       callTool: mcpHook.callTool,
+      readResource: mcpHook.readResource,
       authenticate: mcpHook.authenticate,
       retry: mcpHook.retry,
       clearStorage: mcpHook.clearStorage,
@@ -105,23 +114,23 @@ export function McpProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(saved)
         // Validate and filter out invalid connections
-        const validConnections = Array.isArray(parsed) 
+        const validConnections = Array.isArray(parsed)
           ? parsed.filter((conn: any) => {
               // Ensure connection has valid structure with string url and id
-              return conn 
+              return conn
                 && typeof conn === 'object'
-                && typeof conn.id === 'string' 
+                && typeof conn.id === 'string'
                 && typeof conn.url === 'string'
                 && typeof conn.name === 'string'
             })
           : []
-        
+
         // If we filtered out any invalid connections, update localStorage
         if (validConnections.length !== parsed.length) {
           console.warn('Cleaned up invalid connections from localStorage')
           localStorage.setItem('mcp-inspector-connections', JSON.stringify(validConnections))
         }
-        
+
         setSavedConnections(validConnections)
       }
       catch (error) {
@@ -208,4 +217,3 @@ export function useMcpContext() {
   }
   return context
 }
-

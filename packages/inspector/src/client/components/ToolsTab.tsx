@@ -1,8 +1,8 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
-import { Check, Copy, Play, Search } from 'lucide-react'
+import { Check, Clock, Copy, Play, Save, Search, Trash2, Zap } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { usePrismTheme } from '@/client/hooks/usePrismTheme'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -30,17 +30,57 @@ interface ToolResult {
   result: any
   error?: string
   timestamp: number
+  duration?: number
 }
+
+interface SavedRequest {
+  id: string
+  name: string
+  toolName: string
+  args: Record<string, unknown>
+  savedAt: number
+}
+
+const SAVED_REQUESTS_KEY = 'mcp-inspector-saved-requests'
 
 export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null)
+  const { prismStyle } = usePrismTheme()
   const [toolArgs, setToolArgs] = useState<Record<string, unknown>>({})
   const [results, setResults] = useState<ToolResult[]>([])
   const [isExecuting, setIsExecuting] = useState(false)
   const [copiedResult, setCopiedResult] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('tools')
+  const [savedRequests, setSavedRequests] = useState<SavedRequest[]>([])
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [requestName, setRequestName] = useState('')
+  const [previewMode, setPreviewMode] = useState(true)
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Load saved requests from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SAVED_REQUESTS_KEY)
+      if (saved) {
+        setSavedRequests(JSON.parse(saved))
+      }
+    }
+    catch (error) {
+      console.error('Failed to load saved requests:', error)
+    }
+  }, [])
+
+  // Save to localStorage whenever savedRequests changes
+  const saveSavedRequests = useCallback((requests: SavedRequest[]) => {
+    try {
+      localStorage.setItem(SAVED_REQUESTS_KEY, JSON.stringify(requests))
+      setSavedRequests(requests)
+    }
+    catch (error) {
+      console.error('Failed to save requests:', error)
+    }
+  }, [])
 
   // Auto-focus the search input when the component mounts
   useEffect(() => {
@@ -79,6 +119,18 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
     setToolArgs(initialArgs)
   }, [])
 
+  // Handle auto-selection from command palette
+  useEffect(() => {
+    const selectedToolName = sessionStorage.getItem('selected-tools')
+    if (selectedToolName && tools.length > 0) {
+      const tool = tools.find(t => t.name === selectedToolName)
+      if (tool) {
+        handleToolSelect(tool)
+        sessionStorage.removeItem('selected-tools')
+      }
+    }
+  }, [tools, handleToolSelect])
+
   const handleArgChange = useCallback((key: string, value: string) => {
     setToolArgs((prev) => {
       const newArgs = { ...prev }
@@ -104,21 +156,25 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
 
     try {
       const result = await callTool(selectedTool.name, toolArgs)
+      const duration = Date.now() - startTime
       const newResult: ToolResult = {
         toolName: selectedTool.name,
         args: toolArgs,
         result,
         timestamp: startTime,
+        duration,
       }
       setResults(prev => [newResult, ...prev])
     }
     catch (error) {
+      const duration = Date.now() - startTime
       const newResult: ToolResult = {
         toolName: selectedTool.name,
         args: toolArgs,
         result: null,
         error: error instanceof Error ? error.message : String(error),
         timestamp: startTime,
+        duration,
       }
       setResults(prev => [newResult, ...prev])
     }
@@ -142,6 +198,39 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
       console.error('Failed to copy:', err)
     }
   }, [results])
+
+  const saveRequest = useCallback(() => {
+    if (!selectedTool)
+      return
+
+    const name = requestName.trim() || `${selectedTool.name} - ${new Date().toLocaleString()}`
+    const newRequest: SavedRequest = {
+      id: `${Date.now()}-${Math.random()}`,
+      name,
+      toolName: selectedTool.name,
+      args: toolArgs,
+      savedAt: Date.now(),
+    }
+
+    const updatedRequests = [newRequest, ...savedRequests]
+    saveSavedRequests(updatedRequests)
+    setRequestName('')
+    setSaveDialogOpen(false)
+  }, [selectedTool, toolArgs, requestName, savedRequests, saveSavedRequests])
+
+  const loadSavedRequest = useCallback((request: SavedRequest) => {
+    const tool = tools.find(t => t.name === request.toolName)
+    if (tool) {
+      setSelectedTool(tool)
+      setToolArgs(request.args)
+      setActiveTab('tools')
+    }
+  }, [tools])
+
+  const deleteSavedRequest = useCallback((id: string) => {
+    const updatedRequests = savedRequests.filter(req => req.id !== id)
+    saveSavedRequests(updatedRequests)
+  }, [savedRequests, saveSavedRequests])
 
   // Filter tools based on search query
   const filteredTools = useMemo(() => {
@@ -176,7 +265,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
               className="rounded border-gray-300"
               aria-label={`${key} checkbox`}
             />
-            <span className="text-sm text-gray-600">{typedProp?.description || ''}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-300">{typedProp?.description || ''}</span>
           </div>
         </div>
       )
@@ -197,7 +286,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
             className="min-h-[100px]"
           />
           {typedProp?.description && (
-            <p className="text-xs text-gray-500">{typedProp.description}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{typedProp.description}</p>
           )}
         </div>
       )
@@ -216,7 +305,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
           placeholder={typedProp?.description || `Enter ${key}`}
         />
         {typedProp?.description && (
-          <p className="text-xs text-gray-500">{typedProp.description}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{typedProp.description}</p>
         )}
       </div>
     )
@@ -226,10 +315,10 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
     <ResizablePanelGroup direction="horizontal" className="h-full">
       <ResizablePanel defaultSize={60}>
         {/* Left pane: Tools list with search */}
-        <div className="flex flex-col h-full border-r p-6 bg-white">
+        <div className="flex flex-col h-full border-r dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800">
           <div className="p-0 ">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 rounded-full">
+              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 dark:bg-zinc-700 rounded-full">
                 <TabsTrigger value="tools">
                   Tools
                   <Badge className="ml-2" variant="outline">{filteredTools.length}</Badge>
@@ -239,61 +328,116 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
             </Tabs>
 
             <div className="mt-4 relative">
-              <Search className="absolute left-3 top-1/2 border-none transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 border-none transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
               <Input
                 ref={searchInputRef}
                 placeholder="Search tools by name or description "
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-10 bg-zinc-100 hover:bg-zinc-200 transition-all border-none rounded-full"
+                className="pl-10 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-all border-none rounded-full"
               />
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto overflow-x-visible mt-6 space-y-5 p-2">
-            {filteredTools.length === 0
+            {activeTab === 'tools'
               ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No tools available</p>
-                    <p className="text-sm">Connect to a server to see tools</p>
-                  </div>
+                  <>
+                    {filteredTools.length === 0
+                      ? (
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <p>No tools available</p>
+                            <p className="text-sm">Connect to a server to see tools</p>
+                          </div>
+                        )
+                      : (
+                          filteredTools.map(tool => (
+                            <div
+                              key={tool.name}
+                              className={cn(
+                                'cursor-pointer transition-all rounded-md border-none hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-none p-2',
+                                selectedTool?.name === tool.name && 'ring-2 ring-zinc-200 dark:ring-zinc-600 bg-zinc-100 dark:bg-zinc-700',
+                              )}
+                              onClick={() => handleToolSelect(tool)}
+                            >
+                              <div className="px-2">
+                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{tool.name}</div>
+                                {tool.description && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                                    {tool.description}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                  </>
                 )
               : (
-                  filteredTools.map(tool => (
-                    <div
-                      key={tool.name}
-                      className={cn(
-                        'cursor-pointer transition-all rounded-md border-none hover:bg-zinc-100 shadow-none p-2',
-                        selectedTool?.name === tool.name && 'ring-2 ring-zinc-200 bg-zinc-100',
-                      )}
-                      onClick={() => handleToolSelect(tool)}
-                    >
-                      <div className="px-2">
-                        <div className="text-sm font-medium">{tool.name}</div>
-                        {tool.description && (
-                          <div className="text-xs">
-                            {tool.description}
+                  <>
+                    {savedRequests.length === 0
+                      ? (
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <p>No saved requests</p>
+                            <p className="text-sm">Save a tool configuration to reuse it later</p>
                           </div>
+                        )
+                      : (
+                          savedRequests.map(request => (
+                            <div
+                              key={request.id}
+                              className="cursor-pointer transition-all rounded-md border border-gray-200 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 p-3 group"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div
+                                  className="flex-1"
+                                  onClick={() => loadSavedRequest(request)}
+                                >
+                                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{request.name}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    <Badge variant="outline" className="mr-2">{request.toolName}</Badge>
+                                    <span>{new Date(request.savedAt).toLocaleString()}</span>
+                                  </div>
+                                  {Object.keys(request.args).length > 0 && (
+                                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                                      {Object.keys(request.args).length}
+                                      {' '}
+                                      parameter(s)
+                                    </div>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    deleteSavedRequest(request.id)
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))
                         )}
-                      </div>
-                    </div>
-                  ))
+                  </>
                 )}
           </div>
         </div>
       </ResizablePanel>
-      <ResizableHandle />
+      <ResizableHandle withHandle />
       <ResizablePanel defaultSize={40}>
 
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel defaultSize={40}>
 
             {/* Right pane: Tool form */}
-            <div className="flex flex-col h-full bg-white">
+            <div className="flex flex-col h-full bg-white dark:bg-zinc-800">
               {selectedTool
                 ? (
                     <div className="flex flex-col h-full">
-                      <div className="p-4 border-b bg-gray-50">
+                      <div className="p-4 border-b dark:border-zinc-700 bg-gray-50 dark:bg-zinc-700">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{selectedTool.name}</Badge>
@@ -317,12 +461,18 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                                   )}
                             </Button>
                           </div>
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSaveDialogOpen(true)}
+                            disabled={!selectedTool}
+                          >
+                            <Save className="h-4 w-4 mr-2" />
                             Save
                           </Button>
                         </div>
                         {selectedTool.description && (
-                          <p className="text-sm text-gray-600 mt-2">{selectedTool.description}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{selectedTool.description}</p>
                         )}
                       </div>
 
@@ -337,7 +487,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                             )
                           : (
                               <div className="text-center py-8">
-                                <p className="text-gray-500">This tool has no parameters</p>
+                                <p className="text-gray-500 dark:text-gray-400">This tool has no parameters</p>
                               </div>
                             )}
                       </div>
@@ -346,137 +496,208 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                 : (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
-                        <p className="text-gray-500 text-lg">Select a tool to get started</p>
-                        <p className="text-gray-400 text-sm">Choose a tool from the list to configure and execute it</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-lg">Select a tool to get started</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-sm">Choose a tool from the list to configure and execute it</p>
                       </div>
                     </div>
                   )}
             </div>
           </ResizablePanel>
-          <ResizableHandle />
+          <ResizableHandle withHandle />
           <ResizablePanel defaultSize={60}>
 
             {/* Bottom section: Results */}
-            <div className="flex flex-col h-full bg-white border-t">
-              <div className="p-4 border-b bg-gray-50">
-                <h3 className="font-semibold">Response</h3>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex flex-col h-full bg-white dark:bg-zinc-800 border-t dark:border-zinc-700">
+              <div className="flex-1 overflow-y-auto">
                 {results.length > 0
                   ? (
                       <div className="space-y-4">
-                        {results.map((result, index) => (
-                          <div key={index} className="border rounded-lg p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Badge variant={result.error ? 'destructive' : 'default'}>
-                                  {result.toolName}
-                                </Badge>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(result.timestamp).toLocaleTimeString()}
-                                </span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyResult(index)}
-                              >
-                                {copiedResult === index
-                                  ? (
-                                      <Check className="h-4 w-4" />
-                                    )
-                                  : (
-                                      <Copy className="h-4 w-4" />
-                                    )}
-                              </Button>
-                            </div>
+                        {results.map((result, index) => {
+                          // Check if result contains MCP UI resources
+                          const content = result.result?.content || []
+                          const mcpUIResources = content.filter((item: any) =>
+                            item.type === 'resource' && isMcpUIResource(item.resource),
+                          )
+                          const hasMcpUIResources = mcpUIResources.length > 0
 
-                            {result.error
-                              ? (
-                                  <div className="bg-red-50 border border-red-200 rounded p-3">
-                                    <p className="text-red-800 font-medium">Error:</p>
-                                    <p className="text-red-700 text-sm">{result.error}</p>
+                          return (
+                            <div key={index} className="space-y-3">
+                              <div className={`flex items-center gap-2 px-4 pt-4 ${hasMcpUIResources ? 'border-b border-gray-200 dark:border-zinc-600 pb-3' : ''}`}>
+                                <h3 className="text-sm font-medium">Response</h3>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-gray-400" />
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {new Date(result.timestamp).toLocaleTimeString()}
+                                  </span>
+                                </div>
+                                {result.duration !== undefined && (
+                                  <div className="flex items-center gap-1">
+                                    <Zap className="h-3 w-3 text-gray-400" />
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {result.duration}
+                                      ms
+                                    </span>
                                   </div>
-                                )
-                              : (() => {
-                                  // Check if result contains MCP UI resources
-                                  const content = result.result?.content || []
-                                  const mcpUIResources = content.filter((item: any) =>
-                                    item.type === 'resource' && isMcpUIResource(item.resource)
-                                  )
-
-                                  if (mcpUIResources.length > 0) {
-                                    return (
-                                      <div className="space-y-4">
-                                        {mcpUIResources.map((item: any, idx: number) => (
-                                          <div key={idx} className="border rounded-lg overflow-hidden">
-                                            <div className="bg-gray-100 px-3 py-2 text-xs text-gray-600 border-b">
-                                              <span className="font-medium">MCP UI Resource:</span> {item.resource.uri || 'No URI'}
-                                            </div>
-                            <McpUIRenderer
-                              resource={item.resource}
-                              onUIAction={(_action) => {
-                                // Handle UI actions here if needed
-                              }}
-                              className="p-4"
-                            />
-                                          </div>
-                                        ))}
-                                        {/* Show JSON for non-UI content */}
-                                        {content.filter((item: any) =>
-                                          !(item.type === 'resource' && isMcpUIResource(item.resource))
-                                        ).length > 0 && (
-                                          <div className="bg-gray-50 rounded">
-                                            <SyntaxHighlighter
-                                              language="json"
-                                              style={tomorrow}
-                                              customStyle={{
-                                                margin: 0,
-                                                borderRadius: '0.375rem',
-                                                fontSize: '0.875rem',
-                                              }}
-                                            >
-                                              {JSON.stringify(
-                                                content.filter((item: any) =>
-                                                  !(item.type === 'resource' && isMcpUIResource(item.resource))
-                                                ),
-                                                null,
-                                                2
-                                              )}
-                                            </SyntaxHighlighter>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )
-                                  }
-
-                                  // Default: show JSON
-                                  return (
-                                    <div className="bg-gray-50 rounded">
-                                      <SyntaxHighlighter
-                                        language="json"
-                                        style={tomorrow}
-                                        customStyle={{
-                                          margin: 0,
-                                          borderRadius: '0.375rem',
-                                          fontSize: '0.875rem',
-                                        }}
+                                )}
+                                {hasMcpUIResources && (
+                                  <div className="flex items-center gap-4 ml-4">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      URI:
+                                      {' '}
+                                      {mcpUIResources[0]?.resource?.uri || 'No URI'}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => setPreviewMode(true)}
+                                        className={`text-xs font-medium ${
+                                          previewMode
+                                            ? 'text-black dark:text-white'
+                                            : 'text-zinc-500 dark:text-zinc-400'
+                                        }`}
                                       >
-                                        {JSON.stringify(result.result, null, 2)}
-                                      </SyntaxHighlighter>
+                                        Preview
+                                      </button>
+                                      <span className="text-xs text-zinc-400">|</span>
+                                      <button
+                                        onClick={() => setPreviewMode(false)}
+                                        className={`text-xs font-medium ${
+                                          !previewMode
+                                            ? 'text-black dark:text-white'
+                                            : 'text-zinc-500 dark:text-zinc-400'
+                                        }`}
+                                      >
+                                        JSON
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyResult(index)}
+                                  className="ml-auto"
+                                >
+                                  {copiedResult === index
+                                    ? (
+                                        <Check className="h-4 w-4" />
+                                      )
+                                    : (
+                                        <Copy className="h-4 w-4" />
+                                      )}
+                                </Button>
+                              </div>
+
+                              {result.error
+                                ? (
+                                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 mx-4">
+                                      <p className="text-red-800 dark:text-red-300 font-medium">Error:</p>
+                                      <p className="text-red-700 dark:text-red-400 text-sm">{result.error}</p>
                                     </div>
                                   )
-                                })()}
-                          </div>
-                        ))}
+                                : (() => {
+                                    if (hasMcpUIResources) {
+                                      if (previewMode) {
+                                        return (
+                                          <div className="space-y-4">
+                                            {mcpUIResources.map((item: any, idx: number) => (
+                                              <div key={idx} className="mx-4">
+                                                <div className="w-full">
+                                                  <McpUIRenderer
+                                                    resource={item.resource}
+                                                    onUIAction={(_action) => {
+                                                    // Handle UI actions here if needed
+                                                    }}
+                                                    className="w-full"
+                                                  />
+                                                </div>
+                                              </div>
+                                            ))}
+                                            {/* Show JSON for non-UI content */}
+                                            {content.filter((item: any) =>
+                                              !(item.type === 'resource' && isMcpUIResource(item.resource)),
+                                            ).length > 0 && (
+                                              <div className="px-4">
+                                                <SyntaxHighlighter
+                                                  language="json"
+                                                  style={prismStyle}
+                                                  customStyle={{
+                                                    margin: 0,
+                                                    padding: 0,
+                                                    border: 'none',
+                                                    borderRadius: 0,
+                                                    fontSize: '1rem',
+                                                    background: 'transparent',
+                                                  }}
+                                                  className="text-gray-900 dark:text-gray-100"
+                                                >
+                                                  {JSON.stringify(
+                                                    content.filter((item: any) =>
+                                                      !(item.type === 'resource' && isMcpUIResource(item.resource)),
+                                                    ),
+                                                    null,
+                                                    2,
+                                                  )}
+                                                </SyntaxHighlighter>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )
+                                      }
+                                      else {
+                                      // JSON mode for MCP UI resources
+                                        return (
+                                          <div className="px-4">
+                                            <SyntaxHighlighter
+                                              language="json"
+                                              style={prismStyle}
+                                              customStyle={{
+                                                margin: 0,
+                                                padding: 0,
+                                                border: 'none',
+                                                borderRadius: 0,
+                                                fontSize: '1rem',
+                                                background: 'transparent',
+                                              }}
+                                              className="text-gray-900 dark:text-gray-100"
+                                            >
+                                              {JSON.stringify(result.result, null, 2)}
+                                            </SyntaxHighlighter>
+                                          </div>
+                                        )
+                                      }
+                                    }
+
+                                    // Default: show JSON for non-MCP UI resources
+                                    return (
+                                      <div className="px-4">
+                                        <SyntaxHighlighter
+                                          language="json"
+                                          style={prismStyle}
+                                          customStyle={{
+                                            margin: 0,
+                                            padding: 0,
+                                            border: 'none',
+                                            borderRadius: 0,
+                                            fontSize: '1rem',
+                                            background: 'transparent',
+                                          }}
+                                          className="text-gray-900 dark:text-gray-100"
+                                        >
+                                          {JSON.stringify(result.result, null, 2)}
+                                        </SyntaxHighlighter>
+                                      </div>
+                                    )
+                                  })()}
+                            </div>
+                          )
+                        })}
                       </div>
                     )
                   : (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-center">
-                          <p className="text-gray-500">No results yet</p>
-                          <p className="text-gray-400 text-sm">Execute a tool to see results here</p>
+                          <p className="text-gray-500 dark:text-gray-400">No results yet</p>
+                          <p className="text-gray-400 dark:text-gray-500 text-sm">Execute a tool to see results here</p>
                         </div>
                       </div>
                     )}
@@ -486,6 +707,42 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
         </ResizablePanelGroup>
 
       </ResizablePanel>
+
+      {/* Save Dialog */}
+      {saveDialogOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSaveDialogOpen(false)}>
+          <div className="bg-white dark:bg-zinc-800 rounded-lg p-6 w-[400px] shadow-xl border border-gray-200 dark:border-zinc-700" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Save Request</h3>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="request-name">Request Name (optional)</Label>
+                <Input
+                  id="request-name"
+                  value={requestName}
+                  onChange={e => setRequestName(e.target.value)}
+                  placeholder={`${selectedTool?.name} - ${new Date().toLocaleString()}`}
+                  className="mt-2"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      saveRequest()
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={saveRequest}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </ResizablePanelGroup>
   )
 }

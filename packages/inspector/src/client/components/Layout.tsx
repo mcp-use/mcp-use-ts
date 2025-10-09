@@ -2,8 +2,10 @@ import type { ReactNode } from 'react'
 import { FolderOpen, MessageSquare, Rocket, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import LogoAnimated from '@/components/LogoAnimated'
 import { ShimmerButton } from '@/components/ui/shimmer-button'
+import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -25,6 +27,8 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
 import { useMcpContext } from '../context/McpContext'
+import { AnimatedThemeToggler } from './AnimatedThemeToggler'
+import { CommandPalette } from './CommandPalette'
 import { PromptsTab } from './PromptsTab'
 import { ResourcesTab } from './ResourcesTab'
 import { ServerIcon } from './ServerIcon'
@@ -90,6 +94,8 @@ export function Layout({ children }: LayoutProps) {
   const [activeTab, setActiveTab] = useState('tools')
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null)
   const [configLoaded, setConfigLoaded] = useState(false)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [isAutoConnecting, setIsAutoConnecting] = useState(false)
 
   const tabs = [
     { id: 'tools', label: 'Tools', icon: Wrench },
@@ -98,17 +104,78 @@ export function Layout({ children }: LayoutProps) {
   ]
 
   const handleServerSelect = (serverId: string) => {
+    const server = connections.find(c => c.id === serverId)
+    if (!server || server.state !== 'ready') {
+      toast.error('Server is not connected and cannot be inspected')
+      return
+    }
     setSelectedServerId(serverId)
     navigate(`/servers/${encodeURIComponent(serverId)}`)
   }
 
+  const handleCommandPaletteNavigate = (tab: 'tools' | 'prompts' | 'resources', itemName?: string) => {
+    setActiveTab(tab)
+    // Store the item name to be selected in the respective tab
+    if (itemName) {
+      sessionStorage.setItem(`selected-${tab}`, itemName)
+    }
+  }
+
   const selectedServer = connections.find(c => c.id === selectedServerId)
+
+  // Aggregate tools, prompts, and resources from all connected servers
+  // When a server is selected, use only that server's items
+  // When no server is selected, aggregate from all ready servers and add server metadata
+  const aggregatedTools = selectedServer
+    ? selectedServer.tools.map(tool => ({ ...tool, _serverId: selectedServer.id }))
+    : connections.flatMap(conn =>
+        conn.state === 'ready'
+          ? conn.tools.map(tool => ({ ...tool, _serverId: conn.id, _serverName: conn.name }))
+          : [],
+      )
+
+  const aggregatedPrompts = selectedServer
+    ? selectedServer.prompts.map(prompt => ({ ...prompt, _serverId: selectedServer.id }))
+    : connections.flatMap(conn =>
+        conn.state === 'ready'
+          ? conn.prompts.map(prompt => ({ ...prompt, _serverId: conn.id, _serverName: conn.name }))
+          : [],
+      )
+
+  const aggregatedResources = selectedServer
+    ? selectedServer.resources.map(resource => ({ ...resource, _serverId: selectedServer.id }))
+    : connections.flatMap(conn =>
+        conn.state === 'ready'
+          ? conn.resources.map(resource => ({ ...resource, _serverId: conn.id, _serverName: conn.name }))
+          : [],
+      )
 
   // Load config and auto-connect if URL is provided
   useEffect(() => {
     if (configLoaded)
       return
 
+    // Check for autoConnect query parameter first
+    const urlParams = new URLSearchParams(window.location.search)
+    const autoConnectUrl = urlParams.get('autoConnect')
+
+    if (autoConnectUrl) {
+      // Auto-connect to the URL from query parameter
+      const existing = connections.find(c => c.url === autoConnectUrl)
+      if (!existing) {
+        setIsAutoConnecting(true)
+        addConnection(autoConnectUrl, 'Local MCP Server')
+        // Navigate immediately but keep loading screen visible a bit longer to avoid flash
+        navigate(`/servers/${encodeURIComponent(autoConnectUrl)}`)
+        setTimeout(() => {
+          setIsAutoConnecting(false)
+        }, 1000)
+      }
+      setConfigLoaded(true)
+      return
+    }
+
+    // Fallback to config.json
     fetch('/inspector/config.json')
       .then(res => res.json())
       .then((config: { autoConnectUrl: string | null }) => {
@@ -144,15 +211,80 @@ export function Layout({ children }: LayoutProps) {
   }, [location.pathname])
 
   // If no server is selected and we're on a server route, navigate to root
+  // But only after we've given connections time to load and establish
   useEffect(() => {
-    if (!selectedServer && location.pathname.startsWith('/servers/')) {
-      navigate('/')
+    const serverIdFromRoute = location.pathname.split('/servers/')[1]
+    const decodedServerId = serverIdFromRoute ? decodeURIComponent(serverIdFromRoute) : null
+
+    const isServerRoute = location.pathname.startsWith('/servers/')
+    const hasServerId = selectedServerId === decodedServerId
+
+    if (!isServerRoute || !hasServerId || !configLoaded) {
+      return
     }
-  }, [selectedServer, location.pathname, navigate])
+
+    // Check if any connection exists for this server
+    const serverConnection = connections.find(conn => conn.id === decodedServerId)
+
+    if (serverConnection) {
+      // Server connection exists - check its state
+      if (serverConnection.state === 'failed') {
+        // Server failed to connect, redirect after a short delay
+        const timeoutId = setTimeout(() => {
+          navigate('/')
+        }, 2000)
+        return () => clearTimeout(timeoutId)
+      }
+      // If server is connecting/loading/discovering, don't redirect yet
+      if (serverConnection.state === 'connecting' || serverConnection.state === 'loading' || serverConnection.state === 'discovering') {
+        return
+      }
+      // If server is ready, we're good - no redirect needed
+      return
+    }
+
+    // No connection found for this server
+    // Wait a bit for auto-connection to potentially kick in, then redirect
+    const timeoutId = setTimeout(() => {
+      navigate('/')
+    }, 3000)
+
+    return () => clearTimeout(timeoutId)
+  }, [selectedServer, location.pathname, navigate, selectedServerId, connections, configLoaded])
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K to open command palette
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault()
+        setIsCommandPaletteOpen(true)
+      }
+      // Escape to close command palette
+      if (event.key === 'Escape') {
+        setIsCommandPaletteOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Show loading spinner during auto-connection
+  if (isAutoConnecting) {
+    return (
+      <div className="h-screen bg-white dark:bg-zinc-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-8 w-8 text-zinc-600 dark:text-zinc-400" />
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Connecting to MCP server...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <TooltipProvider>
-      <div className="h-screen bg-zinc-100 flex flex-col px-4 py-4 gap-4">
+      <div className="h-screen bg-[#f3f3f3] dark:bg-zinc-900 flex flex-col px-4 py-4 gap-4">
         {/* Header */}
         <header className="max-w-screen-2xl w-full mx-auto">
           <div className="flex items-center justify-between">
@@ -163,7 +295,7 @@ export function Layout({ children }: LayoutProps) {
                 <DropdownMenuTrigger asChild>
                   <ShimmerButton
                     className={
-                      cn('min-w-[200px] p-0 px-1 pr-4 text-sm h-11 justify-start bg-black text-white border-black hover:bg-gray-800 hover:border-gray-800', !selectedServer && 'pl-4',
+                      cn('min-w-[200px] p-0 px-1 text-sm h-11 justify-start bg-black dark:bg-white text-white dark:text-black border-black dark:border-white hover:bg-gray-800 dark:hover:bg-zinc-100 hover:border-gray-800 dark:hover:border-zinc-200', !selectedServer && 'pl-4', selectedServer && 'pr-4',
                       )
                     }
                   >
@@ -176,7 +308,7 @@ export function Layout({ children }: LayoutProps) {
                       />
                     )}
                     <span className="truncate">
-                      {selectedServer ? selectedServer.name : 'Choose server to inspect'}
+                      {selectedServer ? selectedServer.name : 'Select server to inspect'}
                     </span>
                   </ShimmerButton>
                 </DropdownMenuTrigger>
@@ -185,7 +317,7 @@ export function Layout({ children }: LayoutProps) {
                   <DropdownMenuSeparator />
                   {connections.length === 0
                     ? (
-                        <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                        <div className="px-2 py-4 text-sm text-muted-foreground dark:text-zinc-400 text-center">
                           No servers connected. Go to the dashboard to add one.
                         </div>
                       )
@@ -210,7 +342,7 @@ export function Layout({ children }: LayoutProps) {
                       )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/')}>
-                    <span className="text-blue-600">+ Add new server</span>
+                    <span className="text-blue-600 dark:text-blue-400">+ Add new server</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -219,18 +351,40 @@ export function Layout({ children }: LayoutProps) {
               {selectedServer && (
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
-                    {tabs.map(tab => (
-                      <TabsTrigger key={tab.id} value={tab.id} icon={tab.icon}>
-                        {tab.label}
-                      </TabsTrigger>
-                    ))}
+                    {tabs.map((tab) => {
+                      // Get count for the current tab
+                      let count = 0
+                      if (tab.id === 'tools') {
+                        count = selectedServer.tools.length
+                      }
+                      else if (tab.id === 'prompts') {
+                        count = selectedServer.prompts.length
+                      }
+                      else if (tab.id === 'resources') {
+                        count = selectedServer.resources.length
+                      }
+
+                      return (
+                        <TabsTrigger key={tab.id} value={tab.id} icon={tab.icon}>
+                          <div className="flex items-center gap-2">
+                            {tab.label}
+                            {count > 0 && (
+                              <span className="bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs px-2 py-0.5 rounded-full font-medium">
+                                {count}
+                              </span>
+                            )}
+                          </div>
+                        </TabsTrigger>
+                      )
+                    })}
                   </TabsList>
                 </Tabs>
               )}
             </div>
 
-            {/* Right side: Discord Button + Deploy Button + Logo */}
+            {/* Right side: Theme Toggle + Discord Button + Deploy Button + Logo */}
             <div className="flex items-center gap-4">
+              <AnimatedThemeToggler className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors" />
               <Button
                 variant="ghost"
                 className="hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full"
@@ -247,7 +401,7 @@ export function Layout({ children }: LayoutProps) {
                   Discord
                 </a>
               </Button>
-              <Dialog>
+              {/* <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     <Rocket className="h-4 w-4" />
@@ -273,9 +427,9 @@ export function Layout({ children }: LayoutProps) {
                       <div className="flex items-center gap-2">
                         <Rocket className="h-4 w-4" />
                         <span className="font-medium">Hosted on MCP Use</span>
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">Free</span>
                       </div>
-                      <p className="text-sm text-muted-foreground text-left">
+                      <p className="text-sm text-muted-foreground dark:text-zinc-400 text-left">
                         Deploy your server to our managed infrastructure with zero configuration
                       </p>
                     </Button>
@@ -291,20 +445,20 @@ export function Layout({ children }: LayoutProps) {
                         <div className="h-4 w-4 bg-blue-500 rounded" />
                         <span className="font-medium">Docker</span>
                       </div>
-                      <p className="text-sm text-muted-foreground text-left">
+                      <p className="text-sm text-muted-foreground dark:text-zinc-400 text-left">
                         Get Docker configuration files to deploy on your own infrastructure
                       </p>
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+              </Dialog> */}
               <LogoAnimated state="expanded" />
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 max-w-screen-2xl w-full mx-auto bg-white rounded-2xl p-0 overflow-auto">
+        <main className="flex-1 max-w-screen-2xl w-full mx-auto bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 p-0 overflow-auto">
           {selectedServer && activeTab === 'tools'
             ? (
                 <ToolsTab
@@ -325,7 +479,7 @@ export function Layout({ children }: LayoutProps) {
                 ? (
                     <ResourcesTab
                       resources={selectedServer.resources}
-                      readResource={(uri: string) => selectedServer.callTool('read_resource', { uri })} // Using callTool for now, should be readResource when available
+                      readResource={selectedServer.readResource}
                       isConnected={selectedServer.state === 'ready'}
                     />
                   )
@@ -333,6 +487,18 @@ export function Layout({ children }: LayoutProps) {
                     children
                   )}
         </main>
+
+        {/* Command Palette */}
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onOpenChange={setIsCommandPaletteOpen}
+          tools={aggregatedTools}
+          prompts={aggregatedPrompts}
+          resources={aggregatedResources}
+          connections={connections}
+          onNavigate={handleCommandPaletteNavigate}
+          onServerSelect={handleServerSelect}
+        />
       </div>
     </TooltipProvider>
   )

@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from 'express'
+import { Buffer } from 'node:buffer'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -124,8 +125,20 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
     }
   })
 
-  // Serve the main HTML file for all inspector routes
-  app.get(`${basePath}*`, (_req: Request, res: Response) => {
+  // Handle OAuth callback redirects - redirect /oauth/callback to /inspector/oauth/callback
+  // This helps when OAuth providers are configured with the wrong redirect URL
+  if (basePath !== '') {
+    app.get('/oauth/callback', (req: Request, res: Response) => {
+      const queryString = req.url.split('?')[1] || ''
+      const redirectUrl = queryString
+        ? `${basePath}/oauth/callback?${queryString}`
+        : `${basePath}/oauth/callback`
+      res.redirect(302, redirectUrl)
+    })
+  }
+
+  // Serve the main HTML file for the root inspector path (exact match)
+  app.get(basePath, (_req: Request, res: Response) => {
     const indexPath = join(clientDistPath, 'index.html')
 
     if (!existsSync(indexPath)) {
@@ -133,9 +146,25 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
       return
     }
 
-    // Serve the HTML file (Vite built with base: '/inspector/')
+    // Serve the HTML file (Vite built with base: '/inspector')
     res.sendFile(indexPath)
   })
 
-  console.log(`MCP Inspector mounted at ${basePath}`)
+  // Redirect /inspector/ to /inspector (remove trailing slash)
+  app.get(`${basePath}/`, (_req: Request, res: Response) => {
+    res.redirect(301, basePath)
+  })
+
+  // Serve the main HTML file for all other inspector routes (SPA routing)
+  app.get(`${basePath}/*`, (_req: Request, res: Response) => {
+    const indexPath = join(clientDistPath, 'index.html')
+
+    if (!existsSync(indexPath)) {
+      res.status(500).send('Inspector UI not found. Please build the inspector package.')
+      return
+    }
+
+    // Serve the HTML file (Vite built with base: '/inspector')
+    res.sendFile(indexPath)
+  })
 }

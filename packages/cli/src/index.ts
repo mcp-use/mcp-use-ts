@@ -171,12 +171,12 @@ program
       processes.push(serverProc);
 
       // Auto-open inspector if enabled
-      if (options.open) {
+      if (options.open !== false) {
         const startTime = Date.now();
         const ready = await waitForServer(port);
         if (ready) {
-          const inspectorUrl = `http://localhost:${port}/inspector`;
           const mcpUrl = `http://localhost:${port}/mcp`;
+          const inspectorUrl = `http://localhost:${port}/inspector?autoConnect=${encodeURIComponent(mcpUrl)}`;
           const readyTime = Date.now() - startTime;
           console.log(`\n\x1b[32m✓\x1b[0m Ready in ${readyTime}ms`);
           console.log(`Local:    http://localhost:${port}`);
