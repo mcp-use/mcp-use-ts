@@ -57,7 +57,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "rm -rf dist && tsup index.ts src/browser.ts src/react/index.ts src/server/index.ts --format cjs,esm --out-dir dist --keep-names && tsc --emitDeclarationOnly --declaration",
     "test": "vitest",
     "test:run": "vitest run",
     "test:simple": "vitest run tests/stream_events_simple.test.ts",

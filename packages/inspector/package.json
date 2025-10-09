@@ -32,7 +32,7 @@
     "dev:standalone": "tsx watch src/server/server.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "tsup src/server/index.ts --format esm && tsc -p tsconfig.server.json --emitDeclarationOnly --declaration",
     "start": "node dist/server/server.js",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",

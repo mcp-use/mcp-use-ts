@@ -30,7 +30,7 @@
     "create-mcp-use-app": "./dist/index.js"
   },
   "scripts": {
-    "build": "npm run clean && tsc --build && npm run copy-templates",
+    "build": "npm run clean && tsup src/index.ts --format esm && tsc --emitDeclarationOnly --declaration && npm run copy-templates",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "copy-templates": "mkdir -p dist/templates && cp -r src/templates/* dist/templates/",
     "dev": "tsc --build --watch",
