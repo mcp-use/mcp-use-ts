@@ -54,7 +54,8 @@
     "node": ">=22.0.0"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
   },
   "scripts": {
     "build": "rm -rf dist && tsup index.ts src/browser.ts src/react/index.ts src/server/index.ts --format cjs,esm --out-dir dist --keep-names && tsc --emitDeclarationOnly --declaration",
