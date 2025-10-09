@@ -186,8 +186,8 @@ export function useMcp(options: UseMcpOptions): UseMcpResult {
       addLog('debug', 'MCP Client initialized in connect.')
     }
 
-    const tryConnectWithTransport = async (transportTypeParam: TransportType): Promise<'success' | 'fallback' | 'auth_redirect' | 'failed'> => {
-      addLog('info', `Attempting connection with ${transportTypeParam.toUpperCase()} transport...`)
+    const tryConnectWithTransport = async (transportTypeParam: TransportType, isAuthRetry = false): Promise<'success' | 'fallback' | 'auth_redirect' | 'failed'> => {
+      addLog('info', `Attempting connection with ${transportTypeParam.toUpperCase()} transport${isAuthRetry ? ' (after auth)' : ''}...`)
       if (stateRef.current !== 'authenticating') {
         setState('connecting')
       }
@@ -335,6 +335,13 @@ export function useMcp(options: UseMcpOptions): UseMcpResult {
         }
 
         if (errorInstance instanceof UnauthorizedError || errorMessage.includes('Unauthorized') || errorMessage.includes('401')) {
+          // Prevent infinite auth loops - only retry once after auth
+          if (isAuthRetry) {
+            addLog('error', 'Authentication failed even after successful token refresh. This may indicate a server issue.')
+            failConnection('Authentication loop detected - auth succeeded but connection still unauthorized.')
+            return 'failed'
+          }
+
           addLog('info', 'Authentication required.')
 
           assert(authProviderRef.current, 'Auth Provider not available for auth flow')
@@ -366,11 +373,11 @@ export function useMcp(options: UseMcpOptions): UseMcpResult {
             if (!isMountedRef.current) return 'failed'
 
             if (authResult === 'AUTHORIZED') {
-              addLog('info', 'Authentication successful via existing token or refresh. Re-attempting connection...')
+              addLog('info', 'Authentication successful via existing token or refresh. Retrying transport connection...')
               if (authTimeoutRef.current) clearTimeout(authTimeoutRef.current)
-              connectingRef.current = false
-              connect()
-              return 'failed'
+              authTimeoutRef.current = null
+              // Retry the same transport type with isAuthRetry=true to prevent loops
+              return await tryConnectWithTransport(transportTypeParam, true)
             } else if (authResult === 'REDIRECT') {
               addLog('info', 'Redirecting for authentication. Waiting for callback...')
               return 'auth_redirect'
@@ -673,11 +680,17 @@ export function useMcp(options: UseMcpOptions): UseMcpResult {
       if (event.data?.type === 'mcp_auth_callback') {
         addLog('info', 'Received auth callback message.', event.data)
         if (authTimeoutRef.current) clearTimeout(authTimeoutRef.current)
+        authTimeoutRef.current = null
 
         if (event.data.success) {
           addLog('info', 'Authentication successful via popup. Reconnecting client...')
-          connectingRef.current = false
-          connectRef.current()
+          // Ensure we're not already in a connection attempt to prevent loops
+          if (!connectingRef.current) {
+            connectingRef.current = false // Reset flag before connecting
+            connectRef.current()
+          } else {
+            addLog('warn', 'Connection already in progress, skipping reconnection from auth callback')
+          }
         } else {
           failConnectionRef.current(`Authentication failed in callback: ${event.data.error || 'Unknown reason.'}`)
         }

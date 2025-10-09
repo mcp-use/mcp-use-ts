@@ -23,7 +23,7 @@ export function InspectorDashboard() {
   // Form state
   const [transportType, setTransportType] = useState('SSE')
   const [url, setUrl] = useState('')
-  const [connectionType, setConnectionType] = useState('Via Proxy')
+  const [connectionType, setConnectionType] = useState('Direct')
   const [customHeaders, setCustomHeaders] = useState<CustomHeader[]>([])
   const [requestTimeout, setRequestTimeout] = useState('10000')
   const [resetTimeoutOnProgress, setResetTimeoutOnProgress] = useState('True')
