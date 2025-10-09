@@ -40,7 +40,9 @@
       "mcp-use": "workspace:*",
       "@mcp-use/inspector": "workspace:*",
       "@mcp-use/cli": "workspace:*",
-      "create-mcp-use-app": "workspace:*"
+      "create-mcp-use-app": "workspace:*",
+      "react": "^19.2.0",
+      "react-dom": "^19.2.0"
     }
   },
   "dependencies": {
