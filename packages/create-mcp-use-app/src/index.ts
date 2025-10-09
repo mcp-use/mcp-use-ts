@@ -4,6 +4,7 @@ import { execSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createInterface } from 'node:readline'
 import { Command } from 'commander'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -15,14 +16,29 @@ program
   .name('create-mcp-use-app')
   .description('Create a new MCP server project')
   .version('0.1.0')
-  .argument('<project-name>', 'Name of the MCP server project')
-  .option('-t, --template <template>', 'Template to use', 'basic')
+  .argument('[project-name]', 'Name of the MCP server project')
+  .option('-t, --template <template>', 'Template to use', 'ui')
   .option('--no-install', 'Skip installing dependencies')
-  .action(async (projectName: string, options: { template: string, install: boolean }) => {
+  .action(async (projectName: string | undefined, options: { template: string, install: boolean }) => {
     try {
+      // If no project name provided, prompt for it
+      if (!projectName) {
+        console.log('🎯 Welcome to create-mcp-use-app!')
+        console.log('')
+        
+        const promptedName = await promptForProjectName()
+        
+        if (!promptedName) {
+          console.log('❌ Project creation cancelled.')
+          process.exit(0)
+        }
+        
+        projectName = promptedName
+      }
+
       console.log(`🚀 Creating MCP server "${projectName}"...`)
 
-      const projectPath = resolve(process.cwd(), projectName)
+      const projectPath = resolve(process.cwd(), projectName!)
 
       // Check if directory already exists
       if (existsSync(projectPath)) {
@@ -37,7 +53,7 @@ program
       await copyTemplate(projectPath, options.template)
 
       // Update package.json with project name
-      updatePackageJson(projectPath, projectName)
+      updatePackageJson(projectPath, projectName!)
 
       // Install dependencies if requested
       if (options.install) {
@@ -60,14 +76,26 @@ program
       console.log('')
       console.log('📁 Project structure:')
       console.log(`   ${projectName}/`)
-      console.log('   ├── src/')
-      console.log('   │   └── server.ts')
-      console.log('   ├── package.json')
-      console.log('   ├── tsconfig.json')
-      console.log('   └── README.md')
+      if (options.template === 'ui') {
+        console.log('   ├── src/')
+        console.log('   │   └── server.ts')
+        console.log('   ├── resources/')
+        console.log('   │   ├── data-visualization.tsx')
+        console.log('   │   ├── kanban-board.tsx')
+        console.log('   │   └── todo-list.tsx')
+        console.log('   ├── package.json')
+        console.log('   ├── tsconfig.json')
+        console.log('   └── README.md')
+      } else {
+        console.log('   ├── src/')
+        console.log('   │   └── server.ts')
+        console.log('   ├── package.json')
+        console.log('   ├── tsconfig.json')
+        console.log('   └── README.md')
+      }
       console.log('')
       console.log('🚀 To get started:')
-      console.log(`   cd ${projectName}`)
+      console.log(`   cd ${projectName!}`)
       if (!options.install) {
         console.log('   npm install')
       }
@@ -87,6 +115,7 @@ async function copyTemplate(projectPath: string, template: string) {
   if (!existsSync(templatePath)) {
     console.error(`❌ Template "${template}" not found!`)
     console.log('Available templates: basic, filesystem, api, ui')
+    console.log('💡 Tip: Use "ui" template for React components and modern UI features')
     process.exit(1)
   }
 
@@ -118,6 +147,44 @@ function updatePackageJson(projectPath: string, projectName: string) {
   packageJson.description = `MCP server: ${projectName}`
 
   writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
+}
+
+function promptForProjectName(): Promise<string | null> {
+  return new Promise((resolvePromise) => {
+    const rl = createInterface({
+      input: process.stdin,
+      output: process.stdout
+    })
+
+    const askForName = () => {
+      rl.question('What is your project name? ', (answer) => {
+        const trimmed = answer.trim()
+        
+        if (!trimmed) {
+          console.log('❌ Project name is required')
+          askForName()
+          return
+        }
+        
+        if (!/^[a-zA-Z0-9-_]+$/.test(trimmed)) {
+          console.log('❌ Project name can only contain letters, numbers, hyphens, and underscores')
+          askForName()
+          return
+        }
+        
+        if (existsSync(join(process.cwd(), trimmed))) {
+          console.log(`❌ Directory "${trimmed}" already exists! Please choose a different name.`)
+          askForName()
+          return
+        }
+        
+        rl.close()
+        resolvePromise(trimmed)
+      })
+    }
+    
+    askForName()
+  })
 }
 
 program.parse()
