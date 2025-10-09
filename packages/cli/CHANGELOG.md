@@ -1,5 +1,13 @@
 # @mcp-use/cli
 
+## 2.1.2
+
+### Patch Changes
+
+- 6fa0026: Fix cli dist
+- Updated dependencies [6fa0026]
+  - @mcp-use/inspector@0.3.2
+
 ## 2.1.1
 
 ### Patch Changes
