@@ -43,7 +43,40 @@ export interface PromptDefinition {
   fn: PromptHandler
 }
 
+// UI Resource types (aligned with MCP-UI spec)
+export interface UIResourceContent {
+  type: 'externalUrl' | 'html' | 'rawHtml' | 'remoteDom'
+  iframeUrl?: string
+  iframeUrls?: string[]
+  html?: string
+  htmlString?: string  // For rawHtml type
+  script?: string
+  preferredFrameSize?: {
+    width?: number
+    height?: number
+  }
+}
+
+export interface UIResourceDefinition {
+  uri?: string
+  name: string
+  description?: string
+  widgetPath?: string  // Auto-serve from filesystem
+  iframeUrl?: string   // Manual URL
+  inputs?: InputDefinition[] // Widget props as tool inputs
+  fn?: UIResourceHandler
+  returnTextContent?: boolean // Whether to also return text content
+}
+
+export interface WidgetManifest {
+  name: string
+  path: string
+  props?: Record<string, any>
+  description?: string
+}
+
 export type ResourceHandler = () => Promise<string>
 export type TemplateHandler = (params: Record<string, string>) => Promise<string>
 export type ToolHandler = (params: Record<string, any>) => Promise<CallToolResult>
 export type PromptHandler = (params: Record<string, any>) => Promise<string>
+export type UIResourceHandler = (params: Record<string, any>) => Promise<{ content: UIResourceContent, text?: string }>

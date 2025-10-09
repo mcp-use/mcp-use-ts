@@ -1,0 +1,53 @@
+{
+  "name": "test-ui",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "MCP server: test-ui",
+  "author": "",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "server",
+    "ui",
+    "react",
+    "widgets",
+    "ai",
+    "tools"
+  ],
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc && mcp-use build",
+    "dev": "concurrently \"tsx src/server.ts\" \"mcp-use build --watch\"",
+    "dev:test": "concurrently \"tsx src/server-test-new-features.ts\" \"mcp-use build --watch\"",
+    "dev:upgraded": "concurrently \"tsx src/server-upgraded.ts\" \"mcp-use build --watch\"",
+    "start": "node dist/server.js",
+    "start:test": "tsx src/server-test-new-features.ts",
+    "start:upgraded": "tsx src/server-upgraded.ts",
+    "start:correct": "tsx src/server-correct-demo.ts",
+    "test:features": "npm run build && tsx src/server-test-new-features.ts",
+    "test:validation": "tsx src/server-test-new-features.ts",
+    "demo": "npm run build && tsx src/server-upgraded.ts",
+    "demo:correct": "npm run build && tsx src/server-correct-demo.ts"
+  },
+  "dependencies": {
+    "@mcp-ui/server": "^5.11.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.0",
+    "mcp-use": "file:../packages/mcp-use"
+  },
+  "devDependencies": {
+    "@mcp-use/cli": "file:../packages/cli",
+    "@types/cors": "^2.8.0",
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "concurrently": "^8.0.0",
+    "esbuild": "^0.23.0",
+    "globby": "^14.0.2",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

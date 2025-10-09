@@ -4,12 +4,15 @@ import type {
   ServerConfig,
   TemplateDefinition,
   ToolDefinition,
+  UIResourceDefinition,
 } from './types.js'
 import { McpServer as OfficialMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import express, { type Express } from 'express'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { formatUIResourceOptions, generateWidgetIframeUrl, validateWidgetParams } from './ui-resource.js'
+import { autoRegisterWidgets } from './widget-discovery.js'
 
 export class McpServer {
   private server: OfficialMcpServer
@@ -147,6 +150,195 @@ export class McpServer {
   }
 
   /**
+   * Define a UI resource with automatic widget serving
+   */
+  uiResource(definition: UIResourceDefinition): this {
+    const uri = definition.uri || `ui://widget/${definition.name}`
+    const port = process.env.PORT || 3001
+    const baseUrl = `http://localhost:${port}`
+
+    // Register as a resource
+    this.server.resource(
+      definition.name,
+      uri,
+      {
+        name: definition.name,
+        description: definition.description || `UI widget: ${definition.name}`,
+        mimeType: 'text/html+mcp-ui',
+      },
+      async () => {
+        // Dynamically import @mcp-ui/server to use the proper createUIResource
+        const { createUIResource } = await import('@mcp-ui/server')
+
+        // Generate iframe URL based on widget path or provided URL
+        let iframeUrl: string
+        if (definition.iframeUrl) {
+          iframeUrl = definition.iframeUrl
+        } else if (definition.widgetPath) {
+          iframeUrl = generateWidgetIframeUrl(baseUrl, definition.widgetPath, undefined, definition.inputs)
+        } else {
+          // Default to widget name
+          iframeUrl = generateWidgetIframeUrl(baseUrl, definition.name, undefined, definition.inputs)
+        }
+
+        const uiContent = {
+          type: 'externalUrl' as const,
+          iframeUrl,
+          preferredFrameSize: {
+            width: 800,
+            height: 600,
+          },
+        }
+
+        // Use the proper @mcp-ui/server createUIResource
+        const resourceOptions = formatUIResourceOptions({
+          uri,
+          content: uiContent,
+          encoding: 'text',
+          metadata: {
+            name: definition.name,
+            description: definition.description,
+          }
+        })
+
+        const uiResource = createUIResource(resourceOptions)
+
+        // Return the UI resource directly as text content
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'text/plain',
+              text: typeof uiResource === 'string' ? uiResource : JSON.stringify(uiResource)
+            }
+          ]
+        }
+      }
+    )
+
+    // If inputs are defined, also register as a tool
+    if (definition.inputs && definition.inputs.length > 0) {
+      const inputSchema = this.createToolInputSchema(definition.inputs)
+
+      this.server.tool(
+        `show-${definition.name}`,
+        definition.description || `Display ${definition.name} widget`,
+        inputSchema,
+        async (params: any) => {
+          // Dynamically import @mcp-ui/server
+          const { createUIResource } = await import('@mcp-ui/server')
+
+          // Validate parameters
+          const validatedParams = validateWidgetParams(params, definition.inputs)
+
+          // Generate iframe URL with validated parameters
+          let iframeUrl: string
+          if (definition.iframeUrl) {
+            // Add params to existing URL
+            const url = new URL(definition.iframeUrl)
+            Object.entries(validatedParams).forEach(([key, value]) => {
+              if (value !== undefined) {
+                url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : String(value))
+              }
+            })
+            iframeUrl = url.toString()
+          } else {
+            const widgetName = definition.widgetPath || definition.name
+            iframeUrl = generateWidgetIframeUrl(baseUrl, widgetName, validatedParams, definition.inputs)
+          }
+
+          const uiContent = {
+            type: 'externalUrl' as const,
+            iframeUrl,
+            preferredFrameSize: {
+              width: 800,
+              height: 600,
+            },
+          }
+
+          // If custom handler is provided, use it
+          if (definition.fn) {
+            const result = await definition.fn(validatedParams)
+
+            const resourceOptions = formatUIResourceOptions({
+              uri,
+              content: result.content || uiContent,
+              encoding: 'text',
+              metadata: {
+                name: definition.name,
+                description: definition.description,
+                params: validatedParams,
+              }
+            })
+
+            const uiResource = createUIResource(resourceOptions)
+
+            // Return both text and UI resource as text content
+            const uiResourceText = typeof uiResource === 'string' ? uiResource : JSON.stringify(uiResource)
+
+            if (definition.returnTextContent && result.text) {
+              return {
+                content: [
+                  { type: 'text', text: `${result.text}\n\nUI Resource: ${uri}\n${uiResourceText}` }
+                ]
+              }
+            }
+
+            return {
+              content: [
+                { type: 'text', text: `UI Resource: ${uri}\n${uiResourceText}` }
+              ]
+            }
+          }
+
+          // Default response - create UI resource with validated params
+          const resourceOptions = formatUIResourceOptions({
+            uri,
+            content: uiContent,
+            encoding: 'text',
+            metadata: {
+              name: definition.name,
+              description: definition.description,
+              params: validatedParams,
+            }
+          })
+
+          const uiResource = createUIResource(resourceOptions)
+          const uiResourceText = typeof uiResource === 'string' ? uiResource : JSON.stringify(uiResource)
+          const textContent = `Displayed ${definition.name} widget with parameters: ${JSON.stringify(validatedParams)}`
+
+          if (definition.returnTextContent) {
+            return {
+              content: [
+                { type: 'text', text: `${textContent}\n\nUI Resource: ${uri}\n${uiResourceText}` }
+              ]
+            }
+          }
+
+          return {
+            content: [
+              { type: 'text', text: `UI Resource: ${uri}\n${uiResourceText}` }
+            ]
+          }
+        },
+      )
+    }
+
+    return this
+  }
+
+  /**
+   * Auto-register widgets from a directory
+   * @param widgetDir - Directory containing built widgets (default: dist/resources/mcp-use/widgets)
+   */
+  autoDiscoverWidgets(widgetDir?: string): this {
+    const dir = widgetDir || join(process.cwd(), 'dist', 'resources', 'mcp-use', 'widgets')
+
+    autoRegisterWidgets(this, dir)
+    return this
+  }
+
+  /**
    * Mount MCP server endpoints at /mcp
    */
   private async mountMcp(): Promise<void> {
@@ -156,6 +348,7 @@ export class McpServer {
     
     // Create StreamableHTTPServerTransport in stateless mode
     const httpTransport = new StreamableHTTPServerTransport({
+      // TODO implement session
       sessionIdGenerator: undefined // Stateless mode
     })
 
