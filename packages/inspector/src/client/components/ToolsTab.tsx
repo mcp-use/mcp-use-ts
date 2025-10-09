@@ -1,5 +1,5 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
-import { Check, Clock, Copy, Play, Save, Search, Trash2, Zap } from 'lucide-react'
+import { Check, Clock, Copy, Play, Save, Search, Trash2, Wrench, Zap } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { usePrismTheme } from '@/client/hooks/usePrismTheme'
@@ -13,8 +13,10 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
+import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { isMcpUIResource, McpUIRenderer } from './McpUIRenderer'
 
@@ -313,7 +315,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full">
-      <ResizablePanel defaultSize={60}>
+      <ResizablePanel defaultSize={33}>
         {/* Left pane: Tools list with search */}
         <div className="flex flex-col h-full border-r dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800">
           <div className="p-0 ">
@@ -427,7 +429,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
         </div>
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={40}>
+      <ResizablePanel defaultSize={67}>
 
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel defaultSize={40}>
@@ -437,10 +439,40 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
               {selectedTool
                 ? (
                     <div className="flex flex-col h-full">
-                      <div className="p-4 border-b dark:border-zinc-700 bg-gray-50 dark:bg-zinc-700">
+                      <div className="p-4 ">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline">{selectedTool.name}</Badge>
+                            <div className="space-x-2 flex items-center">
+                              <span className="bg-blue-100 text-blue-400 rounded-full p-2 aspect-square flex items-center justify-center">
+                                <Wrench className="size-4" />
+                              </span>
+                              <div>
+                                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  {selectedTool.name}
+                                </h3>
+                                {selectedTool.description && (
+                                  <p className="text-sm text-gray-600 dark:text-gray-300">{selectedTool.description}</p>
+                                )}
+                              </div>
+                            </div>
+
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setSaveDialogOpen(true)}
+                                  disabled={!selectedTool}
+                                >
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Save request</p>
+                              </TooltipContent>
+                            </Tooltip>
                             <Button
                               onClick={executeTool}
                               disabled={!isConnected || isExecuting}
@@ -449,31 +481,20 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                               {isExecuting
                                 ? (
                                     <>
-                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                                      <Spinner className="size-4 mr-1" />
                                       Executing...
                                     </>
                                   )
                                 : (
                                     <>
-                                      <Play className="h-4 w-4 mr-2" />
+                                      <Play className="h-4 w-4 mr-1" />
                                       Execute
                                     </>
                                   )}
                             </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSaveDialogOpen(true)}
-                            disabled={!selectedTool}
-                          >
-                            <Save className="h-4 w-4 mr-2" />
-                            Save
-                          </Button>
                         </div>
-                        {selectedTool.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{selectedTool.description}</p>
-                        )}
+
                       </div>
 
                       <div className="flex-1 overflow-y-auto p-4">
@@ -522,7 +543,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
 
                           return (
                             <div key={index} className="space-y-3">
-                              <div className={`flex items-center gap-2 px-4 pt-4 ${hasMcpUIResources ? 'border-b border-gray-200 dark:border-zinc-600 pb-3' : ''}`}>
+                              <div className={`flex items-center gap-2 px-4 pt-2 ${hasMcpUIResources ? 'border-b border-gray-200 dark:border-zinc-600 pb-2' : ''}`}>
                                 <h3 className="text-sm font-medium">Response</h3>
                                 <div className="flex items-center gap-1">
                                   <Clock className="h-3 w-3 text-gray-400" />

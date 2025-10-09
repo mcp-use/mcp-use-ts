@@ -239,7 +239,7 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full">
-      <ResizablePanel defaultSize={60}>
+      <ResizablePanel defaultSize={33}>
         {/* Left pane: Prompts list with search */}
         <div className="flex flex-col h-full border-r dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800">
           <div className="p-0 ">
@@ -305,7 +305,7 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
 
       <ResizableHandle withHandle />
 
-      <ResizablePanel defaultSize={40}>
+      <ResizablePanel defaultSize={67}>
         {/* Right pane: Prompt details and execution */}
         <div className="flex flex-col h-full bg-white dark:bg-zinc-800 p-6">
           {selectedPrompt ? (

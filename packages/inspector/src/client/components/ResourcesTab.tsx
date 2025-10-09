@@ -152,7 +152,7 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full">
-      <ResizablePanel defaultSize={60}>
+      <ResizablePanel defaultSize={33}>
         {/* Left pane: Resources list with search */}
         <div className="flex flex-col h-full border-r dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800">
           <div className="p-0 ">
@@ -231,7 +231,7 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
 
       <ResizableHandle withHandle />
 
-      <ResizablePanel defaultSize={40}>
+      <ResizablePanel defaultSize={67}>
         {/* Right pane: Resource details and content */}
         <div className="flex flex-col h-full bg-white dark:bg-zinc-800 p-6">
           {selectedResource

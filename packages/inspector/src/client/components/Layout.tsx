@@ -458,7 +458,7 @@ export function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 max-w-screen-2xl w-full mx-auto bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 p-0 overflow-auto">
+        <main className="flex-1 max-w-screen-2xl w-full mx-auto bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-0 overflow-auto">
           {selectedServer && activeTab === 'tools'
             ? (
                 <ToolsTab
