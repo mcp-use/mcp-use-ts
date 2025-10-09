@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from 'express'
+import { Buffer } from 'node:buffer'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -129,6 +130,18 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
     res.redirect(301, basePath)
   })
 
+  // Handle OAuth callback redirects - redirect /oauth/callback to /inspector/oauth/callback
+  // This helps when OAuth providers are configured with the wrong redirect URL
+  if (basePath !== '') {
+    app.get('/oauth/callback', (req: Request, res: Response) => {
+      const queryString = req.url.split('?')[1] || ''
+      const redirectUrl = queryString
+        ? `${basePath}/oauth/callback?${queryString}`
+        : `${basePath}/oauth/callback`
+      res.redirect(302, redirectUrl)
+    })
+  }
+
   // Serve the main HTML file for all inspector routes
   app.get(`${basePath}*`, (_req: Request, res: Response) => {
     const indexPath = join(clientDistPath, 'index.html')
@@ -141,6 +154,4 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
     // Serve the HTML file (Vite built with base: '/inspector')
     res.sendFile(indexPath)
   })
-
-  console.log(`MCP Inspector mounted at ${basePath}`)
 }

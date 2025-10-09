@@ -9,7 +9,26 @@ const packageJson = JSON.parse(readFileSync(path.resolve(__dirname, 'package.jso
 
 export default defineConfig({
   base: '/inspector',
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    // Custom plugin to handle OAuth callback redirects in dev mode
+    {
+      name: 'oauth-callback-redirect',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url?.startsWith('/oauth/callback')) {
+            const url = new URL(req.url, 'http://localhost')
+            const queryString = url.search
+            res.writeHead(302, { Location: `/inspector/oauth/callback${queryString}` })
+            res.end()
+            return
+          }
+          next()
+        })
+      },
+    },
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

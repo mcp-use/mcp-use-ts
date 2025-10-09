@@ -39,7 +39,14 @@ function McpConnectionWrapper({ url, name, onUpdate, onRemove: _onRemove }: {
   onUpdate: (connection: MCPConnection) => void
   onRemove: () => void
 }) {
-  const mcpHook = useMcp({ url })
+  // Configure OAuth callback URL
+  // Use /oauth/callback (which redirects to /inspector/oauth/callback) for compatibility
+  // with existing OAuth app configurations
+  const callbackUrl = typeof window !== 'undefined'
+    ? new URL('/oauth/callback', window.location.origin).toString()
+    : '/oauth/callback'
+
+  const mcpHook = useMcp({ url, callbackUrl })
   const onUpdateRef = useRef(onUpdate)
   const prevConnectionRef = useRef<MCPConnection | null>(null)
 

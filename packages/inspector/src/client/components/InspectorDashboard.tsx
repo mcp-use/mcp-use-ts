@@ -33,7 +33,11 @@ export function InspectorDashboard() {
 
   // OAuth fields
   const [clientId, setClientId] = useState('')
-  const [redirectUrl, setRedirectUrl] = useState('http://localhost:6274/oauth/callback')
+  const [redirectUrl, setRedirectUrl] = useState(
+    typeof window !== 'undefined'
+      ? new URL('/oauth/callback', window.location.origin).toString()
+      : 'http://localhost:3000/oauth/callback',
+  )
   const [scope, setScope] = useState('')
 
   // UI state
