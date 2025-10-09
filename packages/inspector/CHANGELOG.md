@@ -1,5 +1,11 @@
 # @mcp-use/inspector
 
+## 0.3.2
+
+### Patch Changes
+
+- 6fa0026: Fix cli dist
+
 ## 0.3.1
 
 ### Patch Changes
