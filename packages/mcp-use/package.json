@@ -1,9 +1,9 @@
 {
   "name": "mcp-use",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "packageManager": "pnpm@10.6.1",
-  "description": "A utility library for integrating Model Context Protocol (MCP) with LangChain, Zod, and related tools. Provides helpers for schema conversion, event streaming, and SDK usage.",
+  "description": "Opinionated MCP Framework for TypeScript (@modelcontextprotocol/sdk compatible) - Build MCP Agents and Clients + MCP Servers with support for MCP-UI.",
   "author": "mcp-use, Inc.",
   "license": "MIT",
   "homepage": "https://github.com/mcp-use/mcp-use-ts#readme",
@@ -17,7 +17,6 @@
   "keywords": [
     "MCP",
     "Model Context Protocol",
-    "LangChain",
     "Zod",
     "schema",
     "SDK",
@@ -89,7 +88,7 @@
     "example:observability": "npm run build && node dist/examples/observability.js"
   },
   "peerDependencies": {
-    "@mcp-use/inspector": "^0.1.0",
+    "@mcp-use/inspector": "^0.2.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "langfuse": "^3.32.0",
