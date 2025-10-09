@@ -26,9 +26,7 @@
     "dist"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-    "dev:client": "vite",
-    "dev:server": "tsx watch src/server/standalone.ts",
+    "dev": "tsx watch src/server/standalone.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",

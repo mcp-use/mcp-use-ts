@@ -13,6 +13,7 @@ interface MCPConnection {
   error: string | null
   authUrl: string | null
   callTool: (toolName: string, args: any) => Promise<any>
+  readResource: (uri: string) => Promise<any>
   authenticate: () => void
   retry: () => void
   clearStorage: () => void
@@ -69,6 +70,7 @@ function McpConnectionWrapper({ url, name, onUpdate, onRemove: _onRemove }: {
       error: mcpHook.error ?? null,
       authUrl: mcpHook.authUrl ?? null,
       callTool: mcpHook.callTool,
+      readResource: mcpHook.readResource,
       authenticate: mcpHook.authenticate,
       retry: mcpHook.retry,
       clearStorage: mcpHook.clearStorage,

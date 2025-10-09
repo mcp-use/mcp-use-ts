@@ -47,9 +47,35 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
     }
   }, [])
 
-  const handleResourceSelect = useCallback((resource: Resource) => {
+  const handleResourceSelect = useCallback(async (resource: Resource) => {
     setSelectedResource(resource)
-  }, [])
+
+    // Automatically read the resource when selected
+    if (isConnected) {
+      setIsLoading(true)
+      const timestamp = Date.now()
+
+      try {
+        const result = await readResource(resource.uri)
+        setResults(prev => [{
+          uri: resource.uri,
+          result,
+          timestamp,
+        }, ...prev])
+      }
+      catch (error) {
+        setResults(prev => [{
+          uri: resource.uri,
+          result: null,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp,
+        }, ...prev])
+      }
+      finally {
+        setIsLoading(false)
+      }
+    }
+  }, [readResource, isConnected])
 
   // Handle auto-selection from command palette
   useEffect(() => {
@@ -62,34 +88,6 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
       }
     }
   }, [resources, handleResourceSelect])
-
-  const handleReadResource = useCallback(async () => {
-    if (!selectedResource || !isConnected)
-      return
-
-    setIsLoading(true)
-    const timestamp = Date.now()
-
-    try {
-      const result = await readResource(selectedResource.uri)
-      setResults(prev => [{
-        uri: selectedResource.uri,
-        result,
-        timestamp,
-      }, ...prev])
-    }
-    catch (error) {
-      setResults(prev => [{
-        uri: selectedResource.uri,
-        result: null,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp,
-      }, ...prev])
-    }
-    finally {
-      setIsLoading(false)
-    }
-  }, [selectedResource, readResource, isConnected])
 
   const handleCopyResult = useCallback((index: number) => {
     const result = results[index]
@@ -273,32 +271,18 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
                             />
                           </div>
                         )
-                      : (
-                          <Button
-                            onClick={handleReadResource}
-                            disabled={!isConnected || isLoading}
-                            className="w-full"
-                          >
-                            {isLoading
-                              ? (
-                                  <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                                    Loading...
-                                  </>
-                                )
-                              : (
-                                  <>
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Read Resource
-                                  </>
-                                )}
-                          </Button>
-                        )}
+                      : null}
                   </div>
 
-                  {results.length > 0 && (
+                  {(results.length > 0 || isLoading) && (
                     <div className="flex-1 overflow-hidden">
                       <h4 className="text-sm font-medium text-gray-700 mb-3">Content</h4>
+                      {isLoading && (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2" />
+                          <span className="text-sm text-gray-600">Loading resource...</span>
+                        </div>
+                      )}
                       <div className="space-y-3 overflow-y-auto max-h-96">
                         {results.map((result, index) => (
                           <div key={index} className="border dark:border-zinc-700 rounded-lg p-3 bg-gray-50 dark:bg-zinc-700">

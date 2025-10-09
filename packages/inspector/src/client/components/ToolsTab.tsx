@@ -55,6 +55,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
   const [savedRequests, setSavedRequests] = useState<SavedRequest[]>([])
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [requestName, setRequestName] = useState('')
+  const [previewMode, setPreviewMode] = useState(true)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Load saved requests from localStorage on mount
@@ -425,7 +426,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
           </div>
         </div>
       </ResizablePanel>
-      <ResizableHandle />
+      <ResizableHandle withHandle />
       <ResizablePanel defaultSize={40}>
 
         <ResizablePanelGroup direction="vertical">
@@ -502,7 +503,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                   )}
             </div>
           </ResizablePanel>
-          <ResizableHandle />
+          <ResizableHandle withHandle />
           <ResizablePanel defaultSize={60}>
 
             {/* Bottom section: Results */}
@@ -511,78 +512,138 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                 {results.length > 0
                   ? (
                       <div className="space-y-4">
-                        {results.map((result, index) => (
-                          <div key={index} className="space-y-3">
-                            <div className="flex items-center gap-2 px-4 pt-4">
-                              <h3 className="text-sm font-medium">Response</h3>
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3 text-gray-400" />
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {new Date(result.timestamp).toLocaleTimeString()}
-                                </span>
-                              </div>
-                              {result.duration !== undefined && (
+                        {results.map((result, index) => {
+                          // Check if result contains MCP UI resources
+                          const content = result.result?.content || []
+                          const mcpUIResources = content.filter((item: any) =>
+                            item.type === 'resource' && isMcpUIResource(item.resource),
+                          )
+                          const hasMcpUIResources = mcpUIResources.length > 0
+
+                          return (
+                            <div key={index} className="space-y-3">
+                              <div className={`flex items-center gap-2 px-4 pt-4 ${hasMcpUIResources ? 'border-b border-gray-200 dark:border-zinc-600 pb-3' : ''}`}>
+                                <h3 className="text-sm font-medium">Response</h3>
                                 <div className="flex items-center gap-1">
-                                  <Zap className="h-3 w-3 text-gray-400" />
+                                  <Clock className="h-3 w-3 text-gray-400" />
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    {result.duration}
-                                    ms
+                                    {new Date(result.timestamp).toLocaleTimeString()}
                                   </span>
                                 </div>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyResult(index)}
-                                className="ml-auto"
-                              >
-                                {copiedResult === index
-                                  ? (
-                                      <Check className="h-4 w-4" />
-                                    )
-                                  : (
-                                      <Copy className="h-4 w-4" />
-                                    )}
-                              </Button>
-                            </div>
-
-                            {result.error
-                              ? (
-                                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 mx-4">
-                                    <p className="text-red-800 dark:text-red-300 font-medium">Error:</p>
-                                    <p className="text-red-700 dark:text-red-400 text-sm">{result.error}</p>
+                                {result.duration !== undefined && (
+                                  <div className="flex items-center gap-1">
+                                    <Zap className="h-3 w-3 text-gray-400" />
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {result.duration}
+                                      ms
+                                    </span>
                                   </div>
-                                )
-                              : (() => {
-                                  // Check if result contains MCP UI resources
-                                  const content = result.result?.content || []
-                                  const mcpUIResources = content.filter((item: any) =>
-                                    item.type === 'resource' && isMcpUIResource(item.resource),
-                                  )
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyResult(index)}
+                                  className="ml-auto"
+                                >
+                                  {copiedResult === index
+                                    ? (
+                                        <Check className="h-4 w-4" />
+                                      )
+                                    : (
+                                        <Copy className="h-4 w-4" />
+                                      )}
+                                </Button>
+                              </div>
 
-                                  if (mcpUIResources.length > 0) {
-                                    return (
-                                      <div className="space-y-4">
-                                        {mcpUIResources.map((item: any, idx: number) => (
-                                          <div key={idx} className="border rounded-lg overflow-hidden mx-4">
-                                            <div className="bg-gray-100 dark:bg-zinc-700 px-3 py-2 text-xs text-gray-600 dark:text-zinc-300 border-b dark:border-zinc-600">
-                                              <span className="font-medium">MCP UI Resource:</span>
-                                              {' '}
-                                              {item.resource.uri || 'No URI'}
-                                            </div>
-                                            <McpUIRenderer
-                                              resource={item.resource}
-                                              onUIAction={(_action) => {
-                                                // Handle UI actions here if needed
-                                              }}
-                                              className="p-4"
-                                            />
+                              {result.error
+                                ? (
+                                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 mx-4">
+                                      <p className="text-red-800 dark:text-red-300 font-medium">Error:</p>
+                                      <p className="text-red-700 dark:text-red-400 text-sm">{result.error}</p>
+                                    </div>
+                                  )
+                                : (() => {
+                                    if (hasMcpUIResources) {
+                                      if (previewMode) {
+                                        return (
+                                          <div className="space-y-4">
+                                            {mcpUIResources.map((item: any, idx: number) => (
+                                              <div key={idx} className="mx-4">
+                                                <div className="mb-2 flex items-center gap-4">
+                                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                    URI:
+                                                    {' '}
+                                                    {item.resource.uri || 'No URI'}
+                                                  </span>
+                                                  <div className="flex items-center gap-2">
+                                                    <button
+                                                      onClick={() => setPreviewMode(true)}
+                                                      className={`text-xs font-medium ${
+                                                        previewMode
+                                                          ? 'text-black dark:text-white'
+                                                          : 'text-zinc-500 dark:text-zinc-400'
+                                                      }`}
+                                                    >
+                                                      Preview
+                                                    </button>
+                                                    <span className="text-xs text-zinc-400">|</span>
+                                                    <button
+                                                      onClick={() => setPreviewMode(false)}
+                                                      className={`text-xs font-medium ${
+                                                        !previewMode
+                                                          ? 'text-black dark:text-white'
+                                                          : 'text-zinc-500 dark:text-zinc-400'
+                                                      }`}
+                                                    >
+                                                      JSON
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                                <div className="w-full">
+                                                  <McpUIRenderer
+                                                    resource={item.resource}
+                                                    onUIAction={(_action) => {
+                                                    // Handle UI actions here if needed
+                                                    }}
+                                                    className="w-full"
+                                                  />
+                                                </div>
+                                              </div>
+                                            ))}
+                                            {/* Show JSON for non-UI content */}
+                                            {content.filter((item: any) =>
+                                              !(item.type === 'resource' && isMcpUIResource(item.resource)),
+                                            ).length > 0 && (
+                                              <div className="px-4">
+                                                <SyntaxHighlighter
+                                                  language="json"
+                                                  style={prismStyle}
+                                                  customStyle={{
+                                                    margin: 0,
+                                                    padding: 0,
+                                                    border: 'none',
+                                                    borderRadius: 0,
+                                                    fontSize: '1rem',
+                                                    background: 'transparent',
+                                                  }}
+                                                  className="text-gray-900 dark:text-gray-100"
+                                                >
+                                                  {JSON.stringify(
+                                                    content.filter((item: any) =>
+                                                      !(item.type === 'resource' && isMcpUIResource(item.resource)),
+                                                    ),
+                                                    null,
+                                                    2,
+                                                  )}
+                                                </SyntaxHighlighter>
+                                              </div>
+                                            )}
                                           </div>
-                                        ))}
-                                        {/* Show JSON for non-UI content */}
-                                        {content.filter((item: any) =>
-                                          !(item.type === 'resource' && isMcpUIResource(item.resource)),
-                                        ).length > 0 && (
+                                        )
+                                      }
+                                      else {
+                                      // JSON mode for MCP UI resources
+                                        return (
                                           <div className="px-4">
                                             <SyntaxHighlighter
                                               language="json"
@@ -597,43 +658,37 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                                               }}
                                               className="text-gray-900 dark:text-gray-100"
                                             >
-                                              {JSON.stringify(
-                                                content.filter((item: any) =>
-                                                  !(item.type === 'resource' && isMcpUIResource(item.resource)),
-                                                ),
-                                                null,
-                                                2,
-                                              )}
+                                              {JSON.stringify(result.result, null, 2)}
                                             </SyntaxHighlighter>
                                           </div>
-                                        )}
+                                        )
+                                      }
+                                    }
+
+                                    // Default: show JSON for non-MCP UI resources
+                                    return (
+                                      <div className="px-4">
+                                        <SyntaxHighlighter
+                                          language="json"
+                                          style={prismStyle}
+                                          customStyle={{
+                                            margin: 0,
+                                            padding: 0,
+                                            border: 'none',
+                                            borderRadius: 0,
+                                            fontSize: '1rem',
+                                            background: 'transparent',
+                                          }}
+                                          className="text-gray-900 dark:text-gray-100"
+                                        >
+                                          {JSON.stringify(result.result, null, 2)}
+                                        </SyntaxHighlighter>
                                       </div>
                                     )
-                                  }
-
-                                  // Default: show JSON
-                                  return (
-                                    <div className="px-4">
-                                      <SyntaxHighlighter
-                                        language="json"
-                                        style={prismStyle}
-                                        customStyle={{
-                                          margin: 0,
-                                          padding: 0,
-                                          border: 'none',
-                                          borderRadius: 0,
-                                          fontSize: '1rem',
-                                          background: 'transparent',
-                                        }}
-                                        className="text-gray-900 dark:text-gray-100"
-                                      >
-                                        {JSON.stringify(result.result, null, 2)}
-                                      </SyntaxHighlighter>
-                                    </div>
-                                  )
-                                })()}
-                          </div>
-                        ))}
+                                  })()}
+                            </div>
+                          )
+                        })}
                       </div>
                     )
                   : (

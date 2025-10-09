@@ -188,16 +188,46 @@ export function Layout({ children }: LayoutProps) {
   }, [location.pathname])
 
   // If no server is selected and we're on a server route, navigate to root
+  // But only after we've given connections time to load and establish
   useEffect(() => {
     const serverIdFromRoute = location.pathname.split('/servers/')[1]
     const decodedServerId = serverIdFromRoute ? decodeURIComponent(serverIdFromRoute) : null
 
-    // Only navigate away if we've already set selectedServerId from the route
-    // and the server still wasn't found in connections
-    if (!selectedServer && location.pathname.startsWith('/servers/') && selectedServerId === decodedServerId) {
-      navigate('/')
+    const isServerRoute = location.pathname.startsWith('/servers/')
+    const hasServerId = selectedServerId === decodedServerId
+
+    if (!isServerRoute || !hasServerId || !configLoaded) {
+      return
     }
-  }, [selectedServer, location.pathname, navigate, selectedServerId])
+
+    // Check if any connection exists for this server
+    const serverConnection = connections.find(conn => conn.id === decodedServerId)
+
+    if (serverConnection) {
+      // Server connection exists - check its state
+      if (serverConnection.state === 'failed') {
+        // Server failed to connect, redirect after a short delay
+        const timeoutId = setTimeout(() => {
+          navigate('/')
+        }, 2000)
+        return () => clearTimeout(timeoutId)
+      }
+      // If server is connecting/loading/discovering, don't redirect yet
+      if (serverConnection.state === 'connecting' || serverConnection.state === 'loading' || serverConnection.state === 'discovering') {
+        return
+      }
+      // If server is ready, we're good - no redirect needed
+      return
+    }
+
+    // No connection found for this server
+    // Wait a bit for auto-connection to potentially kick in, then redirect
+    const timeoutId = setTimeout(() => {
+      navigate('/')
+    }, 3000)
+
+    return () => clearTimeout(timeoutId)
+  }, [selectedServer, location.pathname, navigate, selectedServerId, connections, configLoaded])
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -393,7 +423,7 @@ export function Layout({ children }: LayoutProps) {
                 ? (
                     <ResourcesTab
                       resources={selectedServer.resources}
-                      readResource={(uri: string) => selectedServer.callTool('read_resource', { uri })} // Using callTool for now, should be readResource when available
+                      readResource={selectedServer.readResource}
                       isConnected={selectedServer.state === 'ready'}
                     />
                   )
