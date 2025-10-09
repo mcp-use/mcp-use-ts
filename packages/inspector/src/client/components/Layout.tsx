@@ -121,6 +121,33 @@ export function Layout({ children }: LayoutProps) {
 
   const selectedServer = connections.find(c => c.id === selectedServerId)
 
+  // Aggregate tools, prompts, and resources from all connected servers
+  // When a server is selected, use only that server's items
+  // When no server is selected, aggregate from all ready servers and add server metadata
+  const aggregatedTools = selectedServer
+    ? selectedServer.tools.map(tool => ({ ...tool, _serverId: selectedServer.id }))
+    : connections.flatMap(conn =>
+        conn.state === 'ready'
+          ? conn.tools.map(tool => ({ ...tool, _serverId: conn.id, _serverName: conn.name }))
+          : [],
+      )
+
+  const aggregatedPrompts = selectedServer
+    ? selectedServer.prompts.map(prompt => ({ ...prompt, _serverId: selectedServer.id }))
+    : connections.flatMap(conn =>
+        conn.state === 'ready'
+          ? conn.prompts.map(prompt => ({ ...prompt, _serverId: conn.id, _serverName: conn.name }))
+          : [],
+      )
+
+  const aggregatedResources = selectedServer
+    ? selectedServer.resources.map(resource => ({ ...resource, _serverId: selectedServer.id }))
+    : connections.flatMap(conn =>
+        conn.state === 'ready'
+          ? conn.resources.map(resource => ({ ...resource, _serverId: conn.id, _serverName: conn.name }))
+          : [],
+      )
+
   // Load config and auto-connect if URL is provided
   useEffect(() => {
     if (configLoaded)
@@ -162,10 +189,15 @@ export function Layout({ children }: LayoutProps) {
 
   // If no server is selected and we're on a server route, navigate to root
   useEffect(() => {
-    if (!selectedServer && location.pathname.startsWith('/servers/')) {
+    const serverIdFromRoute = location.pathname.split('/servers/')[1]
+    const decodedServerId = serverIdFromRoute ? decodeURIComponent(serverIdFromRoute) : null
+
+    // Only navigate away if we've already set selectedServerId from the route
+    // and the server still wasn't found in connections
+    if (!selectedServer && location.pathname.startsWith('/servers/') && selectedServerId === decodedServerId) {
       navigate('/')
     }
-  }, [selectedServer, location.pathname, navigate])
+  }, [selectedServer, location.pathname, navigate, selectedServerId])
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -374,9 +406,9 @@ export function Layout({ children }: LayoutProps) {
         <CommandPalette
           isOpen={isCommandPaletteOpen}
           onOpenChange={setIsCommandPaletteOpen}
-          tools={selectedServer?.tools || []}
-          prompts={selectedServer?.prompts || []}
-          resources={selectedServer?.resources || []}
+          tools={aggregatedTools}
+          prompts={aggregatedPrompts}
+          resources={aggregatedResources}
           connections={connections}
           onNavigate={handleCommandPaletteNavigate}
           onServerSelect={handleServerSelect}

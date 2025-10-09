@@ -174,14 +174,14 @@ const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
       <div
         ref={containerRef}
         className={cn(
-          'relative flex bg-none p-1 rounded-full border border-zinc-300',
+          'relative flex bg-none p-1 rounded-full border border-zinc-300 dark:border-zinc-600',
           className,
         )}
         {...props}
       >
         {children}
         <span
-          className="absolute bg-white rounded-full transition-all duration-200 ease-out z-0 h-[calc(100%-8px)] top-1 border border-zinc-300"
+          className="absolute bg-white dark:bg-zinc-700 rounded-full transition-all duration-200 ease-out z-0 h-[calc(100%-8px)] top-1 border border-zinc-300 dark:border-zinc-600"
           data-width={indicatorStyle.width}
           data-left={indicatorStyle.left}
         />

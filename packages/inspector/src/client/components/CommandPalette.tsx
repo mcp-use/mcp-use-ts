@@ -97,24 +97,37 @@ export function CommandPalette({
       name: tool.name,
       description: tool.description,
       type: 'tool' as const,
-      category: 'Tools',
-      metadata: tool.inputSchema,
+      category: (tool as any)._serverName ? `Tools - ${(tool as any)._serverName}` : 'Tools',
+      metadata: {
+        inputSchema: tool.inputSchema,
+        serverId: (tool as any)._serverId,
+        serverName: (tool as any)._serverName,
+      },
     })),
     ...prompts.map(prompt => ({
       id: `prompt-${prompt.name}`,
       name: prompt.name,
       description: prompt.description,
       type: 'prompt' as const,
-      category: 'Prompts',
-      metadata: prompt.arguments,
+      category: (prompt as any)._serverName ? `Prompts - ${(prompt as any)._serverName}` : 'Prompts',
+      metadata: {
+        arguments: prompt.arguments,
+        serverId: (prompt as any)._serverId,
+        serverName: (prompt as any)._serverName,
+      },
     })),
     ...resources.map(resource => ({
       id: `resource-${resource.uri}`,
       name: resource.name,
       description: resource.description,
       type: 'resource' as const,
-      category: 'Resources',
-      metadata: { uri: resource.uri, mimeType: resource.mimeType },
+      category: (resource as any)._serverName ? `Resources - ${(resource as any)._serverName}` : 'Resources',
+      metadata: {
+        uri: resource.uri,
+        mimeType: resource.mimeType,
+        serverId: (resource as any)._serverId,
+        serverName: (resource as any)._serverName,
+      },
     })),
   ]
 
@@ -131,6 +144,10 @@ export function CommandPalette({
       }
     }
     else {
+      // If the item belongs to a specific server, switch to that server first
+      if (item.metadata?.serverId) {
+        onServerSelect(item.metadata.serverId)
+      }
       onNavigate(item.type as 'tools' | 'prompts' | 'resources', item.name)
       onOpenChange(false)
     }
@@ -161,12 +178,12 @@ export function CommandPalette({
   }
 
   const getMetadataPreview = (item: CommandItem) => {
-    if (item.type === 'tool' && item.metadata?.properties) {
-      const props = Object.keys(item.metadata.properties)
+    if (item.type === 'tool' && item.metadata?.inputSchema?.properties) {
+      const props = Object.keys(item.metadata.inputSchema.properties)
       return props.length > 0 ? `${props.length} parameter${props.length > 1 ? 's' : ''}` : 'No parameters'
     }
-    if (item.type === 'prompt' && item.metadata) {
-      const args = Object.keys(item.metadata)
+    if (item.type === 'prompt' && item.metadata?.arguments) {
+      const args = Object.keys(item.metadata.arguments)
       return args.length > 0 ? `${args.length} argument${args.length > 1 ? 's' : ''}` : 'No arguments'
     }
     if (item.type === 'resource' && item.metadata?.mimeType) {

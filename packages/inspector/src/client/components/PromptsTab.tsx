@@ -2,7 +2,7 @@ import type { Prompt } from '@modelcontextprotocol/sdk/types.js'
 import { Check, Copy, MessageSquare, Play, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { usePrismTheme } from '@/client/hooks/usePrismTheme'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ interface PromptResult {
 
 export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps) {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null)
+  const { prismStyle } = usePrismTheme()
   const [promptArgs, setPromptArgs] = useState<Record<string, unknown>>({})
   const [results, setResults] = useState<PromptResult[]>([])
   const [isExecuting, setIsExecuting] = useState(false)
@@ -82,7 +83,7 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
   // Handle auto-selection from command palette
   useEffect(() => {
     const selectedPromptName = sessionStorage.getItem('selected-prompts')
-    if (selectedPromptName) {
+    if (selectedPromptName && prompts.length > 0) {
       const prompt = prompts.find(p => p.name === selectedPromptName)
       if (prompt) {
         handlePromptSelect(prompt)
@@ -378,7 +379,7 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
                         ) : (
                           <SyntaxHighlighter
                             language="json"
-                            style={tomorrow}
+                            style={prismStyle}
                             className="text-xs rounded"
                             customStyle={{
                               margin: 0,

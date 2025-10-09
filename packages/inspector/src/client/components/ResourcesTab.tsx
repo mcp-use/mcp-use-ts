@@ -2,7 +2,7 @@ import type { Resource } from '@modelcontextprotocol/sdk/types.js'
 import { Copy, Download, FileText, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { usePrismTheme } from '@/client/hooks/usePrismTheme'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,7 @@ interface ResourceResult {
 }
 
 export function ResourcesTab({ resources, readResource, isConnected }: ResourcesTabProps) {
+  const { prismStyle } = usePrismTheme()
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
   const [results, setResults] = useState<ResourceResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -53,7 +54,7 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
   // Handle auto-selection from command palette
   useEffect(() => {
     const selectedResourceName = sessionStorage.getItem('selected-resources')
-    if (selectedResourceName) {
+    if (selectedResourceName && resources.length > 0) {
       const resource = resources.find(r => r.name === selectedResourceName)
       if (resource) {
         handleResourceSelect(resource)
@@ -358,7 +359,7 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
                                     <div className="max-h-64 overflow-y-auto">
                                       <SyntaxHighlighter
                                         language="json"
-                                        style={tomorrow}
+                                        style={prismStyle}
                                         className="text-xs rounded"
                                         customStyle={{
                                           margin: 0,
