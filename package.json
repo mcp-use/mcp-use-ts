@@ -35,6 +35,12 @@
   "pnpm": {
     "patchedDependencies": {
       "@mcp-ui/server@5.11.0": "patches/@mcp-ui__server@5.11.0.patch"
+    },
+    "overrides": {
+      "mcp-use": "workspace:*",
+      "@mcp-use/inspector": "workspace:*",
+      "@mcp-use/cli": "workspace:*",
+      "create-mcp-use-app": "workspace:*"
     }
   },
   "dependencies": {
