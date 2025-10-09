@@ -14,26 +14,17 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const execAsync = promisify(exec)
 
-// Find available port starting from 8080
-async function findAvailablePort(startPort = 8080): Promise<number> {
+// Check if a specific port is available
+async function isPortAvailable(port: number): Promise<boolean> {
   const net = await import('node:net')
 
-  for (let port = startPort; port < startPort + 100; port++) {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const server = net.createServer()
-        server.listen(port, () => {
-          server.close(() => resolve())
-        })
-        server.on('error', () => reject(new Error(`Port ${port} is in use`)))
-      })
-      return port
-    }
-    catch {
-      continue
-    }
-  }
-  throw new Error(`No available port found starting from ${startPort}`)
+  return new Promise((resolve) => {
+    const server = net.createServer()
+    server.listen(port, () => {
+      server.close(() => resolve(true))
+    })
+    server.on('error', () => resolve(false))
+  })
 }
 
 const app = new Hono()
@@ -142,10 +133,63 @@ app.delete('/api/servers/:id', async (c) => {
   }
 })
 
+// Check if we're in development mode (Vite dev server running)
+const isDev = process.env.NODE_ENV === 'development' || process.env.VITE_DEV === 'true'
+
 // Serve static assets from the built client
 const clientDistPath = join(__dirname, '../../dist/client')
 
-if (existsSync(clientDistPath)) {
+if (isDev) {
+  // Development mode: proxy client requests to Vite dev server
+  console.warn('🔧 Development mode: Proxying client requests to Vite dev server')
+
+  // Proxy all non-API requests to Vite dev server
+  app.get('*', async (c) => {
+    const path = c.req.path
+
+    // Skip API routes
+    if (path.startsWith('/api/')) {
+      return c.notFound()
+    }
+
+    try {
+      // Vite dev server should be running on port 3000
+      const viteUrl = `http://localhost:3000${path}`
+      const response = await fetch(viteUrl, {
+        signal: AbortSignal.timeout(1000), // 1 second timeout
+      })
+
+      if (response.ok) {
+        const content = await response.text()
+        const contentType = response.headers.get('content-type') || 'text/html'
+
+        c.header('Content-Type', contentType)
+        return c.html(content)
+      }
+    }
+    catch (error) {
+      console.warn(`Failed to proxy to Vite dev server: ${error}`)
+    }
+
+    // Fallback HTML if Vite dev server is not running
+    return c.html(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>MCP Inspector - Development</title>
+        </head>
+        <body>
+          <h1>MCP Inspector - Development Mode</h1>
+          <p>Vite dev server is not running. Please start it with:</p>
+          <pre>yarn dev:client</pre>
+          <p>API is available at <a href="/api/servers">/api/servers</a></p>
+        </body>
+      </html>
+    `)
+  })
+}
+else if (existsSync(clientDistPath)) {
+  // Production mode: serve static assets from built client
   // Serve static assets from /inspector/assets/* (matching Vite's base path)
   app.get('/inspector/assets/*', async (c) => {
     const path = c.req.path.replace('/inspector/assets/', 'assets/')
@@ -220,27 +264,58 @@ else {
   })
 }
 
-// Start the server with automatic port selection
+// Start the server
 async function startServer() {
   try {
-    const port = await findAvailablePort()
+    // In development mode, use port 3001 for API server
+    // In production/standalone mode, try 3001 first, then 3002 as fallback
+    const isDev = process.env.NODE_ENV === 'development' || process.env.VITE_DEV === 'true'
+    
+    let port = 3001
+    const available = await isPortAvailable(port)
+    
+    if (!available) {
+      if (isDev) {
+        console.error(`❌ Port ${port} is not available. Please stop the process using this port and try again.`)
+        process.exit(1)
+      } else {
+        // In standalone mode, try fallback port
+        const fallbackPort = 3002
+        console.warn(`⚠️  Port ${port} is not available, trying ${fallbackPort}`)
+        const fallbackAvailable = await isPortAvailable(fallbackPort)
+        
+        if (!fallbackAvailable) {
+          console.error(`❌ Neither port ${port} nor ${fallbackPort} is available. Please stop the processes using these ports and try again.`)
+          process.exit(1)
+        }
+        
+        port = fallbackPort
+      }
+    }
 
     serve({
       fetch: app.fetch,
       port,
     })
 
-    console.log(`🚀 MCP Inspector running on http://localhost:${port}`)
+    if (isDev) {
+      console.warn(`🚀 MCP Inspector API server running on http://localhost:${port}`)
+      console.warn(`🌐 Vite dev server should be running on http://localhost:3000`)
+    } else {
+      console.warn(`🚀 MCP Inspector running on http://localhost:${port}`)
+    }
 
     // Auto-open browser in development
     if (process.env.NODE_ENV !== 'production') {
       try {
         const command = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open'
-        await execAsync(`${command} http://localhost:${port}`)
-        console.log(`🌐 Browser opened automatically`)
+        const url = isDev ? 'http://localhost:3000' : `http://localhost:${port}`
+        await execAsync(`${command} ${url}`)
+        console.warn(`🌐 Browser opened automatically`)
       }
-      catch (error) {
-        console.log(`🌐 Please open http://localhost:${port} in your browser`)
+      catch {
+        const url = isDev ? 'http://localhost:3000' : `http://localhost:${port}`
+        console.warn(`🌐 Please open ${url} in your browser`)
       }
     }
 

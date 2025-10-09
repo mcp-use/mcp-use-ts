@@ -26,11 +26,14 @@
     "dist"
   ],
   "scripts": {
-    "dev": "tsx watch src/server/standalone.ts",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "vite --port 3000",
+    "dev:server": "VITE_DEV=true tsx watch src/server/server.ts",
+    "dev:standalone": "tsx watch src/server/server.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
-    "start": "node dist/server/standalone.js",
+    "start": "node dist/server/server.js",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
@@ -74,7 +77,8 @@
     "react-router-dom": "^7.9.3",
     "react-syntax-highlighter": "^15.6.6",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "vite-express": "^0.21.1"
   },
   "publishConfig": {
     "access": "public"
