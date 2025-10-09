@@ -539,6 +539,38 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                                     </span>
                                   </div>
                                 )}
+                                {hasMcpUIResources && (
+                                  <div className="flex items-center gap-4 ml-4">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      URI:
+                                      {' '}
+                                      {mcpUIResources[0]?.resource?.uri || 'No URI'}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => setPreviewMode(true)}
+                                        className={`text-xs font-medium ${
+                                          previewMode
+                                            ? 'text-black dark:text-white'
+                                            : 'text-zinc-500 dark:text-zinc-400'
+                                        }`}
+                                      >
+                                        Preview
+                                      </button>
+                                      <span className="text-xs text-zinc-400">|</span>
+                                      <button
+                                        onClick={() => setPreviewMode(false)}
+                                        className={`text-xs font-medium ${
+                                          !previewMode
+                                            ? 'text-black dark:text-white'
+                                            : 'text-zinc-500 dark:text-zinc-400'
+                                        }`}
+                                      >
+                                        JSON
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -569,36 +601,6 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                                           <div className="space-y-4">
                                             {mcpUIResources.map((item: any, idx: number) => (
                                               <div key={idx} className="mx-4">
-                                                <div className="mb-2 flex items-center gap-4">
-                                                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                    URI:
-                                                    {' '}
-                                                    {item.resource.uri || 'No URI'}
-                                                  </span>
-                                                  <div className="flex items-center gap-2">
-                                                    <button
-                                                      onClick={() => setPreviewMode(true)}
-                                                      className={`text-xs font-medium ${
-                                                        previewMode
-                                                          ? 'text-black dark:text-white'
-                                                          : 'text-zinc-500 dark:text-zinc-400'
-                                                      }`}
-                                                    >
-                                                      Preview
-                                                    </button>
-                                                    <span className="text-xs text-zinc-400">|</span>
-                                                    <button
-                                                      onClick={() => setPreviewMode(false)}
-                                                      className={`text-xs font-medium ${
-                                                        !previewMode
-                                                          ? 'text-black dark:text-white'
-                                                          : 'text-zinc-500 dark:text-zinc-400'
-                                                      }`}
-                                                    >
-                                                      JSON
-                                                    </button>
-                                                  </div>
-                                                </div>
                                                 <div className="w-full">
                                                   <McpUIRenderer
                                                     resource={item.resource}
