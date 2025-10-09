@@ -79,6 +79,18 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
     setToolArgs(initialArgs)
   }, [])
 
+  // Handle auto-selection from command palette
+  useEffect(() => {
+    const selectedToolName = sessionStorage.getItem('selected-tools')
+    if (selectedToolName) {
+      const tool = tools.find(t => t.name === selectedToolName)
+      if (tool) {
+        handleToolSelect(tool)
+        sessionStorage.removeItem('selected-tools')
+      }
+    }
+  }, [tools, handleToolSelect])
+
   const handleArgChange = useCallback((key: string, value: string) => {
     setToolArgs((prev) => {
       const newArgs = { ...prev }
@@ -226,10 +238,10 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
     <ResizablePanelGroup direction="horizontal" className="h-full">
       <ResizablePanel defaultSize={60}>
         {/* Left pane: Tools list with search */}
-        <div className="flex flex-col h-full border-r p-6 bg-white">
+        <div className="flex flex-col h-full border-r dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800">
           <div className="p-0 ">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 rounded-full">
+              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 dark:bg-zinc-700 rounded-full">
                 <TabsTrigger value="tools">
                   Tools
                   <Badge className="ml-2" variant="outline">{filteredTools.length}</Badge>
@@ -245,7 +257,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                 placeholder="Search tools by name or description "
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-10 bg-zinc-100 hover:bg-zinc-200 transition-all border-none rounded-full"
+                className="pl-10 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-all border-none rounded-full"
               />
             </div>
           </div>
@@ -289,11 +301,11 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
           <ResizablePanel defaultSize={40}>
 
             {/* Right pane: Tool form */}
-            <div className="flex flex-col h-full bg-white">
+            <div className="flex flex-col h-full bg-white dark:bg-zinc-800">
               {selectedTool
                 ? (
                     <div className="flex flex-col h-full">
-                      <div className="p-4 border-b bg-gray-50">
+                      <div className="p-4 border-b dark:border-zinc-700 bg-gray-50 dark:bg-zinc-700">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{selectedTool.name}</Badge>
@@ -357,8 +369,8 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
           <ResizablePanel defaultSize={60}>
 
             {/* Bottom section: Results */}
-            <div className="flex flex-col h-full bg-white border-t">
-              <div className="p-4 border-b bg-gray-50">
+            <div className="flex flex-col h-full bg-white dark:bg-zinc-800 border-t dark:border-zinc-700">
+              <div className="p-4 border-b dark:border-zinc-700 bg-gray-50 dark:bg-zinc-700">
                 <h3 className="font-semibold">Response</h3>
               </div>
 
@@ -394,16 +406,16 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
 
                             {result.error
                               ? (
-                                  <div className="bg-red-50 border border-red-200 rounded p-3">
-                                    <p className="text-red-800 font-medium">Error:</p>
-                                    <p className="text-red-700 text-sm">{result.error}</p>
+                                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                    <p className="text-red-800 dark:text-red-300 font-medium">Error:</p>
+                                    <p className="text-red-700 dark:text-red-400 text-sm">{result.error}</p>
                                   </div>
                                 )
                               : (() => {
                                   // Check if result contains MCP UI resources
                                   const content = result.result?.content || []
                                   const mcpUIResources = content.filter((item: any) =>
-                                    item.type === 'resource' && isMcpUIResource(item.resource)
+                                    item.type === 'resource' && isMcpUIResource(item.resource),
                                   )
 
                                   if (mcpUIResources.length > 0) {
@@ -411,23 +423,25 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                                       <div className="space-y-4">
                                         {mcpUIResources.map((item: any, idx: number) => (
                                           <div key={idx} className="border rounded-lg overflow-hidden">
-                                            <div className="bg-gray-100 px-3 py-2 text-xs text-gray-600 border-b">
-                                              <span className="font-medium">MCP UI Resource:</span> {item.resource.uri || 'No URI'}
+                                            <div className="bg-gray-100 dark:bg-zinc-700 px-3 py-2 text-xs text-gray-600 dark:text-zinc-300 border-b dark:border-zinc-600">
+                                              <span className="font-medium">MCP UI Resource:</span>
+                                              {' '}
+                                              {item.resource.uri || 'No URI'}
                                             </div>
-                            <McpUIRenderer
-                              resource={item.resource}
-                              onUIAction={(_action) => {
-                                // Handle UI actions here if needed
-                              }}
-                              className="p-4"
-                            />
+                                            <McpUIRenderer
+                                              resource={item.resource}
+                                              onUIAction={(_action) => {
+                                                // Handle UI actions here if needed
+                                              }}
+                                              className="p-4"
+                                            />
                                           </div>
                                         ))}
                                         {/* Show JSON for non-UI content */}
                                         {content.filter((item: any) =>
-                                          !(item.type === 'resource' && isMcpUIResource(item.resource))
+                                          !(item.type === 'resource' && isMcpUIResource(item.resource)),
                                         ).length > 0 && (
-                                          <div className="bg-gray-50 rounded">
+                                          <div className="bg-gray-50 dark:bg-zinc-700 rounded">
                                             <SyntaxHighlighter
                                               language="json"
                                               style={tomorrow}
@@ -439,10 +453,10 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                                             >
                                               {JSON.stringify(
                                                 content.filter((item: any) =>
-                                                  !(item.type === 'resource' && isMcpUIResource(item.resource))
+                                                  !(item.type === 'resource' && isMcpUIResource(item.resource)),
                                                 ),
                                                 null,
-                                                2
+                                                2,
                                               )}
                                             </SyntaxHighlighter>
                                           </div>
@@ -453,7 +467,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
 
                                   // Default: show JSON
                                   return (
-                                    <div className="bg-gray-50 rounded">
+                                    <div className="bg-gray-50 dark:bg-zinc-700 rounded">
                                       <SyntaxHighlighter
                                         language="json"
                                         style={tomorrow}

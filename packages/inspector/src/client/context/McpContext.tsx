@@ -1,6 +1,6 @@
-import { useMcp } from 'mcp-use/react'
 import type { ReactNode } from 'react'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useMcp } from 'mcp-use/react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 interface MCPConnection {
   id: string
@@ -33,7 +33,7 @@ interface SavedConnection {
   name: string
 }
 
-function McpConnectionWrapper({ url, name, onUpdate, onRemove }: {
+function McpConnectionWrapper({ url, name, onUpdate, onRemove: _onRemove }: {
   url: string
   name: string
   onUpdate: (connection: MCPConnection) => void
@@ -42,7 +42,7 @@ function McpConnectionWrapper({ url, name, onUpdate, onRemove }: {
   const mcpHook = useMcp({ url })
   const onUpdateRef = useRef(onUpdate)
   const prevConnectionRef = useRef<MCPConnection | null>(null)
-  
+
   // Keep ref up to date
   useEffect(() => {
     onUpdateRef.current = onUpdate
@@ -59,8 +59,8 @@ function McpConnectionWrapper({ url, name, onUpdate, onRemove }: {
       tools: mcpHook.tools,
       resources: mcpHook.resources,
       prompts: mcpHook.prompts,
-      error: mcpHook.error,
-      authUrl: mcpHook.authUrl,
+      error: mcpHook.error ?? null,
+      authUrl: mcpHook.authUrl ?? null,
       callTool: mcpHook.callTool,
       authenticate: mcpHook.authenticate,
       retry: mcpHook.retry,
@@ -105,23 +105,23 @@ export function McpProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(saved)
         // Validate and filter out invalid connections
-        const validConnections = Array.isArray(parsed) 
+        const validConnections = Array.isArray(parsed)
           ? parsed.filter((conn: any) => {
               // Ensure connection has valid structure with string url and id
-              return conn 
+              return conn
                 && typeof conn === 'object'
-                && typeof conn.id === 'string' 
+                && typeof conn.id === 'string'
                 && typeof conn.url === 'string'
                 && typeof conn.name === 'string'
             })
           : []
-        
+
         // If we filtered out any invalid connections, update localStorage
         if (validConnections.length !== parsed.length) {
           console.warn('Cleaned up invalid connections from localStorage')
           localStorage.setItem('mcp-inspector-connections', JSON.stringify(validConnections))
         }
-        
+
         setSavedConnections(validConnections)
       }
       catch (error) {
@@ -208,4 +208,3 @@ export function useMcpContext() {
   }
   return context
 }
-

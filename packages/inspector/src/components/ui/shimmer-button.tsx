@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef, CSSProperties } from 'react'
 import React from 'react'
 
+import { useTheme } from '@/client/context/ThemeContext'
 import { cn } from '@/lib/utils'
 
 export interface ShimmerButtonProps extends ComponentPropsWithoutRef<'button'> {
@@ -19,32 +20,43 @@ export const ShimmerButton = React.forwardRef<
 >(
   (
     {
-      shimmerColor = '#ffffff',
+      shimmerColor,
       shimmerSize = '0.05em',
       shimmerDuration = '3s',
       borderRadius = '100px',
-      background = 'rgba(0, 0, 0, 1)',
+      background,
       className,
       children,
       ...props
     },
     ref,
   ) => {
+    const { resolvedTheme } = useTheme()
+
+    // Set default colors based on theme
+    const defaultShimmerColor = resolvedTheme === 'dark' ? '#000000' : '#ffffff'
+    const defaultBackground = resolvedTheme === 'dark' ? 'rgba(255, 255, 255, 1)' : 'rgba(0, 0, 0, 1)'
+
+    const finalShimmerColor = shimmerColor || defaultShimmerColor
+    const finalBackground = background || defaultBackground
     return (
       <button
         style={
           {
             '--spread': '90deg',
-            '--shimmer-color': shimmerColor,
+            '--shimmer-color': finalShimmerColor,
             '--radius': borderRadius,
             '--speed': shimmerDuration,
             '--cut': shimmerSize,
-            '--bg': background,
+            '--bg': finalBackground,
           } as CSSProperties
         }
         className={cn(
-          'group relative z-0 flex cursor-pointer items-center justify-center overflow-hidden [border-radius:var(--radius)] border border-white/10 px-6 py-3 whitespace-nowrap text-white [background:var(--bg)]',
+          'group relative z-0 flex cursor-pointer items-center justify-center overflow-hidden [border-radius:var(--radius)] border px-6 py-3 whitespace-nowrap [background:var(--bg)]',
           'transform-gpu transition-transform duration-300 ease-in-out active:translate-y-px',
+          resolvedTheme === 'dark'
+            ? 'border-black/10 text-black'
+            : 'border-white/10 text-white',
           className,
         )}
         ref={ref}
@@ -70,16 +82,15 @@ export const ShimmerButton = React.forwardRef<
           className={cn(
             'absolute inset-0 size-full',
 
-            'rounded-2xl px-4 py-1.5 text-sm font-medium shadow-[inset_0_-8px_10px_#ffffff1f]',
+            'rounded-2xl px-4 py-1.5 text-sm font-medium',
 
             // transition
             'transform-gpu transition-all duration-300 ease-in-out',
 
-            // on hover
-            'group-hover:shadow-[inset_0_-6px_10px_#ffffff3f]',
-
-            // on click
-            'group-active:shadow-[inset_0_-10px_10px_#ffffff3f]',
+            // theme-aware shadows
+            resolvedTheme === 'dark'
+              ? 'shadow-[inset_0_-8px_10px_#0000001f] group-hover:shadow-[inset_0_-6px_10px_#0000003f] group-active:shadow-[inset_0_-10px_10px_#0000003f]'
+              : 'shadow-[inset_0_-8px_10px_#ffffff1f] group-hover:shadow-[inset_0_-6px_10px_#ffffff3f] group-active:shadow-[inset_0_-10px_10px_#ffffff3f]',
           )}
         />
 

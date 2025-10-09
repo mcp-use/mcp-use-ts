@@ -1,5 +1,5 @@
 import type { Prompt } from '@modelcontextprotocol/sdk/types.js'
-import { Copy, MessageSquare, Play, Search } from 'lucide-react'
+import { Check, Copy, MessageSquare, Play, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -42,13 +42,6 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
   const [activeTab, setActiveTab] = useState('prompts')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-focus the search input when the component mounts
-  useEffect(() => {
-    if (searchInputRef.current) {
-      searchInputRef.current.focus()
-    }
-  }, [])
-
   const handlePromptSelect = useCallback((prompt: Prompt) => {
     setSelectedPrompt(prompt)
     // Initialize args with default values based on prompt input schema
@@ -78,6 +71,25 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
     }
     setPromptArgs(initialArgs)
   }, [])
+
+  // Auto-focus the search input when the component mounts
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }, [])
+
+  // Handle auto-selection from command palette
+  useEffect(() => {
+    const selectedPromptName = sessionStorage.getItem('selected-prompts')
+    if (selectedPromptName) {
+      const prompt = prompts.find(p => p.name === selectedPromptName)
+      if (prompt) {
+        handlePromptSelect(prompt)
+        sessionStorage.removeItem('selected-prompts')
+      }
+    }
+  }, [prompts, handlePromptSelect])
 
   const handleArgChange = useCallback((key: string, value: any) => {
     setPromptArgs(prev => ({ ...prev, [key]: value }))
@@ -228,10 +240,10 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
     <ResizablePanelGroup direction="horizontal" className="h-full">
       <ResizablePanel defaultSize={60}>
         {/* Left pane: Prompts list with search */}
-        <div className="flex flex-col h-full border-r p-6 bg-white">
+        <div className="flex flex-col h-full border-r dark:border-zinc-700 p-6 bg-white dark:bg-zinc-800">
           <div className="p-0 ">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 rounded-full">
+              <TabsList className="grid w-full grid-cols-2 bg-zinc-100 dark:bg-zinc-700 rounded-full">
                 <TabsTrigger value="prompts">
                   Prompts
                   <Badge className="ml-2" variant="outline">{filteredPrompts.length}</Badge>
@@ -247,7 +259,7 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
                 placeholder="Search prompts by name or description"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-10 bg-zinc-100 hover:bg-zinc-200 transition-all border-none rounded-full"
+                className="pl-10 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-all border-none rounded-full"
               />
             </div>
           </div>
@@ -294,7 +306,7 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
 
       <ResizablePanel defaultSize={40}>
         {/* Right pane: Prompt details and execution */}
-        <div className="flex flex-col h-full bg-white p-6">
+        <div className="flex flex-col h-full bg-white dark:bg-zinc-800 p-6">
           {selectedPrompt ? (
             <>
               <div className="mb-6">
@@ -338,7 +350,7 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Results</h4>
                   <div className="space-y-3 overflow-y-auto max-h-96">
                     {results.map((result, index) => (
-                      <div key={index} className="border rounded-lg p-3 bg-gray-50">
+                      <div key={index} className="border dark:border-zinc-700 rounded-lg p-3 bg-gray-50 dark:bg-zinc-700">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-gray-700">
                             {result.promptName}
@@ -360,7 +372,7 @@ export function PromptsTab({ prompts, callPrompt, isConnected }: PromptsTabProps
                           {new Date(result.timestamp).toLocaleString()}
                         </div>
                         {result.error ? (
-                          <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                          <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">
                             {result.error}
                           </div>
                         ) : (

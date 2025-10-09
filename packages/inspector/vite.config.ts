@@ -1,10 +1,14 @@
 import path from 'node:path'
+import { readFileSync } from 'node:fs'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
+// Read version from package.json
+const packageJson = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'))
+
 export default defineConfig({
-  base: '/inspector/',
+  base: '/inspector',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -15,6 +19,8 @@ export default defineConfig({
   define: {
     // Define process.env for browser compatibility
     'process.env': {},
+    // Inject version from package.json at build time
+    __INSPECTOR_VERSION__: JSON.stringify(packageJson.version),
   },
   optimizeDeps: {
     include: ['mcp-use/react'],

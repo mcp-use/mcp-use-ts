@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { FolderOpen, MessageSquare, Rocket, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import LogoAnimated from '@/components/LogoAnimated'
 import { ShimmerButton } from '@/components/ui/shimmer-button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -25,6 +26,8 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
 import { useMcpContext } from '../context/McpContext'
+import { AnimatedThemeToggler } from './AnimatedThemeToggler'
+import { CommandPalette } from './CommandPalette'
 import { PromptsTab } from './PromptsTab'
 import { ResourcesTab } from './ResourcesTab'
 import { ServerIcon } from './ServerIcon'
@@ -90,6 +93,7 @@ export function Layout({ children }: LayoutProps) {
   const [activeTab, setActiveTab] = useState('tools')
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null)
   const [configLoaded, setConfigLoaded] = useState(false)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
 
   const tabs = [
     { id: 'tools', label: 'Tools', icon: Wrench },
@@ -98,8 +102,21 @@ export function Layout({ children }: LayoutProps) {
   ]
 
   const handleServerSelect = (serverId: string) => {
+    const server = connections.find(c => c.id === serverId)
+    if (!server || server.state !== 'ready') {
+      toast.error('Server is not connected and cannot be inspected')
+      return
+    }
     setSelectedServerId(serverId)
     navigate(`/servers/${encodeURIComponent(serverId)}`)
+  }
+
+  const handleCommandPaletteNavigate = (tab: 'tools' | 'prompts' | 'resources', itemName?: string) => {
+    setActiveTab(tab)
+    // Store the item name to be selected in the respective tab
+    if (itemName) {
+      sessionStorage.setItem(`selected-${tab}`, itemName)
+    }
   }
 
   const selectedServer = connections.find(c => c.id === selectedServerId)
@@ -150,9 +167,27 @@ export function Layout({ children }: LayoutProps) {
     }
   }, [selectedServer, location.pathname, navigate])
 
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K to open command palette
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault()
+        setIsCommandPaletteOpen(true)
+      }
+      // Escape to close command palette
+      if (event.key === 'Escape') {
+        setIsCommandPaletteOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <TooltipProvider>
-      <div className="h-screen bg-zinc-100 flex flex-col px-4 py-4 gap-4">
+      <div className="h-screen bg-[#f3f3f3] dark:bg-zinc-900 flex flex-col px-4 py-4 gap-4">
         {/* Header */}
         <header className="max-w-screen-2xl w-full mx-auto">
           <div className="flex items-center justify-between">
@@ -163,7 +198,7 @@ export function Layout({ children }: LayoutProps) {
                 <DropdownMenuTrigger asChild>
                   <ShimmerButton
                     className={
-                      cn('min-w-[200px] p-0 px-1 pr-4 text-sm h-11 justify-start bg-black text-white border-black hover:bg-gray-800 hover:border-gray-800', !selectedServer && 'pl-4',
+                      cn('min-w-[200px] p-0 px-1 text-sm h-11 justify-start bg-black dark:bg-white text-white dark:text-black border-black dark:border-white hover:bg-gray-800 dark:hover:bg-zinc-100 hover:border-gray-800 dark:hover:border-zinc-200', !selectedServer && 'pl-4', selectedServer && 'pr-4',
                       )
                     }
                   >
@@ -176,7 +211,7 @@ export function Layout({ children }: LayoutProps) {
                       />
                     )}
                     <span className="truncate">
-                      {selectedServer ? selectedServer.name : 'Choose server to inspect'}
+                      {selectedServer ? selectedServer.name : 'Select server to inspect'}
                     </span>
                   </ShimmerButton>
                 </DropdownMenuTrigger>
@@ -185,7 +220,7 @@ export function Layout({ children }: LayoutProps) {
                   <DropdownMenuSeparator />
                   {connections.length === 0
                     ? (
-                        <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                        <div className="px-2 py-4 text-sm text-muted-foreground dark:text-zinc-400 text-center">
                           No servers connected. Go to the dashboard to add one.
                         </div>
                       )
@@ -210,7 +245,7 @@ export function Layout({ children }: LayoutProps) {
                       )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/')}>
-                    <span className="text-blue-600">+ Add new server</span>
+                    <span className="text-blue-600 dark:text-blue-400">+ Add new server</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -229,8 +264,9 @@ export function Layout({ children }: LayoutProps) {
               )}
             </div>
 
-            {/* Right side: Discord Button + Deploy Button + Logo */}
+            {/* Right side: Theme Toggle + Discord Button + Deploy Button + Logo */}
             <div className="flex items-center gap-4">
+              <AnimatedThemeToggler className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors" />
               <Button
                 variant="ghost"
                 className="hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full"
@@ -247,7 +283,7 @@ export function Layout({ children }: LayoutProps) {
                   Discord
                 </a>
               </Button>
-              <Dialog>
+              {/* <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     <Rocket className="h-4 w-4" />
@@ -273,9 +309,9 @@ export function Layout({ children }: LayoutProps) {
                       <div className="flex items-center gap-2">
                         <Rocket className="h-4 w-4" />
                         <span className="font-medium">Hosted on MCP Use</span>
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">Free</span>
                       </div>
-                      <p className="text-sm text-muted-foreground text-left">
+                      <p className="text-sm text-muted-foreground dark:text-zinc-400 text-left">
                         Deploy your server to our managed infrastructure with zero configuration
                       </p>
                     </Button>
@@ -291,20 +327,20 @@ export function Layout({ children }: LayoutProps) {
                         <div className="h-4 w-4 bg-blue-500 rounded" />
                         <span className="font-medium">Docker</span>
                       </div>
-                      <p className="text-sm text-muted-foreground text-left">
+                      <p className="text-sm text-muted-foreground dark:text-zinc-400 text-left">
                         Get Docker configuration files to deploy on your own infrastructure
                       </p>
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+              </Dialog> */}
               <LogoAnimated state="expanded" />
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 max-w-screen-2xl w-full mx-auto bg-white rounded-2xl p-0 overflow-auto">
+        <main className="flex-1 max-w-screen-2xl w-full mx-auto bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 p-0 overflow-auto">
           {selectedServer && activeTab === 'tools'
             ? (
                 <ToolsTab
@@ -333,6 +369,18 @@ export function Layout({ children }: LayoutProps) {
                     children
                   )}
         </main>
+
+        {/* Command Palette */}
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onOpenChange={setIsCommandPaletteOpen}
+          tools={selectedServer?.tools || []}
+          prompts={selectedServer?.prompts || []}
+          resources={selectedServer?.resources || []}
+          connections={connections}
+          onNavigate={handleCommandPaletteNavigate}
+          onServerSelect={handleServerSelect}
+        />
       </div>
     </TooltipProvider>
   )

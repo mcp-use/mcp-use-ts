@@ -57,6 +57,9 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
   --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+  --animate-status-pulse: status-pulse 2s infinite;
+  --animate-status-pulse-red: status-pulse-red 2s infinite;
+  --animate-status-pulse-yellow: status-pulse-yellow 2s infinite;
   @keyframes shimmer-slide {
   to {
     transform: translate(calc(100cqw - 100%), 0);
@@ -74,6 +77,39 @@
     }
   100% {
     transform: translateZ(0) rotate(360deg);
+    }
+  }
+  @keyframes status-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+  }
+  @keyframes status-pulse-red {
+    0% {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+  }
+  @keyframes status-pulse-yellow {
+    0% {
+      box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 8px rgba(234, 179, 8, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(234, 179, 8, 0);
     }
   }
 }
@@ -153,5 +189,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  h2 {
+    font-family: var(--font-family-ubuntu);
+  }
+  .font-ubuntu {
+    font-family: var(--font-family-ubuntu);
   }
 }

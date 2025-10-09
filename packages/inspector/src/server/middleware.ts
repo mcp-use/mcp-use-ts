@@ -124,6 +124,11 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
     }
   })
 
+  // Redirect /inspector/ to /inspector (remove trailing slash)
+  app.get(`${basePath}/`, (_req: Request, res: Response) => {
+    res.redirect(301, basePath)
+  })
+
   // Serve the main HTML file for all inspector routes
   app.get(`${basePath}*`, (_req: Request, res: Response) => {
     const indexPath = join(clientDistPath, 'index.html')
@@ -133,7 +138,7 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
       return
     }
 
-    // Serve the HTML file (Vite built with base: '/inspector/')
+    // Serve the HTML file (Vite built with base: '/inspector')
     res.sendFile(indexPath)
   })
 
