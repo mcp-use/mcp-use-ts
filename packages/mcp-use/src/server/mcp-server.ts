@@ -316,21 +316,21 @@ export class McpServer {
    */
   private mountInspector(): void {
     if (this.inspectorMounted) return
-    
-    try {
-      // Try to dynamically import the inspector package
-      import('@mcp-use/inspector').then(({ mountInspector }) => {
+
+    // Try to dynamically import the inspector package
+    // Using dynamic import makes it truly optional - won't fail if not installed
+    import('@mcp-use/inspector')
+      .then(({ mountInspector }) => {
         // Auto-connect to the local MCP server at /mcp
         const mcpServerUrl = `http://localhost:${this.serverPort}/mcp`
         mountInspector(this.app, '/inspector', mcpServerUrl)
         this.inspectorMounted = true
-      }).catch(() => {
+        console.log(`[INSPECTOR] UI available at http://localhost:${this.serverPort}/inspector`)
+      })
+      .catch(() => {
         // Inspector package not installed, skip mounting silently
         // This allows the server to work without the inspector in production
       })
-    } catch {
-      // Inspector not available, skip
-    }
   }
 
   /**

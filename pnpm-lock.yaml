@@ -271,6 +271,9 @@ importers:
       '@mcp-ui/server':
         specifier: ^5.11.0
         version: 5.11.0(patch_hash=q4o7znptjmfaz7quhzmm6hp4jy)
+      '@mcp-use/inspector':
+        specifier: workspace:*
+        version: link:../inspector
       '@modelcontextprotocol/sdk':
         specifier: 1.12.1
         version: 1.12.1

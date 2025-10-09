@@ -88,6 +88,7 @@
     "example:observability": "npm run build && node dist/examples/observability.js"
   },
   "peerDependencies": {
+    "@mcp-use/inspector": "^0.1.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "langfuse": "^3.32.0",
@@ -95,6 +96,9 @@
     "react": "^18.0.0"
   },
   "peerDependenciesMeta": {
+    "@mcp-use/inspector": {
+      "optional": true
+    },
     "cors": {
       "optional": true
     },
