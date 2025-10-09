@@ -529,10 +529,10 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
 
             {/* Bottom section: Results */}
             <div className="flex flex-col h-full bg-white dark:bg-zinc-800 border-t dark:border-zinc-700">
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto h-full">
                 {results.length > 0
                   ? (
-                      <div className="space-y-4">
+                      <div className="space-y-4 flex-1 h-full">
                         {results.map((result, index) => {
                           // Check if result contains MCP UI resources
                           const content = result.result?.content || []
@@ -542,7 +542,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                           const hasMcpUIResources = mcpUIResources.length > 0
 
                           return (
-                            <div key={index} className="space-y-3">
+                            <div key={index} className="space-y-0 flex-1 h-full">
                               <div className={`flex items-center gap-2 px-4 pt-2 ${hasMcpUIResources ? 'border-b border-gray-200 dark:border-zinc-600 pb-2' : ''}`}>
                                 <h3 className="text-sm font-medium">Response</h3>
                                 <div className="flex items-center gap-1">
@@ -619,16 +619,16 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                                     if (hasMcpUIResources) {
                                       if (previewMode) {
                                         return (
-                                          <div className="space-y-4">
+                                          <div className="space-y-0 h-full">
                                             {mcpUIResources.map((item: any, idx: number) => (
-                                              <div key={idx} className="mx-4">
-                                                <div className="w-full">
+                                              <div key={idx} className="mx-0 size-full">
+                                                <div className="w-full h-full">
                                                   <McpUIRenderer
                                                     resource={item.resource}
                                                     onUIAction={(_action) => {
                                                     // Handle UI actions here if needed
                                                     }}
-                                                    className="w-full"
+                                                    className="w-full h-full"
                                                   />
                                                 </div>
                                               </div>
@@ -667,7 +667,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
                                       else {
                                       // JSON mode for MCP UI resources
                                         return (
-                                          <div className="px-4">
+                                          <div className="px-4 pt-4">
                                             <SyntaxHighlighter
                                               language="json"
                                               style={prismStyle}
@@ -690,7 +690,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
 
                                     // Default: show JSON for non-MCP UI resources
                                     return (
-                                      <div className="px-4">
+                                      <div className="px-4 pt-4">
                                         <SyntaxHighlighter
                                           language="json"
                                           style={prismStyle}

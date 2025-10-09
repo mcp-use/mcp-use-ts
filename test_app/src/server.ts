@@ -27,7 +27,7 @@ server.tool({
       uri: 'ui://widget/kanban-board',
       content: {
         type: 'externalUrl',
-        iframeUrl: 'http://localhost:3000/mcp-use/widgets/kanban-board'
+        iframeUrl: `http://localhost:${PORT}/mcp-use/widgets/kanban-board`
       },
       encoding: 'text',
     })
