@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import LogoAnimated from '@/components/LogoAnimated'
 import { ShimmerButton } from '@/components/ui/shimmer-button'
+import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -94,6 +95,7 @@ export function Layout({ children }: LayoutProps) {
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null)
   const [configLoaded, setConfigLoaded] = useState(false)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [isAutoConnecting, setIsAutoConnecting] = useState(false)
 
   const tabs = [
     { id: 'tools', label: 'Tools', icon: Wrench },
@@ -153,6 +155,27 @@ export function Layout({ children }: LayoutProps) {
     if (configLoaded)
       return
 
+    // Check for autoConnect query parameter first
+    const urlParams = new URLSearchParams(window.location.search)
+    const autoConnectUrl = urlParams.get('autoConnect')
+
+    if (autoConnectUrl) {
+      // Auto-connect to the URL from query parameter
+      const existing = connections.find(c => c.url === autoConnectUrl)
+      if (!existing) {
+        setIsAutoConnecting(true)
+        addConnection(autoConnectUrl, 'Local MCP Server')
+        // Navigate immediately but keep loading screen visible a bit longer to avoid flash
+        navigate(`/servers/${encodeURIComponent(autoConnectUrl)}`)
+        setTimeout(() => {
+          setIsAutoConnecting(false)
+        }, 1000)
+      }
+      setConfigLoaded(true)
+      return
+    }
+
+    // Fallback to config.json
     fetch('/inspector/config.json')
       .then(res => res.json())
       .then((config: { autoConnectUrl: string | null }) => {
@@ -247,6 +270,18 @@ export function Layout({ children }: LayoutProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Show loading spinner during auto-connection
+  if (isAutoConnecting) {
+    return (
+      <div className="h-screen bg-white dark:bg-zinc-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-8 w-8 text-zinc-600 dark:text-zinc-400" />
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Connecting to MCP server...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <TooltipProvider>
       <div className="h-screen bg-[#f3f3f3] dark:bg-zinc-900 flex flex-col px-4 py-4 gap-4">
@@ -316,11 +351,32 @@ export function Layout({ children }: LayoutProps) {
               {selectedServer && (
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
-                    {tabs.map(tab => (
-                      <TabsTrigger key={tab.id} value={tab.id} icon={tab.icon}>
-                        {tab.label}
-                      </TabsTrigger>
-                    ))}
+                    {tabs.map((tab) => {
+                      // Get count for the current tab
+                      let count = 0
+                      if (tab.id === 'tools') {
+                        count = selectedServer.tools.length
+                      }
+                      else if (tab.id === 'prompts') {
+                        count = selectedServer.prompts.length
+                      }
+                      else if (tab.id === 'resources') {
+                        count = selectedServer.resources.length
+                      }
+
+                      return (
+                        <TabsTrigger key={tab.id} value={tab.id} icon={tab.icon}>
+                          <div className="flex items-center gap-2">
+                            {tab.label}
+                            {count > 0 && (
+                              <span className="bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs px-2 py-0.5 rounded-full font-medium">
+                                {count}
+                              </span>
+                            )}
+                          </div>
+                        </TabsTrigger>
+                      )
+                    })}
                   </TabsList>
                 </Tabs>
               )}
