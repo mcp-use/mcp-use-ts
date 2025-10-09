@@ -319,7 +319,6 @@ export class McpServer {
 
     // Try to dynamically import the inspector package
     // Using dynamic import makes it truly optional - won't fail if not installed
-    // @ts-expect-error - Optional peer dependency, may not be installed
     import('@mcp-use/inspector')
       .then(({ mountInspector }) => {
         // Auto-connect to the local MCP server at /mcp
