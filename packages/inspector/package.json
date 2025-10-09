@@ -75,6 +75,10 @@
     "react-syntax-highlighter": "^15.6.6",
     "tailwind-merge": "^3.3.1"
   },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
   "devDependencies": {
     "@antfu/eslint-config": "^5.4.1",
     "@eslint-react/eslint-plugin": "^1.38.4",
