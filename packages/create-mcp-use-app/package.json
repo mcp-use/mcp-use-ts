@@ -3,6 +3,29 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Create MCP-Use apps with one command",
+  "author": "mcp-use, Inc.",
+  "license": "MIT",
+  "homepage": "https://github.com/mcp-use/mcp-use-ts#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mcp-use/mcp-use-ts.git",
+    "directory": "packages/create-mcp-use-app"
+  },
+  "bugs": {
+    "url": "https://github.com/mcp-use/mcp-use-ts/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "create",
+    "scaffold",
+    "cli",
+    "init",
+    "starter",
+    "template",
+    "typescript",
+    "react"
+  ],
   "bin": {
     "create-mcp-use-app": "./dist/index.js"
   },
@@ -18,6 +41,9 @@
     "dist",
     "README.md"
   ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "commander": "^11.0.0",
     "prompts": "^2.4.2",
