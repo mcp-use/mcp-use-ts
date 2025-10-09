@@ -1,5 +1,11 @@
 # create-mcp-use-app
 
+## 0.3.1
+
+### Patch Changes
+
+- 04b9f14: Update versions
+
 ## 0.3.0
 
 ### Minor Changes
