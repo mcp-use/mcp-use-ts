@@ -125,11 +125,6 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
     }
   })
 
-  // Redirect /inspector/ to /inspector (remove trailing slash)
-  app.get(`${basePath}/`, (_req: Request, res: Response) => {
-    res.redirect(301, basePath)
-  })
-
   // Handle OAuth callback redirects - redirect /oauth/callback to /inspector/oauth/callback
   // This helps when OAuth providers are configured with the wrong redirect URL
   if (basePath !== '') {
@@ -142,8 +137,26 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
     })
   }
 
-  // Serve the main HTML file for all inspector routes
-  app.get(`${basePath}*`, (_req: Request, res: Response) => {
+  // Serve the main HTML file for the root inspector path (exact match)
+  app.get(basePath, (_req: Request, res: Response) => {
+    const indexPath = join(clientDistPath, 'index.html')
+
+    if (!existsSync(indexPath)) {
+      res.status(500).send('Inspector UI not found. Please build the inspector package.')
+      return
+    }
+
+    // Serve the HTML file (Vite built with base: '/inspector')
+    res.sendFile(indexPath)
+  })
+
+  // Redirect /inspector/ to /inspector (remove trailing slash)
+  app.get(`${basePath}/`, (_req: Request, res: Response) => {
+    res.redirect(301, basePath)
+  })
+
+  // Serve the main HTML file for all other inspector routes (SPA routing)
+  app.get(`${basePath}/*`, (_req: Request, res: Response) => {
     const indexPath = join(clientDistPath, 'index.html')
 
     if (!existsSync(indexPath)) {

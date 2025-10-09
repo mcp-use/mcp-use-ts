@@ -171,7 +171,7 @@ program
       processes.push(serverProc);
 
       // Auto-open inspector if enabled
-      if (options.open) {
+      if (options.open !== false) {
         const startTime = Date.now();
         const ready = await waitForServer(port);
         if (ready) {
