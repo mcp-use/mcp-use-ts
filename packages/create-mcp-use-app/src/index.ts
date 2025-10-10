@@ -12,10 +12,14 @@ const __dirname = dirname(__filename)
 
 const program = new Command()
 
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, '../package.json'), 'utf-8')
+)
+
 program
   .name('create-mcp-use-app')
   .description('Create a new MCP server project')
-  .version('0.1.0')
+  .version(packageJson.version)
   .argument('[project-name]', 'Name of the MCP server project')
   .option('-t, --template <template>', 'Template to use', 'ui')
   .option('--no-install', 'Skip installing dependencies')
