@@ -22,17 +22,18 @@ server.tool({
       required: true,
     },
   ],
-  fn: async () => {
-    const uiResource = createUIResource({
-      uri: 'ui://widget/kanban-board',
-      content: {
-        type: 'externalUrl',
-        iframeUrl: 'http://localhost:3000/mcp-use/widgets/kanban-board'
-      },
-      encoding: 'text',
-    })
-    return uiResource
-  },
+  fn: async () => ({
+    content: [
+      createUIResource({
+        uri: 'ui://widget/kanban-board',
+        content: {
+          type: 'externalUrl',
+          iframeUrl: 'http://localhost:3000/mcp-use/widgets/kanban-board'
+        },
+        encoding: 'text',
+      })
+    ]
+  }),
 })
 
 // MCP Resource for server status
