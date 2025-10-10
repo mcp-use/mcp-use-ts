@@ -2,21 +2,27 @@
 import { Command } from 'commander';
 import { buildWidgets } from './build';
 import { spawn } from 'node:child_process';
-import { promises as fs } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import path from 'node:path';
 import open from 'open';
-
 const program = new Command();
+
+
+const packageContent = readFileSync(path.join(__dirname, '../../package.json'), 'utf-8')
+const packageJson = JSON.parse(packageContent)
+const packageVersion = packageJson.version || 'unknown'
+
 
 program
   .name('mcp-use')
   .description('MCP CLI tool')
-  .version('2.0.1');
+  .version(packageVersion);
 
 // Helper to check if port is available
 async function isPortAvailable(port: number): Promise<boolean> {
   try {
-    const response = await fetch(`http://localhost:${port}`);
+    await fetch(`http://localhost:${port}`);
     return false; // Port is in use
   } catch {
     return true; // Port is available
@@ -77,7 +83,7 @@ program
     try {
       const projectPath = path.resolve(options.path);
       
-      console.log('\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: 2.0.1\x1b[0m\n');
+      console.log(`\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
       
       // Run tsc first
       console.log('Building TypeScript...');
@@ -103,7 +109,7 @@ program
       const projectPath = path.resolve(options.path);
       let port = parseInt(options.port, 10);
       
-      console.log('\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: 2.0.1\x1b[0m\n');
+      console.log(`\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
 
       // Check if port is available, find alternative if needed
       if (!(await isPortAvailable(port))) {
@@ -116,7 +122,7 @@ program
       // Find the main source file
       let serverFile = 'src/server.ts';
       try {
-        await fs.access(path.join(projectPath, serverFile));
+        await access(path.join(projectPath, serverFile));
       } catch {
         serverFile = 'src/index.ts';
       }
@@ -215,12 +221,12 @@ program
       const projectPath = path.resolve(options.path);
       const port = parseInt(options.port, 10);
 
-      console.log('\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: 2.0.1\x1b[0m\n');
+      console.log(`\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
 
       // Find the built server file
       let serverFile = 'dist/server.js';
       try {
-        await fs.access(path.join(projectPath, serverFile));
+        await access(path.join(projectPath, serverFile));
       } catch {
         serverFile = 'dist/index.js';
       }
