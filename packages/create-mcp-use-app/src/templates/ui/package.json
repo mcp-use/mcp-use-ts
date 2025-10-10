@@ -24,7 +24,7 @@
     "@mcp-ui/server": "^5.11.0",
     "cors": "^2.8.5",
     "express": "^4.18.0",
-    "mcp-use": "^0.3.0"
+    "mcp-use": "^1.0.0"
   },
   "devDependencies": {
     "@mcp-use/cli": "^2.0.2",
