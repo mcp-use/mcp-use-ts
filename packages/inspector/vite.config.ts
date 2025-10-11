@@ -1,5 +1,5 @@
-import path from 'node:path'
 import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
@@ -39,7 +39,7 @@ export default defineConfig({
     // Define process.env for browser compatibility
     'process.env': {},
     // Inject version from package.json at build time
-    __INSPECTOR_VERSION__: JSON.stringify(packageJson.version),
+    '__INSPECTOR_VERSION__': JSON.stringify(packageJson.version),
   },
   optimizeDeps: {
     include: ['mcp-use/react'],
@@ -48,7 +48,8 @@ export default defineConfig({
     port: 3000,
     host: true, // Allow external connections
     proxy: {
-      '/api': {
+      // Proxy API requests to the backend server
+      '^/inspector/api/.*': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },

@@ -37,6 +37,9 @@ export class McpServer {
     })
     this.app = express()
     
+    // Parse JSON bodies
+    this.app.use(express.json())
+    
     // TODO enable override
     // Enable CORS by default
     this.app.use((req, res, next) => {
