@@ -54,11 +54,8 @@ server.resource({
     return {
       contents: [{
         uri: 'ui://widget/kanban-board',
-        mimeType: 'text/html+skybridge',
-        text: `
-<div id="kanban-root"></div>
-<script type="module" src="${widgetUrl}"></script>
-        `.trim()
+        mimeType: 'text/uri-list',
+        text: widgetUrl
       }]
     }
   },

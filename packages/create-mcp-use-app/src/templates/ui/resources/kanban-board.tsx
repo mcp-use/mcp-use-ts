@@ -16,7 +16,7 @@ interface KanbanBoardProps {
 
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ initialTasks = [] }) => {
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
-  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium' as const })
+  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium' as Task['priority'] })
 
   // Load tasks from URL parameters or use defaults
   useEffect(() => {

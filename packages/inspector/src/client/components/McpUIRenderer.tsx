@@ -40,7 +40,6 @@ function convertToMcpUIResource(resource: Resource): any {
  */
 export function McpUIRenderer({ resource, onUIAction, className }: McpUIRendererProps) {
   const handleUIAction = async (action: any) => {
-    console.log('MCP UI Action:', action)
     return onUIAction?.(action)
   }
 
