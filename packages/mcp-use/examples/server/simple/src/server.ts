@@ -36,10 +36,21 @@ server.tool({
 server.resource({
   name: 'test',
   uri: 'resource://test',
+  title: 'Test Resource',
   mimeType: 'text/plain',
-  description: 'A test resource',
+  description: 'A test resource that returns a simple greeting',
+  annotations: {
+    audience: ['user', 'assistant'],
+    priority: 0.5
+  },
   fn: async () => {
-    return 'ciao'
+    return {
+      contents: [{
+        uri: 'resource://test',
+        mimeType: 'text/plain',
+        text: 'ciao'
+      }]
+    }
   }
 })
 

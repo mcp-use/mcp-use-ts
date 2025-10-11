@@ -1,10 +1,11 @@
 import type {
   PromptDefinition,
   ResourceDefinition,
+  ResourceTemplateDefinition,
   ServerConfig,
   ToolDefinition,
 } from './types.js'
-import { McpServer as OfficialMcpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { McpServer as OfficialMcpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import express, { type Express } from 'express'
 import { existsSync, readdirSync } from 'node:fs'
@@ -77,7 +78,10 @@ export class McpServer {
    * @param resourceDefinition - Configuration object containing resource metadata and handler function
    * @param resourceDefinition.name - Unique identifier for the resource
    * @param resourceDefinition.uri - URI pattern for accessing the resource
-   * @param resourceDefinition.resource - Resource metadata (mime type, description, etc.)
+   * @param resourceDefinition.title - Optional human-readable title for the resource
+   * @param resourceDefinition.description - Optional description of the resource
+   * @param resourceDefinition.mimeType - MIME type of the resource content
+   * @param resourceDefinition.annotations - Optional annotations (audience, priority, lastModified)
    * @param resourceDefinition.fn - Async function that returns the resource content
    * @returns The server instance for method chaining
    * 
@@ -86,8 +90,20 @@ export class McpServer {
    * server.resource({
    *   name: 'config',
    *   uri: 'config://app-settings',
-   *   resource: { mimeType: 'application/json' },
-   *   fn: async () => ({ theme: 'dark', language: 'en' })
+   *   title: 'Application Settings',
+   *   mimeType: 'application/json',
+   *   description: 'Current application configuration',
+   *   annotations: {
+   *     audience: ['user'],
+   *     priority: 0.8
+   *   },
+   *   fn: async () => ({
+   *     contents: [{
+   *       uri: 'config://app-settings',
+   *       mimeType: 'application/json',
+   *       text: JSON.stringify({ theme: 'dark', language: 'en' })
+   *     }]
+   *   })
    * })
    * ```
    */
@@ -95,7 +111,13 @@ export class McpServer {
     this.server.resource(
       resourceDefinition.name,
       resourceDefinition.uri,
-      {mimeType: resourceDefinition.mimeType, description: resourceDefinition.description},
+      {
+        name: resourceDefinition.name,
+        title: resourceDefinition.title,
+        description: resourceDefinition.description,
+        mimeType: resourceDefinition.mimeType,
+        annotations: resourceDefinition.annotations,
+      },
       async () => {
         return await resourceDefinition.fn()
       },
@@ -105,18 +127,79 @@ export class McpServer {
 
   /**
    * Define a dynamic resource template with parameters
+   * 
+   * Registers a parameterized resource template with the MCP server. Templates use URI
+   * patterns with placeholders that can be filled in at request time, allowing dynamic
+   * resource generation based on parameters.
+   * 
+   * @param resourceTemplateDefinition - Configuration object for the resource template
+   * @param resourceTemplateDefinition.name - Unique identifier for the template
+   * @param resourceTemplateDefinition.resourceTemplate - ResourceTemplate object with uriTemplate and metadata
+   * @param resourceTemplateDefinition.fn - Async function that generates resource content from URI and params
+   * @returns The server instance for method chaining
+   * 
+   * @example
+   * ```typescript
+   * server.resourceTemplate({
+   *   name: 'user-profile',
+   *   resourceTemplate: {
+   *     uriTemplate: 'user://{userId}/profile',
+   *     name: 'User Profile',
+   *     mimeType: 'application/json'
+   *   },
+   *   fn: async (uri, params) => ({
+   *     contents: [{
+   *       uri: uri.toString(),
+   *       mimeType: 'application/json',
+   *       text: JSON.stringify({ userId: params.userId, name: 'John Doe' })
+   *     }]
+   *   })
+   * })
+   * ```
    */
-  // TODO implement, for some freaky reason this give errors
-  // resourceTemplate(resourceTemplateDefinition: ResourceTemplateDefinition): this {
-  //   this.server.resource(
-  //     resourceTemplateDefinition.name,
-  //     resourceTemplateDefinition.resourceTemplate,
-  //     async (uri, params) => {
-  //       return await resourceTemplateDefinition.fn(uri, params)
-  //     },
-  //   )
-  //   return this
-  // }
+  resourceTemplate(resourceTemplateDefinition: ResourceTemplateDefinition): this {
+    // Create ResourceTemplate instance from SDK
+    const template = new ResourceTemplate(
+      resourceTemplateDefinition.resourceTemplate.uriTemplate,
+      {
+        list: undefined, // Optional: callback to list all matching resources
+        complete: undefined // Optional: callback for auto-completion
+      }
+    )
+    
+    // Create metadata object with optional fields
+    const metadata: any = {}
+    if (resourceTemplateDefinition.resourceTemplate.name) {
+      metadata.name = resourceTemplateDefinition.resourceTemplate.name
+    }
+    if (resourceTemplateDefinition.title) {
+      metadata.title = resourceTemplateDefinition.title
+    }
+    if (resourceTemplateDefinition.description || resourceTemplateDefinition.resourceTemplate.description) {
+      metadata.description = resourceTemplateDefinition.description || resourceTemplateDefinition.resourceTemplate.description
+    }
+    if (resourceTemplateDefinition.resourceTemplate.mimeType) {
+      metadata.mimeType = resourceTemplateDefinition.resourceTemplate.mimeType
+    }
+    if (resourceTemplateDefinition.annotations) {
+      metadata.annotations = resourceTemplateDefinition.annotations
+    }
+    
+    this.server.resource(
+      resourceTemplateDefinition.name,
+      template,
+      metadata,
+      async (uri: URL) => {
+        // Parse URI parameters from the template
+        const params = this.parseTemplateUri(
+          resourceTemplateDefinition.resourceTemplate.uriTemplate,
+          uri.toString()
+        )
+        return await resourceTemplateDefinition.fn(uri, params)
+      },
+    )
+    return this
+  }
 
   /**
    * Define a tool that can be called by clients
@@ -551,6 +634,48 @@ export class McpServer {
   private extractTemplateParams(uriTemplate: string): string[] {
     const matches = uriTemplate.match(/\{([^}]+)\}/g)
     return matches ? matches.map(match => match.slice(1, -1)) : []
+  }
+
+  /**
+   * Parse parameter values from a URI based on a template
+   * 
+   * Extracts parameter values from an actual URI by matching it against a URI template.
+   * The template contains placeholders like {param} which are extracted as key-value pairs.
+   * 
+   * @param template - URI template with placeholders (e.g., "user://{userId}/posts/{postId}")
+   * @param uri - Actual URI to parse (e.g., "user://123/posts/456")
+   * @returns Object mapping parameter names to their values
+   * 
+   * @example
+   * ```typescript
+   * const params = this.parseTemplateUri("user://{userId}/posts/{postId}", "user://123/posts/456")
+   * // Returns: { userId: "123", postId: "456" }
+   * ```
+   */
+  private parseTemplateUri(template: string, uri: string): Record<string, string> {
+    const params: Record<string, string> = {}
+    
+    // Convert template to a regex pattern
+    // Escape special regex characters except {}
+    let regexPattern = template.replace(/[.*+?^$()[\]\\|]/g, '\\$&')
+    
+    // Replace {param} with named capture groups
+    const paramNames: string[] = []
+    regexPattern = regexPattern.replace(/\\\{([^}]+)\\\}/g, (_, paramName) => {
+      paramNames.push(paramName)
+      return '([^/]+)'
+    })
+    
+    const regex = new RegExp(`^${regexPattern}$`)
+    const match = uri.match(regex)
+    
+    if (match) {
+      paramNames.forEach((paramName, index) => {
+        params[paramName] = match[index + 1]
+      })
+    }
+    
+    return params
   }
 }
 
