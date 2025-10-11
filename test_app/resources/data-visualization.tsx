@@ -1,6 +1,24 @@
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
+// CSS styles for dynamic colors
+const dynamicStyles = `
+  .dynamic-bar {
+    background-color: var(--dynamic-color, #3498db);
+    height: var(--dynamic-height, 100px);
+  }
+  .dynamic-color {
+    background-color: var(--dynamic-color, #3498db);
+  }
+`
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style')
+  styleElement.textContent = dynamicStyles
+  document.head.appendChild(styleElement)
+}
+
 interface DataPoint {
   label: string
   value: number
@@ -80,47 +98,24 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
     const maxValue = getMaxValue()
 
     return (
-      <div style={{ padding: '20px' }}>
-        <h3 style={{ marginBottom: '20px', color: '#2c3e50' }}>Bar Chart</h3>
-        <div style={{ display: 'flex', alignItems: 'end', gap: '10px', height: '300px' }}>
+      <div className="p-5">
+        <h3 className="mb-5 text-slate-700">Bar Chart</h3>
+        <div className="flex items-end gap-2.5 h-75">
           {data.map((point, index) => (
-            <div key={index} style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div key={index} className="flex-1 flex flex-col items-center">
               <div
+                className="w-full rounded-t transition-all duration-300 cursor-pointer relative dynamic-bar"
                 style={{
-                  background: point.color || '#3498db',
-                  height: `${(point.value / maxValue) * 250}px`,
-                  width: '100%',
-                  borderRadius: '4px 4px 0 0',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                  position: 'relative',
-                }}
+                  '--dynamic-color': point.color || '#3498db',
+                  '--dynamic-height': `${(point.value / maxValue) * 250}px`,
+                } as React.CSSProperties}
                 title={`${point.label}: ${point.value}`}
               >
-                <div style={{
-                  position: 'absolute',
-                  top: '-25px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: 'rgba(0,0,0,0.8)',
-                  color: 'white',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  whiteSpace: 'nowrap',
-                }}
-                >
+                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-1.5 py-0.5 rounded text-xs whitespace-nowrap">
                   {point.value}
                 </div>
               </div>
-              <div style={{
-                marginTop: '10px',
-                fontSize: '12px',
-                textAlign: 'center',
-                color: '#7f8c8d',
-                wordBreak: 'break-word',
-              }}
-              >
+              <div className="mt-2.5 text-xs text-center text-slate-500 break-words">
                 {point.label}
               </div>
             </div>
@@ -146,9 +141,9 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
     ).join(' ')
 
     return (
-      <div style={{ padding: '20px' }}>
-        <h3 style={{ marginBottom: '20px', color: '#2c3e50' }}>Line Chart</h3>
-        <svg width={width} height={height} style={{ border: '1px solid #ecf0f1', borderRadius: '8px' }}>
+      <div className="p-5">
+        <h3 className="mb-5 text-slate-700">Line Chart</h3>
+        <svg width={width} height={height} className="border border-slate-200 rounded-lg">
           {/* Grid lines */}
           {[0, 0.25, 0.5, 0.75, 1].map(ratio => (
             <line
@@ -172,18 +167,18 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
 
           {/* Data points */}
           {points.map((point, index) => (
-            <circle
-              key={index}
-              cx={point.x}
-              cy={point.y}
-              r="6"
-              fill={data[index].color || '#3498db'}
-              stroke="white"
-              strokeWidth="2"
-              style={{ cursor: 'pointer' }}
-            >
+            <g key={index}>
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="6"
+                fill={data[index].color || '#3498db'}
+                stroke="white"
+                strokeWidth="2"
+                className="cursor-pointer"
+              />
               <title>{`${data[index].label}: ${data[index].value}`}</title>
-            </circle>
+            </g>
           ))}
 
           {/* Labels */}
@@ -209,10 +204,10 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
     let currentAngle = 0
 
     return (
-      <div style={{ padding: '20px' }}>
-        <h3 style={{ marginBottom: '20px', color: '#2c3e50' }}>Pie Chart</h3>
-        <div style={{ display: 'flex', gap: '40px', alignItems: 'center' }}>
-          <svg width="300" height="300" style={{ border: '1px solid #ecf0f1', borderRadius: '8px' }}>
+      <div className="p-5">
+        <h3 className="mb-5 text-slate-700">Pie Chart</h3>
+        <div className="flex gap-10 items-center">
+          <svg width="300" height="300" className="border border-slate-200 rounded-lg">
             {data.map((point, index) => {
               const percentage = point.value / total
               const angle = percentage * 360
@@ -242,49 +237,35 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               ].join(' ')
 
               return (
-                <path
-                  key={index}
-                  d={pathData}
-                  fill={point.color || '#3498db'}
-                  stroke="white"
-                  strokeWidth="2"
-                  style={{ cursor: 'pointer' }}
-                >
+                <g key={index}>
+                  <path
+                    d={pathData}
+                    fill={point.color || '#3498db'}
+                    stroke="white"
+                    strokeWidth="2"
+                    className="cursor-pointer"
+                  />
                   <title>{`${point.label}: ${point.value} (${(percentage * 100).toFixed(1)}%)`}</title>
-                </path>
+                </g>
               )
             })}
           </svg>
 
-          <div style={{ flex: '1' }}>
-            <h4 style={{ marginBottom: '15px', color: '#2c3e50' }}>Legend</h4>
+          <div className="flex-1">
+            <h4 className="mb-4 text-slate-700">Legend</h4>
             {data.map((point, index) => (
               <div
                 key={index}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  marginBottom: '8px',
-                  padding: '8px',
-                  background: '#f8f9fa',
-                  borderRadius: '4px',
-                }}
+                className="flex items-center mb-2 p-2 bg-slate-50 rounded"
               >
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  background: point.color || '#3498db',
-                  borderRadius: '2px',
-                  marginRight: '10px',
-                }}
+                <div 
+                  className="w-4 h-4 rounded-sm mr-2.5 dynamic-color"
+                  style={{
+                    '--dynamic-color': point.color || '#3498db',
+                  } as React.CSSProperties}
                 />
-                <span style={{ flex: '1', fontSize: '14px' }}>{point.label}</span>
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  color: '#2c3e50',
-                }}
-                >
+                <span className="flex-1 text-sm">{point.label}</span>
+                <span className="text-sm font-bold text-slate-700">
                   {point.value}
                 </span>
               </div>
@@ -296,30 +277,20 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
   }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={{ marginBottom: '30px' }}>
-        <h1 style={{ margin: '0 0 20px 0', color: '#2c3e50' }}>Data Visualization</h1>
+    <div className="p-5">
+      <div className="mb-8">
+        <h1 className="m-0 mb-5 text-slate-700">Data Visualization</h1>
 
         {/* Controls */}
-        <div style={{
-          background: 'white',
-          padding: '20px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          marginBottom: '20px',
-        }}
-        >
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '20px' }}>
+        <div className="bg-white p-5 rounded-lg shadow-sm mb-5">
+          <div className="flex gap-5 flex-wrap items-center mb-5">
             <div>
-              <label style={{ marginRight: '10px', fontWeight: 'bold', color: '#2c3e50' }}>Chart Type:</label>
+              <label className="mr-2.5 font-bold text-slate-700">Chart Type:</label>
               <select
                 value={currentChartType}
                 onChange={e => setCurrentChartType(e.target.value as typeof currentChartType)}
-                style={{
-                  padding: '8px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                }}
+                className="px-3 py-2 border border-gray-300 rounded"
+                aria-label="Select chart type"
               >
                 <option value="bar">Bar Chart</option>
                 <option value="line">Line Chart</option>
@@ -328,41 +299,24 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="flex gap-2.5 flex-wrap items-center">
             <input
               type="text"
               placeholder="Label"
               value={newDataPoint.label}
               onChange={e => setNewDataPoint({ ...newDataPoint, label: e.target.value })}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                minWidth: '120px',
-              }}
+              className="px-3 py-2 border border-gray-300 rounded min-w-30"
             />
             <input
               type="number"
               placeholder="Value"
               value={newDataPoint.value}
               onChange={e => setNewDataPoint({ ...newDataPoint, value: Number(e.target.value) })}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                minWidth: '100px',
-              }}
+              className="px-3 py-2 border border-gray-300 rounded min-w-25"
             />
             <button
               onClick={addDataPoint}
-              style={{
-                padding: '8px 16px',
-                background: '#3498db',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="px-4 py-2 bg-blue-500 text-white border-none rounded cursor-pointer"
             >
               Add Data Point
             </button>
@@ -370,22 +324,10 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
         </div>
 
         {/* Chart */}
-        <div style={{
-          background: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          overflow: 'hidden',
-        }}
-        >
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {data.length === 0
             ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px 20px',
-                  color: '#7f8c8d',
-                  fontStyle: 'italic',
-                }}
-                >
+                <div className="text-center py-10 px-5 text-slate-500 italic">
                   No data to visualize. Add some data points above!
                 </div>
               )
@@ -400,59 +342,42 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
 
         {/* Data table */}
         {data.length > 0 && (
-          <div style={{
-            background: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            marginTop: '20px',
-            overflow: 'hidden',
-          }}
-          >
-            <div style={{ padding: '20px', borderBottom: '1px solid #ecf0f1' }}>
-              <h3 style={{ margin: '0', color: '#2c3e50' }}>Data Table</h3>
+          <div className="bg-white rounded-lg shadow-sm mt-5 overflow-hidden">
+            <div className="p-5 border-b border-slate-200">
+              <h3 className="m-0 text-slate-700">Data Table</h3>
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ecf0f1' }}>Label</th>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ecf0f1' }}>Value</th>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ecf0f1' }}>Percentage</th>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ecf0f1' }}>Color</th>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ecf0f1' }}>Actions</th>
+                  <tr className="bg-slate-50">
+                    <th className="p-3 text-left border-b border-slate-200">Label</th>
+                    <th className="p-3 text-left border-b border-slate-200">Value</th>
+                    <th className="p-3 text-left border-b border-slate-200">Percentage</th>
+                    <th className="p-3 text-left border-b border-slate-200">Color</th>
+                    <th className="p-3 text-left border-b border-slate-200">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.map((point, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #ecf0f1' }}>
-                      <td style={{ padding: '12px' }}>{point.label}</td>
-                      <td style={{ padding: '12px', fontWeight: 'bold' }}>{point.value}</td>
-                      <td style={{ padding: '12px' }}>
+                    <tr key={index} className="border-b border-slate-200">
+                      <td className="p-3">{point.label}</td>
+                      <td className="p-3 font-bold">{point.value}</td>
+                      <td className="p-3">
                         {((point.value / getTotalValue()) * 100).toFixed(1)}
                         %
                       </td>
-                      <td style={{ padding: '12px' }}>
-                        <div style={{
-                          width: '20px',
-                          height: '20px',
-                          background: point.color || '#3498db',
-                          borderRadius: '2px',
-                          display: 'inline-block',
-                        }}
+                      <td className="p-3">
+                        <div 
+                          className="w-5 h-5 rounded-sm inline-block dynamic-color"
+                          style={{
+                            '--dynamic-color': point.color || '#3498db',
+                          } as React.CSSProperties}
                         />
                       </td>
-                      <td style={{ padding: '12px' }}>
+                      <td className="p-3">
                         <button
                           onClick={() => removeDataPoint(index)}
-                          style={{
-                            background: '#e74c3c',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                          }}
+                          className="bg-red-500 text-white border-none rounded px-2 py-1 cursor-pointer text-xs"
                         >
                           Remove
                         </button>

@@ -22,132 +22,48 @@ server.tool({
       required: true,
     },
   ],
-  fn: async () => ({
-    content: [
-      createUIResource({
-        uri: 'ui://widget/kanban-board',
-        content: {
-          type: 'externalUrl',
-          iframeUrl: 'http://localhost:3000/mcp-use/widgets/kanban-board'
-        },
-        encoding: 'text',
-      })
-    ]
-  }),
-})
-
-// MCP Resource for server status
-server.resource({
-  uri: 'ui://status',
-  name: 'UI Server Status',
-  description: 'Status of the UI MCP server',
-  mimeType: 'application/json',
   fn: async () => {
-    return JSON.stringify({
-      name: 'ui-mcp-server',
-      version: '1.0.0',
-      status: 'running',
-      transport: process.env.MCP_TRANSPORT || 'http',
-      uiEndpoint: `http://localhost:${PORT}/mcp-use/widgets`,
-      mcpEndpoint: process.env.MCP_TRANSPORT === 'stdio' ? 'stdio' : `http://localhost:${PORT}/mcp`,
-      availableWidgets: ['kanban-board', 'todo-list', 'data-visualization'],
-      timestamp: new Date().toISOString(),
-    }, null, 2)
+    const uiResource = createUIResource({
+      uri: 'ui://widget/kanban-board',
+      content: {
+        type: 'externalUrl',
+        iframeUrl: `http://localhost:${PORT}/mcp-use/widgets/kanban-board`
+      },
+      encoding: 'text',
+    })
+    return {
+      content: [uiResource]
+    }
   },
 })
+
 
 // MCP Resource for Kanban Board widget
 server.resource({
-  uri: 'ui://widget/kanban-board',
   name: 'Kanban Board Widget',
-  description: 'Interactive Kanban board widget',
+  uri: 'ui://widget/kanban-board',
+  title: 'Kanban Board Widget',
   mimeType: 'text/html+skybridge',
+  description: 'Interactive Kanban board widget',
+  annotations: {
+    audience: ['user', 'assistant'],
+    priority: 0.7
+  },
   fn: async () => {
     const widgetUrl = `http://localhost:${PORT}/mcp-use/widgets/kanban-board`
-    return `
+    return {
+      contents: [{
+        uri: 'ui://widget/kanban-board',
+        mimeType: 'text/html+skybridge',
+        text: `
 <div id="kanban-root"></div>
 <script type="module" src="${widgetUrl}"></script>
-    `.trim()
-  },
-})
-
-// MCP Resource for Todo List widget
-server.resource({
-  uri: 'ui://widget/todo-list',
-  name: 'Todo List Widget',
-  description: 'Interactive todo list widget',
-  mimeType: 'text/html+skybridge',
-  fn: async () => {
-    const widgetUrl = `http://localhost:${PORT}/mcp-use/widgets/todo-list`
-    return `
-<div id="todo-root"></div>
-<script type="module" src="${widgetUrl}"></script>
-    `.trim()
-  },
-})
-
-// MCP Resource for Data Visualization widget
-server.resource({
-  uri: 'ui://widget/data-visualization',
-  name: 'Data Visualization Widget',
-  description: 'Interactive data visualization widget',
-  mimeType: 'text/html+skybridge',
-  fn: async () => {
-    const widgetUrl = `http://localhost:${PORT}/mcp-use/widgets/data-visualization`
-    return `
-<div id="data-viz-root"></div>
-<script type="module" src="${widgetUrl}"></script>
-    `.trim()
-  },
-})
-
-// Tool for showing Kanban Board
-server.tool({
-  name: 'show-kanban',
-  description: 'Display an interactive Kanban board',
-  inputs: [
-    {
-      name: 'tasks',
-      type: 'string',
-      description: 'JSON string of tasks to display',
-      required: true,
-    },
-  ],
-  fn: async (params: Record<string, any>) => {
-    const { tasks } = params
-    try {
-      const taskData = JSON.parse(tasks)
-      return `Displayed Kanban board with ${taskData.length || 0} tasks at http://localhost:${PORT}/mcp-use/widgets/kanban-board`
-    }
-    catch (error) {
-      return `Error parsing tasks: ${error instanceof Error ? error.message : 'Invalid JSON'}`
+        `.trim()
+      }]
     }
   },
 })
 
-// Tool for showing Todo List
-server.tool({
-  name: 'show-todo-list',
-  description: 'Display an interactive todo list',
-  inputs: [
-    {
-      name: 'todos',
-      type: 'string',
-      description: 'JSON string of todos to display',
-      required: true,
-    },
-  ],
-  fn: async (params: Record<string, any>) => {
-    const { todos } = params
-    try {
-      const todoData = JSON.parse(todos)
-      return `Displayed Todo list with ${todoData.length || 0} items at http://localhost:${PORT}/mcp-use/widgets/todo-list`
-    }
-    catch (error) {
-      return `Error parsing todos: ${error instanceof Error ? error.message : 'Invalid JSON'}`
-    }
-  },
-})
 
 
 // Start the server (MCP endpoints auto-mounted at /mcp)
