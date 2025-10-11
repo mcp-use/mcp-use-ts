@@ -22,13 +22,18 @@ export interface ResourceTemplateDefinition {
 }
 
 export interface ResourceDefinition {
+  /** Unique identifier for the resource */
   name: string
+  /** URI pattern for accessing the resource (e.g., 'config://app-settings') */
   uri: string
-  resource: {
-    title?: string
-    description?: string
-    mimeType: string
-  }
+  /** Resource metadata including MIME type and description */
+  /** Optional title for the resource */
+  title?: string
+  /** Optional description of the resource */
+  description?: string
+  /** MIME type of the resource content (required) */
+  mimeType: string
+  /** Async function that returns the resource content */
   fn: ResourceHandler
 }
 

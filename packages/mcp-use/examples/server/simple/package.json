@@ -1,8 +1,16 @@
 {
-  "name": "standalone-mcp-example",
+  "name": "simple-example",
   "type": "module",
   "version": "1.0.0",
-  "description": "Standalone MCP server example",
+  "description": "Simple MCP server example with hello world tool",
+  "author": "",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "server",
+    "example",
+    "hello-world"
+  ],
   "main": "dist/server.js",
   "scripts": {
     "build": "mcp-use build",
@@ -14,8 +22,8 @@
   },
   "devDependencies": {
     "@mcp-use/cli": "workspace:*",
-    "@mcp-use/inspector": "workspace:*",
-    "@types/bun": "latest",
-    "typescript": "^5.3.3"
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
   }
 }

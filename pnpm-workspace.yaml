@@ -1,5 +1,5 @@
 packages:
   - 'packages/*'
   - 'packages/mcp-use/examples/client/react'
-  - 'packages/mcp-use/examples/server/standalone'
+  - 'packages/mcp-use/examples/server/simple'
   - 'test_app'

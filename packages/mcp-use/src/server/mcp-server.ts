@@ -95,7 +95,7 @@ export class McpServer {
     this.server.resource(
       resourceDefinition.name,
       resourceDefinition.uri,
-      resourceDefinition.resource,
+      {mimeType: resourceDefinition.mimeType, description: resourceDefinition.description},
       async () => {
         return await resourceDefinition.fn()
       },

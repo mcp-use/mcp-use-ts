@@ -155,23 +155,9 @@ program
       // 3. Server with tsx
       const serverProc = spawn('npx', ['tsx', 'watch', serverFile], {
         cwd: projectPath,
-        stdio: 'pipe',
+        stdio: 'inherit',
         shell: false,
         env: { ...process.env, PORT: String(port) },
-      });
-      
-      // Handle server errors gracefully
-      serverProc.stderr?.on('data', (data) => {
-        const output = data.toString();
-        if (output.includes('EADDRINUSE')) {
-          console.log(`\x1b[31m✗\x1b[0m Port ${port} is still in use. Please try a different port with --port`);
-          console.log(`\x1b[90mHint: Use --port 3001 or kill the process using port ${port}\x1b[0m`);
-          process.exit(1);
-        }
-      });
-      
-      serverProc.stdout?.on('data', (data) => {
-        process.stdout.write(data);
       });
       
       processes.push(serverProc);
