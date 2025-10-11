@@ -2,31 +2,14 @@
 import { Command } from 'commander';
 import { buildWidgets } from './build';
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 import open from 'open';
 const program = new Command();
 
 
-// Find the CLI package.json file
-function findPackageJson() {
-  const possiblePaths = [
-    path.join(__dirname, '../package.json'), // From dist/
-    path.join(__dirname, '../../package.json'), // From dist/
-    path.join(process.cwd(), 'package.json'), // Current working directory
-  ]
-  
-  for (const packagePath of possiblePaths) {
-    if (existsSync(packagePath)) {
-      return packagePath
-    }
-  }
-  
-  throw new Error('Could not find package.json file')
-}
-
-const packageContent = readFileSync(findPackageJson(), 'utf-8')
+const packageContent = readFileSync(path.join(__dirname, '../package.json'), 'utf-8')
 const packageJson = JSON.parse(packageContent)
 const packageVersion = packageJson.version || 'unknown'
 
