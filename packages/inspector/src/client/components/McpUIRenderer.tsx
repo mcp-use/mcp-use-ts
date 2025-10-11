@@ -1,5 +1,5 @@
-import { UIResourceRenderer } from '@mcp-ui/client'
 import type { Resource } from '@modelcontextprotocol/sdk/types.js'
+import { UIResourceRenderer } from '@mcp-ui/client'
 
 interface McpUIRendererProps {
   resource: Resource
@@ -11,13 +11,15 @@ interface McpUIRendererProps {
  * Helper function to check if a resource is an MCP UI resource
  */
 export function isMcpUIResource(resource: any): boolean {
-  if (!resource?.mimeType) return false
-  
+  if (!resource?.mimeType)
+    return false
+
   const mimeType = resource.mimeType.toLowerCase()
   return (
-    mimeType === 'text/html' ||
-    mimeType === 'text/uri-list' ||
-    mimeType.startsWith('application/vnd.mcp-ui.remote-dom')
+    mimeType === 'text/html'
+    || mimeType === 'text/html+skybridge'
+    || mimeType === 'text/uri-list'
+    || mimeType.startsWith('application/vnd.mcp-ui.remote-dom')
   )
 }
 
@@ -37,9 +39,9 @@ function convertToMcpUIResource(resource: Resource): any {
  * Component to render MCP UI resources
  */
 export function McpUIRenderer({ resource, onUIAction, className }: McpUIRendererProps) {
-  const handleUIAction = (action: any) => {
+  const handleUIAction = async (action: any) => {
     console.log('MCP UI Action:', action)
-    onUIAction?.(action)
+    return onUIAction?.(action)
   }
 
   const uiResource = convertToMcpUIResource(resource)
@@ -60,4 +62,3 @@ export function McpUIRenderer({ resource, onUIAction, className }: McpUIRenderer
     </div>
   )
 }
-

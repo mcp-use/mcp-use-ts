@@ -200,7 +200,7 @@ export function InspectorDashboard() {
                     <div
                       key={connection.id}
                       onClick={() => handleServerClick(connection)}
-                      className="rounded-lg bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 p-4 transition-colors cursor-pointer"
+                      className="group rounded-lg bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 p-4 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -239,9 +239,29 @@ export function InspectorDashboard() {
                                   )}
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground dark:text-zinc-400 font-mono mt-1">
-                            {connection.url}
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs text-muted-foreground dark:text-zinc-400 font-mono">
+                              {connection.url}
+                            </p>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    navigator.clipboard.writeText(connection.url)
+                                    toast.success('URL copied to clipboard')
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
+                                  title="Copy URL"
+                                >
+                                  <Copy className="w-3 h-3 text-muted-foreground" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Copy URL</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                         </div>
                         <div className="flex items-center gap-1">
                           <Tooltip>

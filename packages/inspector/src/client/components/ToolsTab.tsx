@@ -137,17 +137,38 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
     setToolArgs((prev) => {
       const newArgs = { ...prev }
 
-      // Try to parse as JSON first, fallback to string
-      try {
-        newArgs[key] = JSON.parse(value)
+      // Check the tool's input schema to determine how to handle the value
+      if (selectedTool?.inputSchema?.properties?.[key]) {
+        const prop = selectedTool.inputSchema.properties[key] as any
+        const expectedType = prop.type
+
+        if (expectedType === 'string') {
+          // For string parameters, don't parse JSON - treat as literal string
+          newArgs[key] = value
+        }
+        else {
+          // For non-string parameters, try to parse as JSON first, fallback to string
+          try {
+            newArgs[key] = JSON.parse(value)
+          }
+          catch {
+            newArgs[key] = value
+          }
+        }
       }
-      catch {
-        newArgs[key] = value
+      else {
+        // Fallback: try to parse as JSON first, fallback to string
+        try {
+          newArgs[key] = JSON.parse(value)
+        }
+        catch {
+          newArgs[key] = value
+        }
       }
 
       return newArgs
     })
-  }, [])
+  }, [selectedTool])
 
   const executeTool = useCallback(async () => {
     if (!selectedTool || !isConnected)
