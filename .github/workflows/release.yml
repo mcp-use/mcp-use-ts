@@ -49,4 +49,4 @@ jobs:
           title: 'chore(release): version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN_ORG }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ORG }}
