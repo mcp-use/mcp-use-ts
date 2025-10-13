@@ -120,11 +120,11 @@ program
       }
 
       // Find the main source file
-      let serverFile = 'src/server.ts';
+      let serverFile = 'index.ts';
       try {
         await access(path.join(projectPath, serverFile));
       } catch {
-        serverFile = 'src/index.ts';
+        serverFile = 'src/server.ts';
       }
 
       // Start all processes concurrently
@@ -210,11 +210,11 @@ program
       console.log(`\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
 
       // Find the built server file
-      let serverFile = 'dist/server.js';
+      let serverFile = 'dist/index.js';
       try {
         await access(path.join(projectPath, serverFile));
       } catch {
-        serverFile = 'dist/index.js';
+        serverFile = 'dist/server.js';
       }
 
       console.log('Starting production server...');

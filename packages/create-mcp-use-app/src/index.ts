@@ -172,6 +172,7 @@ program
         console.log('   │   ├── data-visualization.tsx')
         console.log('   │   ├── kanban-board.tsx')
         console.log('   │   └── todo-list.tsx')
+        console.log('   ├── index.ts')
         console.log('   ├── package.json')
         console.log('   ├── tsconfig.json')
         console.log('   └── README.md')
