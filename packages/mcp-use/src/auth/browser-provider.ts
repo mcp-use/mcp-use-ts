@@ -32,7 +32,7 @@ export class BrowserOAuthClientProvider implements OAuthClientProvider {
     this.serverUrl = serverUrl
     this.storageKeyPrefix = options.storageKeyPrefix || 'mcp:auth'
     this.serverUrlHash = this.hashString(serverUrl)
-    this.clientName = options.clientName || 'MCP Browser Client'
+    this.clientName = options.clientName || 'mcp-use'
     this.clientUri = options.clientUri || (typeof window !== 'undefined' ? window.location.origin : '')
     this.callbackUrl = sanitizeUrl(
       options.callbackUrl ||
