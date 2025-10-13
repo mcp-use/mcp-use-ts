@@ -6,9 +6,8 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import faviconProxy from './favicon-proxy.js'
 import { MCPInspector } from './mcp-inspector.js'
-import { checkClientFiles, fetchFavicon, getClientDistPath, getContentType, handleChatRequest } from './shared-utils.js'
+import { checkClientFiles, getClientDistPath, getContentType, handleChatRequest } from './shared-utils.js'
 
 const execAsync = promisify(exec)
 
@@ -30,9 +29,6 @@ const app = new Hono()
 // Middleware
 app.use('*', cors())
 app.use('*', logger())
-
-// Mount favicon proxy
-app.route('/api/favicon', faviconProxy)
 
 // Health check
 app.get('/health', (c) => {
@@ -146,38 +142,77 @@ app.post('/inspector/api/chat', async (c) => {
   }
 })
 
+// MCP Proxy endpoint - proxies MCP requests to target servers
+app.all('/inspector/api/proxy/*', async (c) => {
+  try {
+    const targetUrl = c.req.header('X-Target-URL')
+    const proxyToken = c.req.header('X-Proxy-Token')
+
+    if (!targetUrl) {
+      return c.json({ error: 'X-Target-URL header is required' }, 400)
+    }
+
+    // Validate proxy token if provided
+    if (proxyToken && proxyToken !== 'c96aeb0c195aa9c7d3846b90aec9bc5fcdd5df97b3049aaede8f5dd1a15d2d87') {
+      return c.json({ error: 'Invalid proxy token' }, 401)
+    }
+
+    // Forward the request to the target MCP server
+    const method = c.req.method
+    const headers: Record<string, string> = {}
+
+    // Copy relevant headers, excluding proxy-specific ones
+    const requestHeaders = c.req.header()
+    for (const [key, value] of Object.entries(requestHeaders)) {
+      if (!key.toLowerCase().startsWith('x-proxy-')
+        && !key.toLowerCase().startsWith('x-target-')
+        && key.toLowerCase() !== 'host') {
+        headers[key] = value
+      }
+    }
+
+    // Set the target URL as the host
+    try {
+      const targetUrlObj = new URL(targetUrl)
+      headers.Host = targetUrlObj.host
+    }
+    catch {
+      return c.json({ error: 'Invalid target URL' }, 400)
+    }
+
+    const body = method !== 'GET' && method !== 'HEAD' ? await c.req.arrayBuffer() : undefined
+
+    const response = await fetch(targetUrl, {
+      method,
+      headers,
+      body: body ? new Uint8Array(body) : undefined,
+    })
+
+    // Forward the response
+    const responseHeaders: Record<string, string> = {}
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value
+    })
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+    })
+  }
+  catch (error) {
+    console.error('Proxy error:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to proxy request',
+    }, 500)
+  }
+})
+
 // Inspector config endpoint
 app.get('/inspector/config.json', (c) => {
   return c.json({
     autoConnectUrl: null,
   })
-})
-
-// Inspector favicon proxy endpoint
-app.get('/inspector/api/favicon/:url', async (c) => {
-  const url = c.req.param('url')
-
-  if (!url) {
-    return c.json({ error: 'URL parameter is required' }, 400)
-  }
-
-  try {
-    const result = await fetchFavicon(url)
-
-    if (result) {
-      c.header('Content-Type', result.contentType)
-      c.header('Cache-Control', 'public, max-age=86400')
-      c.header('Access-Control-Allow-Origin', '*')
-      return c.body(new Uint8Array(result.data))
-    }
-
-    // If no favicon found, return 404
-    return c.json({ error: 'No favicon found' }, 404)
-  }
-  catch (error) {
-    console.error('Favicon proxy error:', error)
-    return c.json({ error: 'Invalid URL or fetch failed' }, 400)
-  }
 })
 
 // Check if we're in development mode (Vite dev server running)

@@ -9,7 +9,6 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
-import faviconProxy from '../server/favicon-proxy.js'
 import { MCPInspector } from '../server/mcp-inspector.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -81,8 +80,6 @@ const app = new Hono()
 app.use('*', cors())
 app.use('*', logger())
 
-// Mount favicon proxy
-app.route('/api/favicon', faviconProxy)
 
 // Health check
 app.get('/health', (c) => {
