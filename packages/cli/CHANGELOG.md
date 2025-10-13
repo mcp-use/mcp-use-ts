@@ -1,5 +1,13 @@
 # @mcp-use/cli
 
+## 2.1.4
+
+### Patch Changes
+
+- Bump version to fix npm publish issue - version 2.1.3 was already published
+- Updated dependencies
+  - @mcp-use/inspector@0.3.4
+
 ## 2.1.3
 
 ### Patch Changes

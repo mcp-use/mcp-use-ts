@@ -1,5 +1,11 @@
 # @mcp-use/inspector
 
+## 0.3.4
+
+### Patch Changes
+
+- Bump version to fix npm publish issue - version 0.3.3 was already published
+
 ## 0.3.3
 
 ### Patch Changes
