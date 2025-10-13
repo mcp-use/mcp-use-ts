@@ -299,7 +299,6 @@ Make sure all packages are in the workspace config (`pnpm-workspace.yaml`):
 ```yaml
 packages:
   - 'packages/*'
-  - 'test_app'
 ```
 
 ### "Package is not published"
