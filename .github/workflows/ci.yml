@@ -112,7 +112,7 @@ jobs:
         run: |
           if [ -n "$(ls -A .changeset/*.md 2>/dev/null | grep -v README.md)" ]; then
             echo "✅ Changeset found"
-            pnpm version:check
+            pnpm changeset status --since=origin/main
           else
             echo "⚠️ No changeset found. If this PR includes changes that should be published, please add a changeset:"
             echo "  pnpm changeset"
