@@ -1,137 +1,59 @@
 {
-  "name": "mcp-use",
+  "name": "mcp-use-monorepo",
+  "version": "1.0.0",
+  "private": true,
   "type": "module",
-  "version": "0.2.0",
-  "packageManager": "pnpm@10.6.1",
-  "description": "A utility library for integrating Model Context Protocol (MCP) with LangChain, Zod, and related tools. Provides helpers for schema conversion, event streaming, and SDK usage.",
-  "author": "mcp-use, Inc.",
-  "license": "MIT",
-  "homepage": "https://github.com/mcp-use/mcp-use-ts#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mcp-use/mcp-use-ts.git"
-  },
-  "bugs": {
-    "url": "https://github.com/mcp-use/mcp-use-ts/issues"
-  },
-  "keywords": [
-    "MCP",
-    "Model Context Protocol",
-    "LangChain",
-    "Zod",
-    "schema",
-    "SDK",
-    "eventsource",
-    "AI",
-    "utility",
-    "typescript"
+  "workspaces": [
+    "packages/*"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./browser": {
-      "types": "./dist/src/browser.d.ts",
-      "import": "./dist/src/browser.js"
-    }
-  },
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "engines": {
-    "node": ">=22.0.0"
-  },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org"
-  },
   "scripts": {
-    "build": "rm -rf dist && tsc",
-    "lint": "eslint",
-    "lint:fix": "eslint --fix",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:simple": "vitest run tests/stream_events_simple.test.ts",
-    "test:integration": "vitest run tests/stream_events.test.ts",
-    "watch": "tsc --watch",
-    "start": "node dist/index.js",
-    "prepublishOnly": "npm run build",
-    "fmt": "eslint --fix",
-    "release": "npm version patch --tag-version-prefix=v && git push --follow-tags",
-    "release:minor": "npm version minor --tag-version-prefix=v && git push --follow-tags",
-    "release:major": "npm version major --tag-version-prefix=v && git push --follow-tags",
-    "prepare": "husky",
-    "example:airbnb": "npm run build && node dist/examples/airbnb_use.js",
-    "example:browser": "npm run build && node dist/examples/browser_use.js",
-    "example:chat": "npm run build && node dist/examples/chat_example.js",
-    "example:stream": "npm run build && node dist/examples/stream_example.js",
-    "example:stream_events": "npm run build && node dist/examples/stream_events_example.js",
-    "example:ai_sdk": "npm run build && node dist/examples/ai_sdk_example.js",
-    "example:filesystem": "npm run build && node dist/examples/filesystem_use.js",
-    "example:http": "npm run build && node dist/examples/http_example.js",
-    "example:everything": "npm run build && node dist/examples/mcp_everything.js",
-    "example:multi": "npm run build && node dist/examples/multi_server_example.js",
-    "example:sandbox": "npm run build && node dist/examples/sandbox_everything.js",
-    "example:oauth": "npm run build && node dist/examples/simple_oauth_example.js",
-    "example:blender": "npm run build && node dist/examples/blender_use.js",
-    "example:add_server": "npm run build && node dist/examples/add_server_tool.js",
-    "example:structured": "npm run build && node dist/examples/structured_output.js",
-    "example:observability": "npm run build && node dist/examples/observability.js"
+    "build": "pnpm run build:mcp-use && pnpm run build:other",
+    "build:mcp-use": "pnpm --filter mcp-use build",
+    "build:other": "pnpm --filter '{packages/*}' --filter '!mcp-use' build",
+    "test": "pnpm run -r test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:strict": "eslint . --max-warnings 0",
+    "dev": "pnpm run -r --parallel dev",
+    "changeset": "changeset",
+    "version": "changeset version && pnpm install --no-frozen-lockfile",
+    "release": "pnpm build && changeset publish",
+    "version:check": "changeset status"
   },
-  "peerDependencies": {
-    "langfuse": "^3.32.0",
-    "langfuse-langchain": "^3.38.4"
+  "devDependencies": {
+    "@changesets/cli": "^2.29.7",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.28.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
+    "tsup": "^8.5.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.20.0"
   },
-  "peerDependenciesMeta": {
-    "langfuse": {
-      "optional": true
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
+  },
+  "packageManager": "pnpm@10.6.1",
+  "pnpm": {
+    "patchedDependencies": {
+      "@mcp-ui/server@5.11.0": "patches/@mcp-ui__server@5.11.0.patch"
     },
-    "langfuse-langchain": {
-      "optional": true
+    "overrides": {
+      "mcp-use": "workspace:*",
+      "@mcp-use/inspector": "workspace:*",
+      "@mcp-use/cli": "workspace:*",
+      "create-mcp-use-app": "workspace:*",
+      "react": "^19.2.0",
+      "react-dom": "^19.2.0"
     }
   },
   "dependencies": {
-    "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
-    "@langchain/anthropic": "^0.3.26",
-    "@langchain/core": "^0.3.72",
-    "@langchain/openai": "^0.6.9",
-    "@modelcontextprotocol/sdk": "1.12.1",
-    "@scarf/scarf": "^1.4.0",
-    "ai": "^4.3.19",
-    "dotenv": "^16.5.0",
-    "langchain": "^0.3.27",
-    "lodash-es": "^4.17.21",
-    "posthog-node": "^5.1.1",
-    "uuid": "^11.1.0",
-    "winston": "^3.17.0",
-    "winston-transport-browserconsole": "^1.0.5",
-    "ws": "^8.18.2",
-    "zod": "^3.25.48",
-    "zod-to-json-schema": "^3.24.6"
-  },
-  "devDependencies": {
-    "@antfu/eslint-config": "^4.13.2",
-    "@types/lodash-es": "^4.17.12",
-    "@types/node": "^20.19.8",
-    "@types/ws": "^8.18.1",
-    "eslint": "^9.28.0",
-    "eslint-plugin-format": "^1.0.1",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.2.11",
-    "typescript": "^5.8.3",
-    "vitest": "^2.1.9"
-  },
-  "lint-staged": {
-    "*.{js,ts}": [
-      "eslint --fix",
-      "eslint"
-    ],
-    "*.md": [
-      "eslint --fix",
-      "eslint"
-    ]
+    "@eslint/js": "^9.37.0"
   }
 }
