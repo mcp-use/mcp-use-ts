@@ -216,7 +216,7 @@ If you want packages to always have the same version:
 ### Ignore Packages
 
 Packages already ignored (in `.changeset/config.json`):
-- `test-ui` (test application, not published)
+- add the package in `"ignore": []`
 
 ## CI/CD Integration
 

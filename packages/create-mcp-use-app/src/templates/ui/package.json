@@ -1,8 +1,8 @@
 {
-  "name": "test-ui",
+  "name": "mcp-use-server-with-mcp-ui",
   "type": "module",
   "version": "1.0.0",
-  "description": "MCP server: test-ui",
+  "description": "MCP server: mcp-use-server-with-mcp-ui",
   "author": "",
   "license": "MIT",
   "keywords": [
