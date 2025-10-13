@@ -1,5 +1,13 @@
 # mcp-use
 
+## 1.0.1
+
+### Patch Changes
+
+- 1310533: add MCP server feature to mcp-use + add mcp-use inspector + add mcp-use cli build and deployment tool + add create-mcp-use-app for scaffolding mcp-use apps
+- Updated dependencies [1310533]
+  - @mcp-use/inspector@0.3.3
+
 ## 1.0.0
 
 ### Patch Changes
