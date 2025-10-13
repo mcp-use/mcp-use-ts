@@ -1,5 +1,13 @@
 # @mcp-use/cli
 
+## 2.1.5
+
+### Patch Changes
+
+- 8e92eaa: Bump version to fix npm publish issue - version 2.1.3 was already published
+- Updated dependencies [8e92eaa]
+  - @mcp-use/inspector@0.3.5
+
 ## 2.1.4
 
 ### Patch Changes
