@@ -1,5 +1,5 @@
 import { Check, Copy, Key, MessageCircle, Send, Settings, Trash2, User } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { usePrismTheme } from '@/client/hooks/usePrismTheme'
 
@@ -8,11 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '@/components/ui/resizable'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
@@ -30,7 +25,7 @@ interface ChatTabProps {
 interface Message {
   id: string
   role: 'user' | 'assistant'
-  content: string | Array<{ index: number; type: string; text: string }>
+  content: string | Array<{ index: number, type: string, text: string }>
   timestamp: number
   toolCalls?: Array<{
     toolName: string
@@ -83,12 +78,12 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null)
   const [configDialogOpen, setConfigDialogOpen] = useState(false)
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
-  
+
   // LLM Config form state
   const [tempProvider, setTempProvider] = useState<'openai' | 'anthropic' | 'google'>('openai')
   const [tempApiKey, setTempApiKey] = useState('')
   const [tempModel, setTempModel] = useState(DEFAULT_MODELS.openai)
-  
+
   // Auth Config form state
   const [tempAuthType, setTempAuthType] = useState<'none' | 'basic' | 'bearer' | 'oauth'>('none')
   const [tempUsername, setTempUsername] = useState('')
@@ -113,7 +108,8 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
         setTempProvider(config.provider)
         setTempApiKey(config.apiKey)
         setTempModel(config.model)
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Failed to load LLM config:', error)
       }
     }
@@ -127,13 +123,18 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
         const config = JSON.parse(saved)
         setAuthConfig(config)
         setTempAuthType(config.type)
-        if (config.username) setTempUsername(config.username)
-        if (config.password) setTempPassword(config.password)
-        if (config.token) setTempToken(config.token)
-      } catch (error) {
+        if (config.username)
+          setTempUsername(config.username)
+        if (config.password)
+          setTempPassword(config.password)
+        if (config.token)
+          setTempToken(config.token)
+      }
+      catch (error) {
         console.error('Failed to load auth config:', error)
       }
-    } else {
+    }
+    else {
       // Check if OAuth tokens exist for this server
       try {
         const storageKeyPrefix = 'mcp:auth'
@@ -147,7 +148,8 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
           setTempAuthType('oauth')
           console.log('Auto-detected OAuth tokens for this MCP server')
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Failed to check for OAuth tokens:', error)
       }
     }
@@ -163,13 +165,13 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
       return
     }
 
-    const llmConfig: LLMConfig = {
+    const newLlmConfig: LLMConfig = {
       provider: tempProvider,
       apiKey: tempApiKey,
       model: tempModel,
     }
 
-    const authConfig: AuthConfig = {
+    const newAuthConfig: AuthConfig = {
       type: tempAuthType,
       ...(tempAuthType === 'basic' && {
         username: tempUsername.trim(),
@@ -180,10 +182,10 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
       }),
     }
 
-    setLLMConfig(llmConfig)
-    setAuthConfig(authConfig)
-    localStorage.setItem('mcp-inspector-llm-config', JSON.stringify(llmConfig))
-    localStorage.setItem('mcp-inspector-auth-config', JSON.stringify(authConfig))
+    setLLMConfig(newLlmConfig)
+    setAuthConfig(newAuthConfig)
+    localStorage.setItem('mcp-inspector-llm-config', JSON.stringify(newLlmConfig))
+    localStorage.setItem('mcp-inspector-auth-config', JSON.stringify(newAuthConfig))
     setConfigDialogOpen(false)
   }, [tempProvider, tempApiKey, tempModel, tempAuthType, tempUsername, tempPassword, tempToken])
 
@@ -234,10 +236,12 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
               oauthTokens: tokens,
             }
             console.log('Retrieved OAuth tokens from localStorage')
-          } else {
+          }
+          else {
             console.warn('No OAuth tokens found in localStorage for key:', storageKey)
           }
-        } catch (error) {
+        }
+        catch (error) {
           console.warn('Failed to retrieve OAuth tokens:', error)
         }
       }
@@ -248,7 +252,8 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
         if (authConfigWithTokens.type === 'oauth' && authConfigWithTokens.oauthTokens) {
           console.log('OAuth token present:', !!authConfigWithTokens.oauthTokens.access_token)
         }
-      } else {
+      }
+      else {
         console.log('No auth config - attempting connection without authentication')
       }
 
@@ -284,7 +289,8 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
       }
 
       setMessages(prev => [...prev, assistantMessage])
-    } catch (error) {
+    }
+    catch (error) {
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         role: 'assistant',
@@ -292,7 +298,8 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
         timestamp: Date.now(),
       }
       setMessages(prev => [...prev, errorMessage])
-    } finally {
+    }
+    finally {
       setIsLoading(false)
     }
   }, [inputValue, llmConfig, isConnected, mcpServerUrl, messages])
@@ -307,16 +314,17 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
   const copyMessage = useCallback(async (messageId: string, content: any) => {
     try {
       // Handle different content formats
-      const textContent = typeof content === 'string' 
-        ? content 
-        : Array.isArray(content) 
+      const textContent = typeof content === 'string'
+        ? content
+        : Array.isArray(content)
           ? content.map(item => typeof item === 'string' ? item : item.text || JSON.stringify(item)).join('')
           : JSON.stringify(content)
-      
+
       await navigator.clipboard.writeText(textContent)
       setCopiedMessageId(messageId)
       setTimeout(() => setCopiedMessageId(null), 2000)
-    } catch (err) {
+    }
+    catch (err) {
       console.error('Failed to copy:', err)
     }
   }, [])
@@ -334,7 +342,10 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
           <h3 className="text-lg font-semibold">Chat with MCP Agent</h3>
           {llmConfig && (
             <Badge variant="outline" className="ml-2">
-              {llmConfig.provider} / {llmConfig.model}
+              {llmConfig.provider}
+              {' '}
+              /
+              {llmConfig.model}
             </Badge>
           )}
         </div>
@@ -422,7 +433,7 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
                       <SelectItem value="bearer">Bearer Token</SelectItem>
                     </SelectContent>
                   </Select>
-                  
+
                   {tempAuthType === 'basic' && (
                     <div className="space-y-2">
                       <Input
@@ -438,7 +449,7 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
                       />
                     </div>
                   )}
-                  
+
                   {tempAuthType === 'bearer' && (
                     <Input
                       type="password"
@@ -447,12 +458,12 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
                       onChange={e => setTempToken(e.target.value)}
                     />
                   )}
-                  
+
                   {tempAuthType === 'oauth' && (
                     <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                       <p className="font-medium">OAuth Authentication</p>
                       <p className="text-xs mt-1">
-                        This will use the same OAuth flow as the Inspector's main connection. 
+                        This will use the same OAuth flow as the Inspector's main connection.
                         If the MCP server requires OAuth, the Inspector will handle the authentication automatically.
                       </p>
                       {oauthState === 'authenticating' && (
@@ -463,7 +474,9 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
                       )}
                       {oauthState === 'failed' && oauthError && (
                         <div className="mt-2 text-xs text-destructive">
-                          Auth failed: {oauthError}
+                          Auth failed:
+                          {' '}
+                          {oauthError}
                         </div>
                       )}
                     </div>
@@ -518,12 +531,12 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
             </p>
           </div>
         ) : (
-          messages.map((message) => (
+          messages.map(message => (
             <div
               key={message.id}
               className={cn(
                 'flex gap-3',
-                message.role === 'user' ? 'justify-end' : 'justify-start'
+                message.role === 'user' ? 'justify-end' : 'justify-start',
               )}
             >
               {message.role === 'assistant' && (
@@ -536,21 +549,20 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
                   'max-w-[80%] rounded-lg p-3',
                   message.role === 'user'
                     ? 'bg-blue-500 text-white'
-                    : 'bg-zinc-100 dark:bg-zinc-800'
+                    : 'bg-zinc-100 dark:bg-zinc-800',
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
-                    {typeof message.content === 'string' 
-                      ? message.content 
-                      : Array.isArray(message.content) 
-                        ? message.content.map((item, idx) => 
-                            typeof item === 'string' 
-                              ? item 
-                              : item.text || JSON.stringify(item)
+                    {typeof message.content === 'string'
+                      ? message.content
+                      : Array.isArray(message.content)
+                        ? message.content.map((item, idx) =>
+                            typeof item === 'string'
+                              ? item
+                              : item.text || JSON.stringify(item),
                           ).join('')
-                        : JSON.stringify(message.content)
-                    }
+                        : JSON.stringify(message.content)}
                   </div>
                   <Button
                     variant="ghost"
@@ -558,14 +570,16 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
                     onClick={() => copyMessage(message.id, message.content)}
                     className={cn(
                       'h-6 w-6 p-0 flex-shrink-0',
-                      message.role === 'user' ? 'hover:bg-blue-600' : ''
+                      message.role === 'user' ? 'hover:bg-blue-600' : '',
                     )}
                   >
-                    {copiedMessageId === message.id ? (
-                      <Check className="h-3 w-3" />
-                    ) : (
-                      <Copy className="h-3 w-3" />
-                    )}
+                    {copiedMessageId === message.id
+                      ? (
+                          <Check className="h-3 w-3" />
+                        )
+                      : (
+                          <Copy className="h-3 w-3" />
+                        )}
                   </Button>
                 </div>
 
@@ -576,7 +590,11 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
                     {message.toolCalls.map((toolCall, idx) => (
                       <details key={idx} className="text-xs">
                         <summary className="cursor-pointer hover:opacity-80 font-mono">
-                          {toolCall.toolName}({Object.keys(toolCall.args).length} args)
+                          {toolCall.toolName}
+                          (
+                          {Object.keys(toolCall.args).length}
+                          {' '}
+                          args)
                         </summary>
                         <div className="mt-2 p-2 bg-black/10 dark:bg-white/10 rounded">
                           <SyntaxHighlighter
@@ -631,7 +649,7 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isConnected ? "Ask a question or request an action..." : "Server not connected"}
+              placeholder={isConnected ? 'Ask a question or request an action...' : 'Server not connected'}
               className="resize-none"
               rows={2}
               disabled={!isConnected || isLoading}
@@ -649,4 +667,3 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
     </div>
   )
 }
-

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useMcp } from 'mcp-use/react'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 interface MCPConnection {
   id: string
@@ -93,7 +93,42 @@ function McpConnectionWrapper({ url, name, proxyConfig, onUpdate, onRemove: _onR
   useEffect(() => {
     // Use queueMicrotask to defer state updates and avoid React warnings
     // about updating one component while rendering another
-    queueMicrotask(() => {
+    if (typeof queueMicrotask !== 'undefined') {
+      queueMicrotask(() => {
+        const connection: MCPConnection = {
+          id: url,
+          url,
+          name,
+          state: mcpHook.state,
+          tools: mcpHook.tools,
+          resources: mcpHook.resources,
+          prompts: mcpHook.prompts,
+          error: mcpHook.error ?? null,
+          authUrl: mcpHook.authUrl ?? null,
+          callTool: mcpHook.callTool,
+          readResource: mcpHook.readResource,
+          authenticate: mcpHook.authenticate,
+          retry: mcpHook.retry,
+          clearStorage: mcpHook.clearStorage,
+        }
+
+        // Only update if something actually changed
+        const prev = prevConnectionRef.current
+        if (!prev
+          || prev.state !== connection.state
+          || prev.error !== connection.error
+          || prev.authUrl !== connection.authUrl
+          || prev.tools.length !== connection.tools.length
+          || prev.resources.length !== connection.resources.length
+          || prev.prompts.length !== connection.prompts.length
+        ) {
+          prevConnectionRef.current = connection
+          onUpdateRef.current(connection)
+        }
+      })
+    }
+    else {
+      // Fallback for environments without queueMicrotask
       const connection: MCPConnection = {
         id: url,
         url,
@@ -124,7 +159,7 @@ function McpConnectionWrapper({ url, name, proxyConfig, onUpdate, onRemove: _onR
         prevConnectionRef.current = connection
         onUpdateRef.current(connection)
       }
-    })
+    }
   }, [
     url,
     name,
@@ -247,7 +282,7 @@ export function McpProvider({ children }: { children: ReactNode }) {
   }), [connections, addConnection, removeConnection, getConnection])
 
   return (
-    <McpContext.Provider value={contextValue}>
+    <McpContext value={contextValue}>
       {savedConnections.map(saved => (
         <McpConnectionWrapper
           key={saved.id}
@@ -259,12 +294,12 @@ export function McpProvider({ children }: { children: ReactNode }) {
         />
       ))}
       {children}
-    </McpContext.Provider>
+    </McpContext>
   )
 }
 
 export function useMcpContext() {
-  const context = useContext(McpContext)
+  const context = use(McpContext)
   if (!context) {
     throw new Error('useMcpContext must be used within McpProvider')
   }

@@ -39,7 +39,7 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('resources')
   const [previewMode, setPreviewMode] = useState(true)
-  const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchInputRef = useRef<globalThis.HTMLInputElement>(null)
 
   // Auto-focus the search input when the component mounts
   useEffect(() => {
@@ -101,7 +101,7 @@ export function ResourcesTab({ resources, readResource, isConnected }: Resources
   const handleDownloadResult = useCallback((index: number) => {
     const result = results[index]
     const resultText = result.error ? result.error : JSON.stringify(result.result, null, 2)
-    const blob = new Blob([resultText], { type: 'text/plain' })
+    const blob = new globalThis.Blob([resultText], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

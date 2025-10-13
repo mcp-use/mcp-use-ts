@@ -148,8 +148,8 @@ export async function buildWidgets(projectPath: string, watch = false) {
         },
         plugins: [{
           name: 'html-writer',
-          setup(build) {
-            build.onEnd(async () => {
+          setup(buildPlugin) {
+            buildPlugin.onEnd(async () => {
               try {
                 const files = await fs.readdir(path.join(pageOutDir, 'assets'))
                 const mainJs = files.find(f => f.startsWith(`${baseName}-`) && f.endsWith('.js'))

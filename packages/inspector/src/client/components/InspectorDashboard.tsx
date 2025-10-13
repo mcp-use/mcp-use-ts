@@ -1,6 +1,6 @@
 import type { CustomHeader } from './CustomHeadersEditor'
 import { CircleMinus, Cog, Copy, FileText, RotateCcw, Shield } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -222,7 +222,7 @@ export function InspectorDashboard() {
               >
                 <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors">
                   v
-                  {__INSPECTOR_VERSION__}
+                  {typeof window !== 'undefined' && (window as any).__INSPECTOR_VERSION__ || '1.0.0'}
                 </Badge>
               </a>
             </TooltipTrigger>

@@ -1,7 +1,8 @@
 'use client'
 
+import type { FormEvent, ReactNode } from 'react'
+import { AlertCircle, CheckCircle, Loader2, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { Plus, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Button } from './button'
 import {
@@ -14,13 +15,12 @@ import {
 } from './dialog'
 import { Input } from './input'
 import { Label } from './label'
-import { Textarea } from './textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
-import { Badge } from './badge'
+import { Textarea } from './textarea'
 
 interface AddServerDialogProps {
-  onServerAdded: (server: { id: string; name: string; url: string; type: string; color?: string }) => void
-  children?: React.ReactNode
+  onServerAdded: (server: { id: string, name: string, url: string, type: string, color?: string }) => void
+  children?: ReactNode
 }
 
 interface ServerFormData {
@@ -35,7 +35,7 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
-  
+
   const [formData, setFormData] = useState<ServerFormData>({
     name: '',
     url: '',
@@ -59,14 +59,15 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
     if (!formData.url.trim()) {
       return 'Server URL is required'
     }
-    
+
     // Basic URL validation
     try {
       new URL(formData.url)
-    } catch {
+    }
+    catch {
       return 'Please enter a valid URL'
     }
-    
+
     return null
   }
 
@@ -78,34 +79,36 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
 
       // Import MCP client dynamically
       const { MCPClient } = await import('mcp-use/browser')
-      
+
       // Create a temporary client to test the connection
       const testClient = MCPClient.fromDict({
         mcpServers: {
           test: {
             [formData.type === 'websocket' ? 'ws_url' : 'url']: formData.url,
-          }
-        }
+          },
+        },
       })
 
       // Try to create a session (this will test the connection)
       await testClient.createSession('test', true)
-      
+
       setConnectionStatus('success')
       return true
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Connection test failed:', error)
       setConnectionStatus('error')
       setErrorMessage(error instanceof Error ? error.message : 'Connection failed')
       return false
-    } finally {
+    }
+    finally {
       setIsConnecting(false)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    
+
     const validationError = validateForm()
     if (validationError) {
       setErrorMessage(validationError)
@@ -123,7 +126,7 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
     const id = `server-${Date.now()}`
     const colors = [
       'oklch(0.6 0.2 120)',
-      'oklch(0.5 0.3 200)', 
+      'oklch(0.5 0.3 200)',
       'oklch(0.7 0.2 60)',
       'oklch(0.6 0.25 300)',
       'oklch(0.5 0.2 180)',
@@ -174,7 +177,7 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
           </Button>
         )}
       </DialogTrigger>
-      
+
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Server</DialogTitle>
@@ -191,9 +194,9 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
               id="server-name"
               placeholder="e.g., Linear, GitHub, etc."
               value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              onChange={e => handleInputChange('name', e.target.value)}
               className={cn(
-                connectionStatus === 'error' && !formData.name.trim() && 'border-red-500'
+                connectionStatus === 'error' && !formData.name.trim() && 'border-red-500',
               )}
             />
           </div>
@@ -222,16 +225,15 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
               id="server-url"
               placeholder={formData.type === 'websocket' ? 'ws://localhost:3000' : 'http://localhost:3000'}
               value={formData.url}
-              onChange={(e) => handleInputChange('url', e.target.value)}
+              onChange={e => handleInputChange('url', e.target.value)}
               className={cn(
-                connectionStatus === 'error' && !formData.url.trim() && 'border-red-500'
+                connectionStatus === 'error' && !formData.url.trim() && 'border-red-500',
               )}
             />
             <p className="text-xs text-muted-foreground">
-              {formData.type === 'websocket' 
+              {formData.type === 'websocket'
                 ? 'WebSocket URL (e.g., ws://localhost:3000)'
-                : 'HTTP URL (e.g., http://localhost:3000)'
-              }
+                : 'HTTP URL (e.g., http://localhost:3000)'}
             </p>
           </div>
 
@@ -242,7 +244,7 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
               id="server-description"
               placeholder="Brief description of this server..."
               value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={e => handleInputChange('description', e.target.value)}
               rows={2}
             />
           </div>
@@ -252,18 +254,20 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
             <div className={cn(
               'flex items-center gap-2 p-3 rounded-lg text-sm',
               connectionStatus === 'success' && 'bg-green-50 text-green-700 border border-green-200',
-              connectionStatus === 'error' && 'bg-red-50 text-red-700 border border-red-200'
-            )}>
-              {connectionStatus === 'success' ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertCircle className="h-4 w-4" />
-              )}
+              connectionStatus === 'error' && 'bg-red-50 text-red-700 border border-red-200',
+            )}
+            >
+              {connectionStatus === 'success'
+                ? (
+                    <CheckCircle className="h-4 w-4" />
+                  )
+                : (
+                    <AlertCircle className="h-4 w-4" />
+                  )}
               <span>
-                {connectionStatus === 'success' 
-                  ? 'Connection successful!' 
-                  : errorMessage || 'Connection failed'
-                }
+                {connectionStatus === 'success'
+                  ? 'Connection successful!'
+                  : errorMessage || 'Connection failed'}
               </span>
             </div>
           )}
@@ -283,17 +287,19 @@ export function AddServerDialog({ onServerAdded, children }: AddServerDialogProp
               disabled={isConnecting || !formData.name.trim() || !formData.url.trim()}
               className="flex items-center gap-2"
             >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Testing Connection...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4" />
-                  Add Server
-                </>
-              )}
+              {isConnecting
+                ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Testing Connection...
+                    </>
+                  )
+                : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Add Server
+                    </>
+                  )}
             </Button>
           </div>
         </form>

@@ -58,7 +58,7 @@ export function ToolsTab({ tools, callTool, isConnected }: ToolsTabProps) {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [requestName, setRequestName] = useState('')
   const [previewMode, setPreviewMode] = useState(true)
-  const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
 
   // Load saved requests from localStorage on mount
   useEffect(() => {

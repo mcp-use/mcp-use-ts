@@ -64,14 +64,14 @@ function DiscordIcon({ className }: { className?: string }) {
 
 // Pulsing emerald dot component
 function StatusDot({ status }: { status: string }) {
-  const getStatusInfo = (status: string) => {
-    switch (status) {
+  const getStatusInfo = (statusValue: string) => {
+    switch (statusValue) {
       case 'ready':
         return { color: 'bg-emerald-500', ringColor: 'ring-emerald-500', tooltip: 'Connected' }
       case 'failed':
         return { color: 'bg-red-500', ringColor: 'ring-red-500', tooltip: 'Failed' }
       default:
-        return { color: 'bg-yellow-500', ringColor: 'ring-yellow-500', tooltip: status }
+        return { color: 'bg-yellow-500', ringColor: 'ring-yellow-500', tooltip: statusValue }
     }
   }
 
@@ -323,7 +323,7 @@ export function Layout({ children }: LayoutProps) {
 
   // Handle keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       // Cmd+K or Ctrl+K to open command palette
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault()

@@ -76,7 +76,7 @@ export function ServerIcon({
         for (const currentDomain of domainsToTry) {
           for (const serviceTemplate of faviconServices) {
             try {
-              const faviconUrl = serviceTemplate.replace('{domain}', currentDomain)
+              const currentFaviconUrl = serviceTemplate.replace('{domain}', currentDomain)
 
               // Create a timeout promise
               const timeoutPromise = new Promise<never>((_, reject) => {
@@ -85,12 +85,12 @@ export function ServerIcon({
 
               // Race between fetch and timeout
               const response = await Promise.race([
-                fetch(faviconUrl),
+                fetch(currentFaviconUrl),
                 timeoutPromise,
               ])
 
               if (response.ok) {
-                setFaviconUrl(faviconUrl)
+                setFaviconUrl(currentFaviconUrl)
                 return
               }
             }
