@@ -1,5 +1,11 @@
 # create-mcp-use-app
 
+## 0.3.2
+
+### Patch Changes
+
+- 1310533: add MCP server feature to mcp-use + add mcp-use inspector + add mcp-use cli build and deployment tool + add create-mcp-use-app for scaffolding mcp-use apps
+
 ## 0.3.1
 
 ### Patch Changes
