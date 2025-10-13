@@ -34,7 +34,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "copy-templates": "node scripts/copy-templates.js",
     "dev": "tsc --build --watch",
-    "test": "vitest",
+    "test": "vitest --run --passWithNoTests",
     "lint": "eslint ."
   },
   "files": [
