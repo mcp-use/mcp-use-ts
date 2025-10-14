@@ -12,7 +12,5 @@ export {
   createRawHtmlResource,
   createRemoteDomResource,
   createUIResourceFromDefinition,
-  generateWidgetHtml,
-  generateRemoteDomScript,
   type UrlConfig
 } from './adapters/mcp-ui-adapter.js'

@@ -12,10 +12,12 @@ import {
   createRawHtmlResource,
   createRemoteDomResource,
   createUIResourceFromDefinition,
-  generateWidgetHtml,
-  generateRemoteDomScript,
   type UrlConfig
 } from '../src/server/adapters/mcp-ui-adapter.js'
+import {
+  generateWidgetHtml,
+  generateRemoteDomScript
+} from './helpers/widget-generators.js'
 import type {
   ExternalUrlUIResource,
   RawHtmlUIResource,
