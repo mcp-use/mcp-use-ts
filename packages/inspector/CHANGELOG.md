@@ -1,5 +1,13 @@
 # @mcp-use/inspector
 
+## 0.3.7
+
+### Patch Changes
+
+- fix: export server from mcp-use/server due to edge runtime
+- Updated dependencies
+  - mcp-use@1.0.3
+
 ## 0.3.6
 
 ### Patch Changes

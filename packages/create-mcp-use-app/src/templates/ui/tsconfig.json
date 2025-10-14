@@ -3,7 +3,7 @@
     "target": "ES2022",
     "jsx": "react-jsx",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowJs": true,
     "strict": true,
     "declaration": true,
