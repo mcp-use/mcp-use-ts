@@ -1,10 +1,8 @@
 import { MCPAgent } from './src/agents/mcp_agent.js'
 import { RemoteAgent } from './src/agents/remote.js'
 import { MCPClient } from './src/client.js'
-import { loadConfigFile } from './src/config.js'
 import { BaseConnector } from './src/connectors/base.js'
 import { HttpConnector } from './src/connectors/http.js'
-import { StdioConnector } from './src/connectors/stdio.js'
 import { WebSocketConnector } from './src/connectors/websocket.js'
 
 import { Logger, logger } from './src/logging.js'
@@ -20,19 +18,9 @@ export * from './src/managers/tools/index.js'
 // Export observability utilities
 export { type ObservabilityConfig, ObservabilityManager } from './src/observability/index.js'
 
-// Export server utilities
-export { createMCPServer } from './src/server/index.js'
+// Note: Server utilities (createMCPServer, ServerConfig, etc.) are available via 'mcp-use/server'
+// This keeps the root export client-safe for edge environments like Cloudflare Workers
 
-export type {
-  InputDefinition,
-  PromptDefinition,
-  PromptHandler,
-  ResourceDefinition,
-  ResourceHandler,
-  ServerConfig,
-  ToolDefinition,
-  ToolHandler,
-} from './src/server/types.js'
 // Export telemetry utilities
 export { setTelemetrySource, Telemetry } from './src/telemetry/index.js'
 
@@ -53,4 +41,4 @@ export { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from
 // Re-export StreamEvent type from LangChain for convenience
 export type { StreamEvent } from '@langchain/core/tracers/log_stream'
 
-export { BaseConnector, HttpConnector, loadConfigFile, Logger, logger, MCPAgent, MCPClient, MCPSession, RemoteAgent, StdioConnector, WebSocketConnector }
+export { BaseConnector, HttpConnector, Logger, logger, MCPAgent, MCPClient, MCPSession, RemoteAgent, WebSocketConnector }

@@ -21,7 +21,7 @@ A web-based interface for connecting to and managing MCP (Model Context Protocol
 The inspector is automatically available when you create an MCP server:
 
 ```typescript
-import { createMCPServer } from 'mcp-use'
+import { createMCPServer } from 'mcp-use/server'
 
 const server = createMCPServer('my-server', {
   version: '1.0.0',
