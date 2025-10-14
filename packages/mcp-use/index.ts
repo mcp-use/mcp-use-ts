@@ -34,6 +34,9 @@ export type {
   ToolHandler,
   // UIResource specific types
   UIResourceDefinition,
+  ExternalUrlUIResource,
+  RawHtmlUIResource,
+  RemoteDomUIResource,
   WidgetProps,
   WidgetConfig,
   WidgetManifest,
