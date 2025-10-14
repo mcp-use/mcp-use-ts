@@ -4,13 +4,17 @@ import type {
   ResourceTemplateDefinition,
   ServerConfig,
   ToolDefinition,
-} from './types.js'
+  UIResourceDefinition,
+  WidgetProps,
+  InputDefinition,
+} from './types/index.js'
 import { McpServer as OfficialMcpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import express, { type Express } from 'express'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { requestLogger } from './logging.js'
+import { createUIResource } from '@mcp-ui/server'
 
 export class McpServer {
   private server: OfficialMcpServer
@@ -289,6 +293,210 @@ export class McpServer {
       },
     )
     return this
+  }
+
+  /**
+   * Register a UI widget as both a tool and a resource
+   *
+   * Creates a unified interface for MCP-UI compatible widgets that can be accessed
+   * either as tools (with parameters) or as resources (static access). The tool
+   * allows dynamic parameter passing while the resource provides discoverable access.
+   *
+   * @param definition - Configuration for the UI widget
+   * @param definition.name - Unique identifier for the resource
+   * @param definition.widget - Widget name (matches directory in dist/resources/mcp-use/widgets)
+   * @param definition.title - Human-readable title for the widget
+   * @param definition.description - Description of the widget's functionality
+   * @param definition.props - Widget properties configuration with types and defaults
+   * @param definition.size - Preferred iframe size [width, height] (e.g., ['800px', '600px'])
+   * @param definition.annotations - Resource annotations for discovery
+   * @returns The server instance for method chaining
+   *
+   * @example
+   * ```typescript
+   * server.uiResource({
+   *   name: 'kanban-board',
+   *   widget: 'kanban-board',
+   *   title: 'Kanban Board',
+   *   description: 'Interactive task management board',
+   *   props: {
+   *     initialTasks: {
+   *       type: 'array',
+   *       description: 'Initial tasks to display',
+   *       required: false
+   *     },
+   *     theme: {
+   *       type: 'string',
+   *       default: 'light'
+   *     }
+   *   },
+   *   size: ['900px', '600px']
+   * })
+   * ```
+   */
+  uiResource(definition: UIResourceDefinition): this {
+    // Register the tool - returns UIResource with parameters
+    this.tool({
+      name: `ui_${definition.widget}`,
+      description: definition.description || `Display ${definition.widget} widget`,
+      inputs: this.convertPropsToInputs(definition.props),
+      fn: async (params) => {
+        // Create the UIResource with user-provided params
+        const uiResource = this.createWidgetUIResource(
+          definition.widget,
+          params,
+          definition.size
+        )
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Displaying ${definition.title || definition.widget} widget`
+            },
+            uiResource  // Reuse the same UIResource
+          ]
+        }
+      }
+    })
+
+    // Register the resource - returns widget URL for MCP clients
+    this.resource({
+      name: definition.name,
+      uri: `ui://widget/${definition.widget}`,
+      title: definition.title,
+      description: definition.description,
+      mimeType: 'text/uri-list',
+      annotations: definition.annotations,
+      fn: async () => {
+        // Build the widget URL with default props
+        const widgetUrl = this.buildWidgetUrl(
+          definition.widget,
+          this.applyDefaultProps(definition.props)
+        )
+
+        return {
+          contents: [{
+            uri: `ui://widget/${definition.widget}`,
+            mimeType: 'text/uri-list',
+            text: widgetUrl
+          }]
+        }
+      }
+    })
+
+    return this
+  }
+
+  /**
+   * Create a UIResource object for a widget with the given parameters
+   *
+   * This method is shared between tool and resource handlers to avoid duplication.
+   * It creates a consistent UIResource structure that can be rendered by MCP-UI
+   * compatible clients.
+   *
+   * @private
+   * @param widget - Widget name/identifier
+   * @param params - Parameters to pass to the widget via URL
+   * @param size - Optional preferred frame size [width, height]
+   * @returns UIResource object compatible with MCP-UI
+   */
+  private createWidgetUIResource(
+    widget: string,
+    params: Record<string, any>,
+    size?: [string, string]
+  ): any {
+    const iframeUrl = this.buildWidgetUrl(widget, params)
+
+    return createUIResource({
+      uri: `ui://widget/${widget}` as any,
+      content: {
+        type: 'externalUrl',
+        iframeUrl
+      },
+      encoding: 'text',
+      uiMetadata: size ? {
+        'preferred-frame-size': size
+      } : undefined
+    })
+  }
+
+  /**
+   * Build a complete URL for a widget including query parameters
+   *
+   * Constructs the full URL to access a widget's iframe, encoding any provided
+   * parameters as query string parameters. Complex objects are JSON-stringified
+   * for transmission.
+   *
+   * @private
+   * @param widget - Widget name/identifier
+   * @param params - Parameters to encode in the URL
+   * @returns Complete URL with encoded parameters
+   */
+  private buildWidgetUrl(widget: string, params: Record<string, any>): string {
+    const baseUrl = `http://localhost:${this.serverPort}/mcp-use/widgets/${widget}`
+
+    if (Object.keys(params).length === 0) {
+      return baseUrl
+    }
+
+    const queryParams = new URLSearchParams()
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        if (typeof value === 'object') {
+          queryParams.append(key, JSON.stringify(value))
+        } else {
+          queryParams.append(key, String(value))
+        }
+      }
+    }
+
+    return `${baseUrl}?${queryParams.toString()}`
+  }
+
+  /**
+   * Convert widget props definition to tool input schema
+   *
+   * Transforms the widget props configuration into the format expected by
+   * the tool registration system, mapping types and handling defaults.
+   *
+   * @private
+   * @param props - Widget props configuration
+   * @returns Array of InputDefinition objects for tool registration
+   */
+  private convertPropsToInputs(props?: WidgetProps): InputDefinition[] {
+    if (!props) return []
+
+    return Object.entries(props).map(([name, prop]) => ({
+      name,
+      type: prop.type,
+      description: prop.description,
+      required: prop.required,
+      default: prop.default
+    }))
+  }
+
+  /**
+   * Apply default values to widget props
+   *
+   * Extracts default values from the props configuration to use when
+   * the resource is accessed without parameters.
+   *
+   * @private
+   * @param props - Widget props configuration
+   * @returns Object with default values for each prop
+   */
+  private applyDefaultProps(props?: WidgetProps): Record<string, any> {
+    if (!props) return {}
+
+    const defaults: Record<string, any> = {}
+    for (const [key, prop] of Object.entries(props)) {
+      if (prop.default !== undefined) {
+        defaults[key] = prop.default
+      }
+    }
+    return defaults
   }
 
   /**

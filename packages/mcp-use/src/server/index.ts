@@ -1,13 +1,6 @@
-export { 
-  createMCPServer
+export {
+  createMCPServer,
+  type McpServerInstance
 } from './mcp-server.js'
-export type {
-  InputDefinition,
-  PromptDefinition,
-  PromptHandler,
-  ResourceDefinition,
-  ResourceHandler,
-  ServerConfig,
-  ToolDefinition,
-  ToolHandler,
-} from './types.js'
+
+export * from './types/index.js'

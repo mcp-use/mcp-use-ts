@@ -32,6 +32,12 @@ export type {
   ServerConfig,
   ToolDefinition,
   ToolHandler,
+  // UIResource specific types
+  UIResourceDefinition,
+  WidgetProps,
+  WidgetConfig,
+  WidgetManifest,
+  DiscoverWidgetsOptions,
 } from './src/server/types.js'
 // Export telemetry utilities
 export { setTelemetrySource, Telemetry } from './src/telemetry/index.js'
