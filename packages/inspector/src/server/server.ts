@@ -1,17 +1,14 @@
 import { exec } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import faviconProxy from './favicon-proxy.js'
 import { MCPInspector } from './mcp-inspector.js'
+import { checkClientFiles, getClientDistPath, getContentType, handleChatRequest } from './shared-utils.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 const execAsync = promisify(exec)
 
 // Check if a specific port is available
@@ -32,9 +29,6 @@ const app = new Hono()
 // Middleware
 app.use('*', cors())
 app.use('*', logger())
-
-// Mount favicon proxy
-app.route('/api/favicon', faviconProxy)
 
 // Health check
 app.get('/health', (c) => {
@@ -133,11 +127,99 @@ app.delete('/api/servers/:id', async (c) => {
   }
 })
 
+// Chat API endpoint - handles MCP agent chat with custom LLM key
+app.post('/inspector/api/chat', async (c) => {
+  try {
+    const requestBody = await c.req.json()
+    const result = await handleChatRequest(requestBody)
+    return c.json(result)
+  }
+  catch (error) {
+    console.error('Chat API error:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to process chat request',
+    }, 500)
+  }
+})
+
+// MCP Proxy endpoint - proxies MCP requests to target servers
+app.all('/inspector/api/proxy/*', async (c) => {
+  try {
+    const targetUrl = c.req.header('X-Target-URL')
+    const proxyToken = c.req.header('X-Proxy-Token')
+
+    if (!targetUrl) {
+      return c.json({ error: 'X-Target-URL header is required' }, 400)
+    }
+
+    // Validate proxy token if provided
+    if (proxyToken && proxyToken !== 'c96aeb0c195aa9c7d3846b90aec9bc5fcdd5df97b3049aaede8f5dd1a15d2d87') {
+      return c.json({ error: 'Invalid proxy token' }, 401)
+    }
+
+    // Forward the request to the target MCP server
+    const method = c.req.method
+    const headers: Record<string, string> = {}
+
+    // Copy relevant headers, excluding proxy-specific ones
+    const requestHeaders = c.req.header()
+    for (const [key, value] of Object.entries(requestHeaders)) {
+      if (!key.toLowerCase().startsWith('x-proxy-')
+        && !key.toLowerCase().startsWith('x-target-')
+        && key.toLowerCase() !== 'host') {
+        headers[key] = value
+      }
+    }
+
+    // Set the target URL as the host
+    try {
+      const targetUrlObj = new URL(targetUrl)
+      headers.Host = targetUrlObj.host
+    }
+    catch {
+      return c.json({ error: 'Invalid target URL' }, 400)
+    }
+
+    const body = method !== 'GET' && method !== 'HEAD' ? await c.req.arrayBuffer() : undefined
+
+    const response = await fetch(targetUrl, {
+      method,
+      headers,
+      body: body ? new Uint8Array(body) : undefined,
+    })
+
+    // Forward the response
+    const responseHeaders: Record<string, string> = {}
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value
+    })
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+    })
+  }
+  catch (error) {
+    console.error('Proxy error:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to proxy request',
+    }, 500)
+  }
+})
+
+// Inspector config endpoint
+app.get('/inspector/config.json', (c) => {
+  return c.json({
+    autoConnectUrl: null,
+  })
+})
+
 // Check if we're in development mode (Vite dev server running)
 const isDev = process.env.NODE_ENV === 'development' || process.env.VITE_DEV === 'true'
 
 // Serve static assets from the built client
-const clientDistPath = join(__dirname, '../../dist/client')
+const clientDistPath = getClientDistPath()
 
 if (isDev) {
   // Development mode: proxy client requests to Vite dev server
@@ -147,8 +229,8 @@ if (isDev) {
   app.get('*', async (c) => {
     const path = c.req.path
 
-    // Skip API routes
-    if (path.startsWith('/api/')) {
+    // Skip API routes - both /api/ and /inspector/api/
+    if (path.startsWith('/api/') || path.startsWith('/inspector/api/') || path === '/inspector/config.json') {
       return c.notFound()
     }
 
@@ -188,7 +270,7 @@ if (isDev) {
     `)
   })
 }
-else if (existsSync(clientDistPath)) {
+else if (checkClientFiles(clientDistPath)) {
   // Production mode: serve static assets from built client
   // Serve static assets from /inspector/assets/* (matching Vite's base path)
   app.get('/inspector/assets/*', async (c) => {
@@ -199,15 +281,8 @@ else if (existsSync(clientDistPath)) {
       const content = await import('node:fs').then(fs => fs.readFileSync(fullPath))
 
       // Set appropriate content type based on file extension
-      if (path.endsWith('.js')) {
-        c.header('Content-Type', 'application/javascript')
-      }
-      else if (path.endsWith('.css')) {
-        c.header('Content-Type', 'text/css')
-      }
-      else if (path.endsWith('.svg')) {
-        c.header('Content-Type', 'image/svg+xml')
-      }
+      const contentType = getContentType(fullPath)
+      c.header('Content-Type', contentType)
 
       return c.body(content)
     }
@@ -270,25 +345,26 @@ async function startServer() {
     // In development mode, use port 3001 for API server
     // In production/standalone mode, try 3001 first, then 3002 as fallback
     const isDev = process.env.NODE_ENV === 'development' || process.env.VITE_DEV === 'true'
-    
+
     let port = 3001
     const available = await isPortAvailable(port)
-    
+
     if (!available) {
       if (isDev) {
         console.error(`❌ Port ${port} is not available. Please stop the process using this port and try again.`)
         process.exit(1)
-      } else {
+      }
+      else {
         // In standalone mode, try fallback port
         const fallbackPort = 3002
         console.warn(`⚠️  Port ${port} is not available, trying ${fallbackPort}`)
         const fallbackAvailable = await isPortAvailable(fallbackPort)
-        
+
         if (!fallbackAvailable) {
           console.error(`❌ Neither port ${port} nor ${fallbackPort} is available. Please stop the processes using these ports and try again.`)
           process.exit(1)
         }
-        
+
         port = fallbackPort
       }
     }
@@ -301,7 +377,8 @@ async function startServer() {
     if (isDev) {
       console.warn(`🚀 MCP Inspector API server running on http://localhost:${port}`)
       console.warn(`🌐 Vite dev server should be running on http://localhost:3000`)
-    } else {
+    }
+    else {
       console.warn(`🚀 MCP Inspector running on http://localhost:${port}`)
     }
 

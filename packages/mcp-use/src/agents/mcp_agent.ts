@@ -1175,8 +1175,53 @@ export class MCPAgent {
       }
 
       try {
-        const structuredResult = await structuredLlm.invoke(formatPrompt)
+        logger.info(`🔄 Structured output attempt ${attempt} - using streaming approach`)
+        
+        // Use streaming to avoid blocking the event loop
+        const stream = await structuredLlm.stream(formatPrompt)
+        let structuredResult = null
+        let chunkCount = 0
+
+        for await (const chunk of stream) {
+          chunkCount++
+          
+          // Handle different chunk types
+          if (typeof chunk === 'string') {
+            // If it's a string, try to parse it as JSON
+            try {
+              structuredResult = JSON.parse(chunk)
+            } catch (e) {
+              logger.warn(`🔄 Failed to parse string chunk as JSON: ${chunk}`)
+            }
+          } else if (chunk && typeof chunk === 'object') {
+            // If it's already an object, use it directly
+            structuredResult = chunk
+          } else {
+            // Convert other types to string and try to parse
+            try {
+              structuredResult = JSON.parse(String(chunk))
+            } catch (e) {
+              logger.warn(`🔄 Failed to parse chunk as JSON: ${chunk}`)
+            }
+          }
+          
+          // Yield control to allow keepalive events during streaming
+          // This prevents the event loop from being blocked during long LLM processing,
+          // allowing keepalive events to fire and preventing inactivity timeouts
+          await new Promise(resolve => setTimeout(resolve, 0))
+          
+          // Log progress every 10 chunks
+          if (chunkCount % 10 === 0) {
+            logger.info(`🔄 Structured output streaming: ${chunkCount} chunks`)
+          }
+        }
+
         logger.info(`🔄 Structured result attempt ${attempt}: ${JSON.stringify(structuredResult, null, 2)}`)
+
+        // Use the structured result directly (no need to parse)
+        if (!structuredResult) {
+          throw new Error('No structured result received from stream')
+        }
 
         // Validate the structured result
         const validatedResult = this._validateStructuredResult(structuredResult, outputSchema)

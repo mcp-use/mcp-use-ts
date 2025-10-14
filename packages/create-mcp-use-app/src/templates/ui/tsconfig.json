@@ -3,7 +3,7 @@
     "target": "ES2022",
     "jsx": "react-jsx",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowJs": true,
     "strict": true,
     "declaration": true,
@@ -15,6 +15,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "resources/**/*"],
+  "include": ["index.ts", "src/**/*", "resources/**/*"],
   "exclude": ["node_modules", "dist"]
 }

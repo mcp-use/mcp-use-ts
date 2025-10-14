@@ -36,62 +36,15 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build Packages
-        run: pnpm build
-
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
-          version: pnpm run version
-          commit: 'chore: version packages (beta)'
-          title: 'chore: version packages (beta)'
+          publish: pnpm release
+          version: pnpm version
+          commit: 'chore(release): version packages (beta)'
+          title: 'chore(release): version packages (beta)'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Publish mcp-use package with NPM_TOKEN (beta)
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-          echo "📦 Publishing mcp-use@beta with NPM_TOKEN..."
-          cd packages/mcp-use && pnpm publish --access public --no-git-checks --tag beta
-          cd ../..
-          rm -f .npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
-      - name: Publish other packages with NPM_TOKEN_ORG (beta)
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN_ORG }}" > .npmrc
-          
-          # Publish in dependency order: inspector and create-mcp-use-app first, then cli
-          echo "📦 Publishing @mcp-use/inspector@beta with NPM_TOKEN_ORG..."
-          cd packages/inspector && pnpm publish --access public --no-git-checks --tag beta
-          cd ../..
-          
-          echo "📦 Publishing create-mcp-use-app@beta with NPM_TOKEN_ORG..."
-          cd packages/create-mcp-use-app && pnpm publish --access public --no-git-checks --tag beta
-          cd ../..
-          
-          echo "📦 Publishing @mcp-use/cli@beta with NPM_TOKEN_ORG..."
-          cd packages/cli && pnpm publish --access public --no-git-checks --tag beta
-          cd ../..
-          
-          rm -f .npmrc
-        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ORG }}
-
-      - name: Send Notification on Success
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          echo "✅ Beta packages published successfully!"
-          echo "📦 mcp-use@beta published with NPM_TOKEN"
-          echo "📦 Other packages@beta published with NPM_TOKEN_ORG"
-          echo ""
-          echo "Install beta versions with:"
-          echo "  npm install mcp-use@beta"
-          echo "  npm install @mcp-use/cli@beta"
-          echo "  npm install @mcp-use/inspector@beta"
-          echo "  npm install create-mcp-use-app@beta"
 

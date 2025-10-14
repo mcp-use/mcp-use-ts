@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/*",
-    "test_app"
+    "packages/*"
   ],
   "scripts": {
     "build": "pnpm run build:mcp-use && pnpm run build:other",

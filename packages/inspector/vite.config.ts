@@ -48,7 +48,8 @@ export default defineConfig({
     port: 3000,
     host: true, // Allow external connections
     proxy: {
-      '/api': {
+      // Proxy API requests to the backend server
+      '^/inspector/api/.*': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },

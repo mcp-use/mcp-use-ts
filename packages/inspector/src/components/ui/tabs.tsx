@@ -12,7 +12,7 @@ interface TabsContextType {
 const TabsContext = React.createContext<TabsContextType | undefined>(undefined)
 
 function useTabs() {
-  const context = React.useContext(TabsContext)
+  const context = React.use(TabsContext)
   if (!context) {
     throw new Error('useTabs must be used within a TabsProvider')
   }
@@ -27,41 +27,39 @@ interface TabsProps {
   className?: string
 }
 
-const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
-  ({ children, defaultValue, value, onValueChange, className, ...props }, ref) => {
-    const [activeValue, setActiveValue] = React.useState(defaultValue || '')
-    const isControlled = value !== undefined
+function Tabs({ ref, children, defaultValue, value, onValueChange, className, ...props }: TabsProps & { ref?: React.RefObject<HTMLDivElement | null> }) {
+  const [activeValue, setActiveValue] = React.useState(defaultValue || '')
+  const isControlled = value !== undefined
 
-    const handleValueChange = React.useCallback(
-      (val: string) => {
-        if (!isControlled) {
-          setActiveValue(val)
-        }
-        onValueChange?.(val)
-      },
-      [isControlled, onValueChange],
-    )
+  const handleValueChange = React.useCallback(
+    (val: string) => {
+      if (!isControlled) {
+        setActiveValue(val)
+      }
+      onValueChange?.(val)
+    },
+    [isControlled, onValueChange],
+  )
 
-    const currentValue = isControlled ? value : activeValue
+  const currentValue = isControlled ? value : activeValue
 
-    return (
-      <TabsContext.Provider
-        value={{
-          activeValue: currentValue,
-          handleValueChange,
-        }}
+  return (
+    <TabsContext
+      value={{
+        activeValue: currentValue,
+        handleValueChange,
+      }}
+    >
+      <div
+        ref={ref}
+        className={cn('flex flex-col gap-2', className)}
+        {...props}
       >
-        <div
-          ref={ref}
-          className={cn('flex flex-col gap-2', className)}
-          {...props}
-        >
-          {children}
-        </div>
-      </TabsContext.Provider>
-    )
-  },
-)
+        {children}
+      </div>
+    </TabsContext>
+  )
+}
 Tabs.displayName = 'Tabs'
 
 interface TabsListProps {
@@ -69,126 +67,124 @@ interface TabsListProps {
   className?: string
 }
 
-const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
-  ({ children, className, ...props }, _ref) => {
-    const { activeValue } = useTabs()
-    const [indicatorStyle, setIndicatorStyle] = React.useState({ width: 0, left: 0 })
-    const containerRef = React.useRef<HTMLDivElement>(null)
-    const resizeObserverRef = React.useRef<ResizeObserver | null>(null)
-    const debounceTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
-    const childrenArray = React.Children.toArray(children)
-    const activeIndex = childrenArray.findIndex(
-      child => React.isValidElement(child) && (child.props as { value: string }).value === activeValue,
-    )
+function TabsList({ ref: _ref, children, className, ...props }: TabsListProps & { ref?: React.RefObject<HTMLDivElement | null> }) {
+  const { activeValue } = useTabs()
+  const [indicatorStyle, setIndicatorStyle] = React.useState({ width: 0, left: 0 })
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const resizeObserverRef = React.useRef<ResizeObserver | null>(null)
+  const debounceTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const childrenArray = React.Children.toArray(children)
+  const activeIndex = childrenArray.findIndex(
+    child => React.isValidElement(child) && (child.props as { value: string }).value === activeValue,
+  )
 
-    // Debounced update function
-    const updateIndicator = React.useCallback(() => {
-      const container = containerRef.current
-      if (!container)
-        return
+  // Debounced update function
+  const updateIndicator = React.useCallback(() => {
+    const container = containerRef.current
+    if (!container)
+      return
 
-      const triggers = container.querySelectorAll('button')
-      const activeTrigger = triggers[activeIndex] as HTMLElement
+    const triggers = container.querySelectorAll('button')
+    const activeTrigger = triggers[activeIndex] as HTMLElement
 
-      if (activeTrigger) {
-        const containerRect = container.getBoundingClientRect()
-        const triggerRect = activeTrigger.getBoundingClientRect()
+    if (activeTrigger) {
+      const containerRect = container.getBoundingClientRect()
+      const triggerRect = activeTrigger.getBoundingClientRect()
 
-        setIndicatorStyle({
-          width: triggerRect.width,
-          left: triggerRect.left - containerRect.left,
-        })
+      setIndicatorStyle({
+        width: triggerRect.width,
+        left: triggerRect.left - containerRect.left,
+      })
+    }
+  }, [activeIndex])
+
+  // Debounced version of updateIndicator
+  const debouncedUpdateIndicator = React.useCallback(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current)
+    }
+    debounceTimeoutRef.current = setTimeout(updateIndicator, 16) // ~60fps
+  }, [updateIndicator])
+
+  // Update indicator when active tab changes
+  React.useEffect(() => {
+    // Use a small delay to ensure DOM is updated
+    const timeoutId = setTimeout(updateIndicator, 10)
+    return () => clearTimeout(timeoutId)
+  }, [updateIndicator])
+
+  // Set up ResizeObserver for the container
+  React.useEffect(() => {
+    const container = containerRef.current
+    if (!container)
+      return
+
+    // Create ResizeObserver to watch for container size changes
+    resizeObserverRef.current = new ResizeObserver(() => {
+      debouncedUpdateIndicator()
+    })
+
+    resizeObserverRef.current.observe(container)
+
+    // Also observe all button elements for size changes
+    const triggers = container.querySelectorAll('button')
+    triggers.forEach((trigger) => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.observe(trigger)
       }
-    }, [activeIndex])
+    })
 
-    // Debounced version of updateIndicator
-    const debouncedUpdateIndicator = React.useCallback(() => {
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect()
+      }
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current)
       }
-      debounceTimeoutRef.current = setTimeout(updateIndicator, 16) // ~60fps
-    }, [updateIndicator])
+    }
+  }, [debouncedUpdateIndicator])
 
-    // Update indicator when active tab changes
-    React.useEffect(() => {
-      // Use a small delay to ensure DOM is updated
-      const timeoutId = setTimeout(updateIndicator, 10)
-      return () => clearTimeout(timeoutId)
-    }, [updateIndicator])
+  // Fallback window resize listener for broader compatibility
+  React.useEffect(() => {
+    const handleResize = () => {
+      debouncedUpdateIndicator()
+    }
 
-    // Set up ResizeObserver for the container
-    React.useEffect(() => {
-      const container = containerRef.current
-      if (!container)
-        return
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [debouncedUpdateIndicator])
 
-      // Create ResizeObserver to watch for container size changes
-      resizeObserverRef.current = new ResizeObserver(() => {
-        debouncedUpdateIndicator()
-      })
+  // Apply dynamic styles using data attributes
+  React.useEffect(() => {
+    const container = containerRef.current
+    if (!container)
+      return
 
-      resizeObserverRef.current.observe(container)
+    const glider = container.querySelector('[data-width]') as HTMLElement
+    if (glider) {
+      glider.style.width = `${indicatorStyle.width}px`
+      glider.style.left = `${indicatorStyle.left}px`
+    }
+  }, [indicatorStyle])
 
-      // Also observe all button elements for size changes
-      const triggers = container.querySelectorAll('button')
-      triggers.forEach((trigger) => {
-        if (resizeObserverRef.current) {
-          resizeObserverRef.current.observe(trigger)
-        }
-      })
-
-      return () => {
-        if (resizeObserverRef.current) {
-          resizeObserverRef.current.disconnect()
-        }
-        if (debounceTimeoutRef.current) {
-          clearTimeout(debounceTimeoutRef.current)
-        }
-      }
-    }, [debouncedUpdateIndicator])
-
-    // Fallback window resize listener for broader compatibility
-    React.useEffect(() => {
-      const handleResize = () => {
-        debouncedUpdateIndicator()
-      }
-
-      window.addEventListener('resize', handleResize)
-      return () => window.removeEventListener('resize', handleResize)
-    }, [debouncedUpdateIndicator])
-
-    // Apply dynamic styles using data attributes
-    React.useEffect(() => {
-      const container = containerRef.current
-      if (!container)
-        return
-
-      const glider = container.querySelector('[data-width]') as HTMLElement
-      if (glider) {
-        glider.style.width = `${indicatorStyle.width}px`
-        glider.style.left = `${indicatorStyle.left}px`
-      }
-    }, [indicatorStyle])
-
-    return (
-      <div
-        ref={containerRef}
-        className={cn(
-          'relative flex bg-none p-1 rounded-full border border-zinc-300 dark:border-zinc-600',
-          className,
-        )}
-        {...props}
-      >
-        {children}
-        <span
-          className="absolute bg-white dark:bg-zinc-700 rounded-full transition-all duration-200 ease-out z-0 h-[calc(100%-8px)] top-1 border border-zinc-300 dark:border-zinc-600"
-          data-width={indicatorStyle.width}
-          data-left={indicatorStyle.left}
-        />
-      </div>
-    )
-  },
-)
+  return (
+    <div
+      ref={containerRef}
+      className={cn(
+        'relative flex bg-none p-1 rounded-full border border-zinc-300 dark:border-zinc-600',
+        className,
+      )}
+      {...props}
+    >
+      {children}
+      <span
+        className="absolute bg-white dark:bg-zinc-700 rounded-full transition-all duration-200 ease-out z-0 h-[calc(100%-8px)] top-1 border border-zinc-300 dark:border-zinc-600"
+        data-width={indicatorStyle.width}
+        data-left={indicatorStyle.left}
+      />
+    </div>
+  )
+}
 TabsList.displayName = 'TabsList'
 
 interface TabsTriggerProps {
@@ -211,30 +207,28 @@ interface TabsTriggerProps {
  * </TabsTrigger>
  * ```
  */
-const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
-  ({ children, value, className, disabled, icon: Icon, ...props }, ref) => {
-    const { activeValue, handleValueChange } = useTabs()
-    const isActive = activeValue === value
+function TabsTrigger({ ref, children, value, className, disabled, icon: Icon, ...props }: TabsTriggerProps & { ref?: React.RefObject<HTMLButtonElement | null> }) {
+  const { activeValue, handleValueChange } = useTabs()
+  const isActive = activeValue === value
 
-    return (
-      <button
-        ref={ref}
-        disabled={disabled}
-        onClick={() => handleValueChange(value)}
-        className={cn(
-          'relative z-10 flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-          isActive && 'text-foreground',
-          !isActive && 'text-muted-foreground hover:text-foreground',
-          className,
-        )}
-        {...props}
-      >
-        {Icon && <Icon className="mr-2 h-4 w-4" />}
-        {children}
-      </button>
-    )
-  },
-)
+  return (
+    <button
+      ref={ref}
+      disabled={disabled}
+      onClick={() => handleValueChange(value)}
+      className={cn(
+        'relative z-10 flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
+        isActive && 'text-foreground',
+        !isActive && 'text-muted-foreground hover:text-foreground',
+        className,
+      )}
+      {...props}
+    >
+      {Icon && <Icon className="mr-2 h-4 w-4" />}
+      {children}
+    </button>
+  )
+}
 TabsTrigger.displayName = 'TabsTrigger'
 
 interface TabsContentProps {
@@ -243,29 +237,27 @@ interface TabsContentProps {
   className?: string
 }
 
-const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
-  ({ children, value, className, ...props }, ref) => {
-    const { activeValue } = useTabs()
-    const isActive = activeValue === value
+function TabsContent({ ref, children, value, className, ...props }: TabsContentProps & { ref?: React.RefObject<HTMLDivElement | null> }) {
+  const { activeValue } = useTabs()
+  const isActive = activeValue === value
 
-    if (!isActive)
-      return null
+  if (!isActive)
+    return null
 
-    return (
-      <div
-        ref={ref}
-        role="tabpanel"
-        className={cn(
-          'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </div>
-    )
-  },
-)
+  return (
+    <div
+      ref={ref}
+      role="tabpanel"
+      className={cn(
+        'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}
 TabsContent.displayName = 'TabsContent'
 
 export { Tabs, TabsContent, TabsList, TabsTrigger, useTabs }

@@ -180,7 +180,7 @@ export function useMcp(options: UseMcpOptions): UseMcpResult {
     }
     if (!clientRef.current) {
       clientRef.current = new Client(
-        { name: clientConfig.name || 'use-mcp-react-client', version: clientConfig.version || '0.1.0' },
+        { name: clientConfig.name || 'mcp-use', version: clientConfig.version || '0.1.0' },
         { capabilities: {} },
       )
       addLog('debug', 'MCP Client initialized in connect.')

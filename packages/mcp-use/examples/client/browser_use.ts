@@ -11,7 +11,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ChatOpenAI } from '@langchain/openai'
 import { config } from 'dotenv'
-import { MCPAgent, MCPClient } from '../index.js'
+import { MCPAgent, MCPClient } from '../../index.js'
 
 // Load environment variables from .env file
 config()

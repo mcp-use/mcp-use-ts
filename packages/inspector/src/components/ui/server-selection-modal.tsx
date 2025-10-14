@@ -14,7 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './dialog'
-import { ShineBorder } from './magicui/shine-border'
 import { PulsatingButton } from './pulsating-button'
 import { RandomGradientBackground } from './random-gradient-background'
 import {

@@ -9,7 +9,7 @@ import open from 'open';
 const program = new Command();
 
 
-const packageContent = readFileSync(path.join(__dirname, '../../package.json'), 'utf-8')
+const packageContent = readFileSync(path.join(__dirname, '../package.json'), 'utf-8')
 const packageJson = JSON.parse(packageContent)
 const packageVersion = packageJson.version || 'unknown'
 
@@ -120,11 +120,11 @@ program
       }
 
       // Find the main source file
-      let serverFile = 'src/server.ts';
+      let serverFile = 'index.ts';
       try {
         await access(path.join(projectPath, serverFile));
       } catch {
-        serverFile = 'src/index.ts';
+        serverFile = 'src/server.ts';
       }
 
       // Start all processes concurrently
@@ -155,23 +155,9 @@ program
       // 3. Server with tsx
       const serverProc = spawn('npx', ['tsx', 'watch', serverFile], {
         cwd: projectPath,
-        stdio: 'pipe',
+        stdio: 'inherit',
         shell: false,
         env: { ...process.env, PORT: String(port) },
-      });
-      
-      // Handle server errors gracefully
-      serverProc.stderr?.on('data', (data) => {
-        const output = data.toString();
-        if (output.includes('EADDRINUSE')) {
-          console.log(`\x1b[31m✗\x1b[0m Port ${port} is still in use. Please try a different port with --port`);
-          console.log(`\x1b[90mHint: Use --port 3001 or kill the process using port ${port}\x1b[0m`);
-          process.exit(1);
-        }
-      });
-      
-      serverProc.stdout?.on('data', (data) => {
-        process.stdout.write(data);
       });
       
       processes.push(serverProc);
@@ -224,11 +210,11 @@ program
       console.log(`\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
 
       // Find the built server file
-      let serverFile = 'dist/server.js';
+      let serverFile = 'dist/index.js';
       try {
         await access(path.join(projectPath, serverFile));
       } catch {
-        serverFile = 'dist/index.js';
+        serverFile = 'dist/server.js';
       }
 
       console.log('Starting production server...');

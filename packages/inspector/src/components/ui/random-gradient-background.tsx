@@ -1,11 +1,12 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface RandomGradientBackgroundProps {
   className?: string
-  children?: React.ReactNode
+  children?: ReactNode
   grayscaled?: boolean
   color?: string | null // oklch(hue lightness saturation)
 }

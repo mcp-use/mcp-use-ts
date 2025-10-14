@@ -1,11 +1,7 @@
 import type { Express, Request, Response } from 'express'
-import { Buffer } from 'node:buffer'
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+import { join } from 'node:path'
+import { checkClientFiles, getClientDistPath, getContentType, handleChatRequest } from './shared-utils.js'
 
 /**
  * Mount the MCP Inspector UI at a specified path on an Express app
@@ -17,7 +13,7 @@ const __dirname = dirname(__filename)
  *
  * @example
  * ```typescript
- * import { createMCPServer } from 'mcp-use'
+ * import { createMCPServer } from 'mcp-use/server'
  * import { mountInspector } from '@mcp-use/inspector'
  *
  * const server = createMCPServer('my-server')
@@ -29,9 +25,9 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
   const basePath = path.startsWith('/') ? path : `/${path}`
 
   // Find the built client files
-  const clientDistPath = join(__dirname, '../../dist/client')
+  const clientDistPath = getClientDistPath()
 
-  if (!existsSync(clientDistPath)) {
+  if (!checkClientFiles(clientDistPath)) {
     console.warn(`⚠️  MCP Inspector client files not found at ${clientDistPath}`)
     console.warn(`   Run 'yarn build' in the inspector package to build the UI`)
     return
@@ -44,80 +40,28 @@ export function mountInspector(app: Express, path: string = '/inspector', mcpSer
     })
   })
 
-  // Favicon proxy endpoint
-  app.get(`${basePath}/api/favicon/:url`, async (req: Request, res: Response) => {
-    const url = req.params.url
-
-    if (!url) {
-      res.status(400).json({ error: 'URL parameter is required' })
-      return
-    }
-
+  // Chat API endpoint - handles MCP agent chat with custom LLM key
+  app.post(`${basePath}/api/chat`, async (req: Request, res: Response) => {
     try {
-      // Decode the URL
-      const decodedUrl = decodeURIComponent(url)
-
-      // Add protocol if missing
-      let fullUrl = decodedUrl
-      if (!decodedUrl.startsWith('http://') && !decodedUrl.startsWith('https://')) {
-        fullUrl = `https://${decodedUrl}`
-      }
-
-      // Validate URL
-      const urlObj = new URL(fullUrl)
-
-      // Try to fetch favicon from common locations
-      const faviconUrls = [
-        `${urlObj.origin}/favicon.ico`,
-        `${urlObj.origin}/favicon.png`,
-        `${urlObj.origin}/apple-touch-icon.png`,
-      ]
-
-      for (const faviconUrl of faviconUrls) {
-        try {
-          const response = await fetch(faviconUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; MCP-Inspector/1.0)',
-            },
-          })
-
-          if (response.ok) {
-            const contentType = response.headers.get('content-type') || 'image/x-icon'
-            const buffer = await response.arrayBuffer()
-
-            res.setHeader('Content-Type', contentType)
-            res.setHeader('Cache-Control', 'public, max-age=86400')
-            res.setHeader('Access-Control-Allow-Origin', '*')
-            res.send(Buffer.from(buffer))
-            return
-          }
-        }
-        catch {
-          // Continue to next URL
-          continue
-        }
-      }
-
-      // If no favicon found, return 404
-      res.status(404).json({ error: 'No favicon found' })
+      const result = await handleChatRequest(req.body)
+      res.json(result)
     }
     catch (error) {
-      console.error('Favicon proxy error:', error)
-      res.status(400).json({ error: 'Invalid URL or fetch failed' })
+      console.error('Chat API error:', error)
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Failed to process chat request',
+      })
     }
   })
+
 
   // Serve static assets
   app.use(`${basePath}/assets`, (_req: Request, res: Response) => {
     const assetPath = join(clientDistPath, 'assets', _req.path)
     if (existsSync(assetPath)) {
       // Set appropriate content type
-      if (assetPath.endsWith('.js')) {
-        res.setHeader('Content-Type', 'application/javascript')
-      }
-      else if (assetPath.endsWith('.css')) {
-        res.setHeader('Content-Type', 'text/css')
-      }
+      const contentType = getContentType(assetPath)
+      res.setHeader('Content-Type', contentType)
       res.sendFile(assetPath)
     }
     else {

@@ -14,6 +14,7 @@ export default [
       '**/*.min.js',
       '**/.turbo/**',
       '**/.vercel/**',
+      '**/.tsup/**',
       'packages/*/dist/**',
       'packages/*/build/**',
       'packages/*/node_modules/**',
@@ -75,6 +76,20 @@ export default [
         location: 'readonly',
         localStorage: 'readonly',
         sessionStorage: 'readonly',
+        // HTML Element types
+        HTMLInputElement: 'readonly',
+        HTMLButtonElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLSpanElement: 'readonly',
+        HTMLTextAreaElement: 'readonly',
+        HTMLElement: 'readonly',
+        // Browser APIs
+        MutationObserver: 'readonly',
+        ResizeObserver: 'readonly',
+        queueMicrotask: 'readonly',
+        FileReader: 'readonly',
+        // React
+        React: 'readonly',
       },
     },
     plugins: {

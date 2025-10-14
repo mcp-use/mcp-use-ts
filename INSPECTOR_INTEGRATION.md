@@ -33,7 +33,7 @@ The MCP Inspector is now automatically mounted at `/inspector` for all MCP serve
 When developers create a new MCP server:
 
 ```typescript
-import { createMCPServer } from 'mcp-use'
+import { createMCPServer } from 'mcp-use/server'
 
 const server = createMCPServer('my-server', {
   version: '1.0.0',
@@ -121,26 +121,4 @@ For published packages:
 - `packages/mcp-use/package.json` - Added inspector as optional peer dependency
 - `packages/create-mcp-use-app/src/templates/ui/package.json` - Added inspector dependency
 - `packages/create-mcp-use-app/src/templates/ui/src/server.ts` - Updated comments
-- `test_app/package.json` - Added inspector dependency
-- `test_app/src/server.ts` - Updated comments
-
-## Testing
-
-To test the integration:
-
-1. Build all packages:
-   ```bash
-   cd /Users/e.t./Projects/mcp-use/mcp-use-ts
-   pnpm install
-   cd packages/inspector && pnpm build
-   cd ../mcp-use && pnpm build
-   ```
-
-2. Run the test app:
-   ```bash
-   cd test_app
-   pnpm dev
-   ```
-
-3. Open `http://localhost:3000/inspector` in your browser
 

@@ -99,14 +99,59 @@ export abstract class BaseConnector {
     return res as CallToolResult
   }
 
-  /** List resources from the server. */
-  async listResources(options?: RequestOptions) {
+  /**
+   * List resources from the server with optional pagination
+   * 
+   * @param cursor - Optional cursor for pagination
+   * @param options - Request options
+   * @returns Resource list with optional nextCursor for pagination
+   */
+  async listResources(cursor?: string, options?: RequestOptions) {
     if (!this.client) {
       throw new Error('MCP client is not connected')
     }
 
-    logger.debug('Listing resources')
-    return await this.client.listResources(undefined, options)
+    logger.debug('Listing resources', cursor ? `with cursor: ${cursor}` : '')
+    return await this.client.listResources({ cursor }, options)
+  }
+
+  /**
+   * List all resources from the server, automatically handling pagination
+   * 
+   * @param options - Request options
+   * @returns Complete list of all resources
+   */
+  async listAllResources(options?: RequestOptions) {
+    if (!this.client) {
+      throw new Error('MCP client is not connected')
+    }
+
+    logger.debug('Listing all resources (with auto-pagination)')
+    const allResources: any[] = []
+    let cursor: string | undefined = undefined
+
+    do {
+      const result = await this.client.listResources({ cursor }, options)
+      allResources.push(...(result.resources || []))
+      cursor = result.nextCursor
+    } while (cursor)
+
+    return { resources: allResources }
+  }
+
+  /**
+   * List resource templates from the server
+   * 
+   * @param options - Request options
+   * @returns List of available resource templates
+   */
+  async listResourceTemplates(options?: RequestOptions) {
+    if (!this.client) {
+      throw new Error('MCP client is not connected')
+    }
+
+    logger.debug('Listing resource templates')
+    return await this.client.listResourceTemplates(undefined, options)
   }
 
   /** Read a resource by URI. */
@@ -118,6 +163,36 @@ export abstract class BaseConnector {
     logger.debug(`Reading resource ${uri}`)
     const res = await this.client.readResource({ uri }, options)
     return { content: res.content, mimeType: res.mimeType }
+  }
+
+  /**
+   * Subscribe to resource updates
+   * 
+   * @param uri - URI of the resource to subscribe to
+   * @param options - Request options
+   */
+  async subscribeToResource(uri: string, options?: RequestOptions) {
+    if (!this.client) {
+      throw new Error('MCP client is not connected')
+    }
+
+    logger.debug(`Subscribing to resource: ${uri}`)
+    return await this.client.subscribeResource({ uri }, options)
+  }
+
+  /**
+   * Unsubscribe from resource updates
+   * 
+   * @param uri - URI of the resource to unsubscribe from
+   * @param options - Request options
+   */
+  async unsubscribeFromResource(uri: string, options?: RequestOptions) {
+    if (!this.client) {
+      throw new Error('MCP client is not connected')
+    }
+
+    logger.debug(`Unsubscribing from resource: ${uri}`)
+    return await this.client.unsubscribeResource({ uri }, options)
   }
 
   async listPrompts() {

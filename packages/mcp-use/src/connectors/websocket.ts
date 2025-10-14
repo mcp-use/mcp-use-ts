@@ -109,16 +109,28 @@ export class WebSocketConnector extends BaseConnector {
       }
     }
 
-    socket.addEventListener ? socket.addEventListener('message', onMessage) : socket.on('message', onMessage)
+    if (socket.addEventListener) {
+      socket.addEventListener('message', onMessage)
+    } else {
+      socket.on('message', onMessage)
+    }
 
     // keep promise pending until close
     return new Promise<void>((resolve) => {
       const onClose = () => {
-        socket.removeEventListener ? socket.removeEventListener('message', onMessage) : socket.off('message', onMessage)
+        if (socket.removeEventListener) {
+          socket.removeEventListener('message', onMessage)
+        } else {
+          socket.off('message', onMessage)
+        }
         this.rejectAll(new Error('WebSocket closed'))
         resolve()
       }
-      socket.addEventListener ? socket.addEventListener('close', onClose) : socket.on('close', onClose)
+      if (socket.addEventListener) {
+        socket.addEventListener('close', onClose)
+      } else {
+        socket.on('close', onClose)
+      }
     })
   }
 

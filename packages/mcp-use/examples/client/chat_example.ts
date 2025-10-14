@@ -10,7 +10,7 @@
 import readline from 'node:readline'
 import { ChatOpenAI } from '@langchain/openai'
 import { config } from 'dotenv'
-import { MCPAgent, MCPClient } from '../index.js'
+import { MCPAgent, MCPClient } from '../../index.js'
 
 // Load environment variables from .env file
 config()

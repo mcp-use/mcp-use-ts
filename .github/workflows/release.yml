@@ -24,7 +24,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 9.14.2
+          version: 10.6.1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -34,7 +34,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build Packages
         run: pnpm build
@@ -43,48 +43,10 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
+          publish: pnpm release
           version: pnpm run version
-          commit: 'chore: version packages'
-          title: 'chore: version packages'
+          commit: 'chore(release): version packages'
+          title: 'chore(release): version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Publish mcp-use package with NPM_TOKEN
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-          echo "📦 Publishing mcp-use with NPM_TOKEN..."
-          cd packages/mcp-use && pnpm publish --access public --no-git-checks
-          cd ../..
-          rm -f .npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
-      - name: Publish other packages with NPM_TOKEN_ORG
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN_ORG }}" > .npmrc
-          
-          # Publish in dependency order: inspector and create-mcp-use-app first, then cli
-          echo "📦 Publishing @mcp-use/inspector with NPM_TOKEN_ORG..."
-          cd packages/inspector && pnpm publish --access public --no-git-checks
-          cd ../..
-          
-          echo "📦 Publishing create-mcp-use-app with NPM_TOKEN_ORG..."
-          cd packages/create-mcp-use-app && pnpm publish --access public --no-git-checks
-          cd ../..
-          
-          echo "📦 Publishing @mcp-use/cli with NPM_TOKEN_ORG..."
-          cd packages/cli && pnpm publish --access public --no-git-checks
-          cd ../..
-          
-          rm -f .npmrc
-        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ORG }}
-
-      - name: Send Notification on Success
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          echo "✅ Packages published successfully!"
-          echo "📦 mcp-use published with NPM_TOKEN"
-          echo "📦 Other packages published with NPM_TOKEN_ORG"

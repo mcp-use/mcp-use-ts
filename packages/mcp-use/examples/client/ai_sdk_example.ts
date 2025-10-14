@@ -10,11 +10,11 @@
  * - Building chat interfaces with token-by-token updates
  */
 
-import type { StreamEvent } from '../index.js'
+import type { StreamEvent } from '../../index.js'
 import { ChatAnthropic } from '@langchain/anthropic'
 import { LangChainAdapter } from 'ai'
 import { config } from 'dotenv'
-import { MCPAgent, MCPClient } from '../index.js'
+import { MCPAgent, MCPClient } from '../../index.js'
 
 // Load environment variables
 config()

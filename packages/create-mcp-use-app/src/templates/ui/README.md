@@ -234,29 +234,29 @@ if (container) {
 npm run build
 
 # The built files will be in dist/
-# - dist/server.js (MCP server)
-# - dist/resources/ (UI widgets)
+# - dist/index.js (MCP server entry point)
+# - dist/src/server.js (MCP server implementation)  
+# - dist/resources/ (Compiled TypeScript + UI widget bundles)
 ```
 
 ## Project Structure
 
 ```
 my-ui-server/
+├── index.ts                   # Entry point (re-exports server)
 ├── src/
 │   └── server.ts              # MCP server with UI endpoints
-├── resources/                 # React components and HTML entry points
-│   ├── kanban-board.html
+├── resources/                 # React components (TSX widgets)
 │   ├── kanban-board.tsx
-│   ├── todo-list.html
 │   ├── todo-list.tsx
-│   ├── data-visualization.html
 │   └── data-visualization.tsx
 ├── dist/                      # Built files
-│   ├── server.js
-│   └── resources/
+│   ├── index.js               # Entry point
+│   ├── src/
+│   │   └── server.js          # Server implementation
+│   └── resources/             # TypeScript output + bundled widgets
 ├── package.json
 ├── tsconfig.json
-├── vite.config.ts
 └── README.md
 ```
 

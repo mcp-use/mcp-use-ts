@@ -36,17 +36,73 @@ export function ServerIcon({
       setFaviconError(false)
 
       try {
-        const encodedUrl = encodeURIComponent(serverUrl)
-        const proxyUrl = `/inspector/api/favicon/${encodedUrl}`
-
-        // Test if favicon exists
-        const response = await fetch(proxyUrl)
-        if (response.ok) {
-          setFaviconUrl(proxyUrl)
+        // Extract domain from serverUrl
+        let domain = serverUrl
+        if (serverUrl.startsWith('http://') || serverUrl.startsWith('https://')) {
+          domain = new URL(serverUrl).hostname
+        }
+        else if (serverUrl.includes('://')) {
+          domain = serverUrl.split('://')[1].split('/')[0]
         }
         else {
-          setFaviconError(true)
+          domain = serverUrl.split('/')[0]
         }
+
+        // Check if this is a local server - skip remote favicon services
+        const isLocalServer = domain === 'localhost'
+          || domain === '127.0.0.1'
+          || domain.startsWith('127.')
+          || domain.startsWith('192.168.')
+          || domain.startsWith('10.')
+          || domain.startsWith('172.')
+
+        if (isLocalServer) {
+          // For local servers, skip favicon fetching and go straight to fallback
+          setFaviconError(true)
+          return
+        }
+
+        // Try full domain first, then base domain with 1s timeout
+        const baseDomain = domain.split('.').slice(-2).join('.')
+        const domainsToTry = domain !== baseDomain ? [domain, baseDomain] : [domain]
+
+        const faviconServices = [
+          // list of providers, google and duckduckgo are not working due to CORS
+          // `https://www.google.com/s2/favicons?domain={domain}&sz=128`,
+          `https://icon.horse/icon/{domain}`,
+          // `https://icons.duckduckgo.com/ip3/{domain}.ico`,
+        ]
+
+        for (const currentDomain of domainsToTry) {
+          for (const serviceTemplate of faviconServices) {
+            try {
+              const currentFaviconUrl = serviceTemplate.replace('{domain}', currentDomain)
+
+              // Create a timeout promise
+              const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error('Timeout')), 1000)
+              })
+
+              // Race between fetch and timeout
+              const response = await Promise.race([
+                fetch(currentFaviconUrl),
+                timeoutPromise,
+              ])
+
+              if (response.ok) {
+                setFaviconUrl(currentFaviconUrl)
+                return
+              }
+            }
+            catch {
+              // Continue to next service
+              continue
+            }
+          }
+        }
+
+        // If all services fail
+        setFaviconError(true)
       }
       catch {
         setFaviconError(true)

@@ -60,15 +60,21 @@ export class HttpConnector extends BaseConnector {
 
     try {
       // Try streamable HTTP transport first
-      logger.debug('Attempting streamable HTTP transport...')
+      logger.info('🔄 Attempting streamable HTTP transport...')
       await this.connectWithStreamableHttp(baseUrl)
+      logger.info('✅ Successfully connected via streamable HTTP')
     }
     catch (err) {
       // Check if this is a 4xx error that indicates we should try SSE fallback
       let fallbackReason = 'Unknown error'
 
       if (err instanceof StreamableHTTPError) {
-        if (err.code === 404 || err.code === 405) {
+        // Check for "Missing session ID" error (HTTP 400 from FastMCP)
+        if (err.code === 400 && err.message.includes('Missing session ID')) {
+          fallbackReason = 'Server requires session ID (FastMCP compatibility) - using SSE transport'
+          logger.warn(`⚠️  ${fallbackReason}`)
+        }
+        else if (err.code === 404 || err.code === 405) {
           fallbackReason = `Server returned ${err.code} - server likely doesn't support streamable HTTP`
           logger.debug(fallbackReason)
         }
@@ -80,7 +86,16 @@ export class HttpConnector extends BaseConnector {
       else if (err instanceof Error) {
         // Check for 404/405 in error message as fallback detection
         const errorStr = err.toString()
-        if (errorStr.includes('405 Method Not Allowed') || errorStr.includes('404 Not Found')) {
+        const errorMsg = err.message || ''
+        
+        // Check for "Missing session ID" error in the message (from both direct errors and wrapped errors)
+        if (errorStr.includes('Missing session ID') 
+            || errorStr.includes('Bad Request: Missing session ID')
+            || errorMsg.includes('FastMCP session ID error')) {
+          fallbackReason = 'Server requires session ID (FastMCP compatibility) - using SSE transport'
+          logger.warn(`⚠️  ${fallbackReason}`)
+        }
+        else if (errorStr.includes('405 Method Not Allowed') || errorStr.includes('404 Not Found')) {
           fallbackReason = 'Server doesn\'t support streamable HTTP (405/404)'
           logger.debug(fallbackReason)
         }
@@ -91,7 +106,7 @@ export class HttpConnector extends BaseConnector {
       }
 
       // Always try SSE fallback for maximum compatibility
-      logger.debug('Falling back to SSE transport...')
+      logger.info('🔄 Falling back to SSE transport...')
 
       try {
         await this.connectWithSse(baseUrl)
@@ -127,8 +142,25 @@ export class HttpConnector extends BaseConnector {
       const transport = await this.connectionManager.start()
 
       // Create and connect the client
+      // This performs both initialize AND initialized notification
       this.client = new Client(this.clientInfo, this.opts.clientOptions)
-      await this.client.connect(transport)
+      
+      try {
+        await this.client.connect(transport)
+      }
+      catch (connectErr) {
+        // Check if the error is due to missing session ID during connection handshake
+        if (connectErr instanceof Error) {
+          const errMsg = connectErr.message || connectErr.toString()
+          if (errMsg.includes('Missing session ID') || errMsg.includes('Bad Request: Missing session ID')) {
+            // Wrap it in a more specific error so the outer catch can detect it
+            const wrappedError = new Error(`FastMCP session ID error: ${errMsg}`)
+            wrappedError.cause = connectErr
+            throw wrappedError
+          }
+        }
+        throw connectErr
+      }
 
       this.connected = true
       this.transportType = 'streamable-http'

@@ -1,15 +1,15 @@
 import type { CustomHeader } from './CustomHeadersEditor'
-import { CircleMinus, Cog, Copy, FileText, RotateCcw, Server, Shield } from 'lucide-react'
-import { useState } from 'react'
+import { CircleMinus, Cog, Copy, FileText, RotateCcw, Shield } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { NotFound } from '@/components/ui/not-found'
 import { RandomGradientBackground } from '@/components/ui/random-gradient-background'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -17,8 +17,12 @@ import { useMcpContext } from '../context/McpContext'
 import { CustomHeadersEditor } from './CustomHeadersEditor'
 
 export function InspectorDashboard() {
-  const { connections, addConnection, removeConnection } = useMcpContext()
+  const mcpContext = useMcpContext()
+  const { connections, addConnection, removeConnection } = mcpContext
   const navigate = useNavigate()
+
+  // Log connections on every render to debug
+  console.warn('[InspectorDashboard] Render - connections:', connections.map(c => ({ id: c.id, state: c.state })))
 
   // Form state
   const [transportType, setTransportType] = useState('SSE')
@@ -28,7 +32,7 @@ export function InspectorDashboard() {
   const [requestTimeout, setRequestTimeout] = useState('10000')
   const [resetTimeoutOnProgress, setResetTimeoutOnProgress] = useState('True')
   const [maxTotalTimeout, setMaxTotalTimeout] = useState('60000')
-  const [proxyAddress, setProxyAddress] = useState('')
+  const [proxyAddress, setProxyAddress] = useState(`${window.location.origin}/inspector/api/proxy`)
   const [proxyToken, setProxyToken] = useState('c96aeb0c195aa9c7d3846b90aec9bc5fcdd5df97b3049aaede8f5dd1a15d2d87')
 
   // OAuth fields
@@ -36,7 +40,7 @@ export function InspectorDashboard() {
   const [redirectUrl, setRedirectUrl] = useState(
     typeof window !== 'undefined'
       ? new URL('/oauth/callback', window.location.origin).toString()
-      : 'http://localhost:3000/oauth/callback',
+      : '/oauth/callback',
   )
   const [scope, setScope] = useState('')
 
@@ -44,19 +48,84 @@ export function InspectorDashboard() {
   const [headersDialogOpen, setHeadersDialogOpen] = useState(false)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const [configDialogOpen, setConfigDialogOpen] = useState(false)
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [pendingConnectionUrl, setPendingConnectionUrl] = useState<string | null>(null)
+  const hasShownToastRef = useRef(false)
+
+  // Monitor the pending connection state
+  useEffect(() => {
+    if (!pendingConnectionUrl)
+      return
+
+    const connection = connections.find(c => c.id === pendingConnectionUrl)
+    if (!connection) {
+      console.warn('[InspectorDashboard] Pending connection not found yet:', pendingConnectionUrl)
+      return
+    }
+
+    console.warn('[InspectorDashboard] Connection state:', connection.state, 'for', pendingConnectionUrl)
+
+    // Skip if we've already shown a toast for this connection
+    if (hasShownToastRef.current)
+      return
+
+    // Connection succeeded
+    if (connection.state === 'ready') {
+      console.warn('[InspectorDashboard] Connection ready!')
+      hasShownToastRef.current = true
+      setIsConnecting(false)
+      setPendingConnectionUrl(null)
+      toast.success('Connection established successfully')
+
+      // Reset form
+      setUrl('')
+      setCustomHeaders([])
+      setClientId('')
+      setScope('')
+    }
+    // Connection failed
+    else if (connection.state === 'failed' || connection.error) {
+      console.warn('[InspectorDashboard] Connection failed:', connection.error)
+      hasShownToastRef.current = true
+      setIsConnecting(false)
+      setPendingConnectionUrl(null)
+      const errorMessage = connection.error || 'Failed to connect to server'
+      toast.error(errorMessage)
+      // Don't remove the connection - let user see it in the list and manually remove if needed
+    }
+  }, [connections, pendingConnectionUrl])
 
   const handleAddConnection = () => {
     if (!url.trim())
       return
 
-    // For now, use URL as both ID and name - this will need proper implementation
-    addConnection(url, url)
+    setIsConnecting(true)
+    hasShownToastRef.current = false
+    setPendingConnectionUrl(url)
 
-    // Reset form
-    setUrl('')
-    setCustomHeaders([])
-    setClientId('')
-    setScope('')
+    // Prepare proxy configuration if "Via Proxy" is selected
+    const proxyConfig = connectionType === 'Via Proxy' && proxyAddress.trim()
+      ? {
+          proxyAddress: proxyAddress.trim(),
+          proxyToken: proxyToken.trim(),
+          customHeaders: customHeaders.reduce((acc, header) => {
+            if (header.name && header.value) {
+              acc[header.name] = header.value
+            }
+            return acc
+          }, {} as Record<string, string>),
+        }
+      : {
+          customHeaders: customHeaders.reduce((acc, header) => {
+            if (header.name && header.value) {
+              acc[header.name] = header.value
+            }
+            return acc
+          }, {} as Record<string, string>),
+        }
+
+    // For now, use URL as both ID and name - this will need proper implementation
+    addConnection(url, url, proxyConfig)
   }
 
   const handleClearAllConnections = () => {
@@ -153,7 +222,7 @@ export function InspectorDashboard() {
               >
                 <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors">
                   v
-                  {__INSPECTOR_VERSION__}
+                  {typeof window !== 'undefined' && (window as any).__INSPECTOR_VERSION__ || '1.0.0'}
                 </Badge>
               </a>
             </TooltipTrigger>
@@ -184,15 +253,7 @@ export function InspectorDashboard() {
           </div>
           {connections.length === 0
             ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-8">
-                    <Server className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No servers connected yet</p>
-                    <p className="text-sm text-muted-foreground">
-                      Add a server above to get started
-                    </p>
-                  </CardContent>
-                </Card>
+                <NotFound message="No servers connected yet. Add a server above to get started." />
               )
             : (
                 <div className="grid gap-3">
@@ -200,7 +261,7 @@ export function InspectorDashboard() {
                     <div
                       key={connection.id}
                       onClick={() => handleServerClick(connection)}
-                      className="rounded-lg bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 p-4 transition-colors cursor-pointer"
+                      className="group rounded-lg bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 p-4 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -239,9 +300,29 @@ export function InspectorDashboard() {
                                   )}
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground dark:text-zinc-400 font-mono mt-1">
-                            {connection.url}
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs text-muted-foreground dark:text-zinc-400 font-mono">
+                              {connection.url}
+                            </p>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    navigator.clipboard.writeText(connection.url)
+                                    toast.success('URL copied to clipboard')
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
+                                  title="Copy URL"
+                                >
+                                  <Copy className="w-3 h-3 text-muted-foreground" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Copy URL</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                         </div>
                         <div className="flex items-center gap-1">
                           <Tooltip>
@@ -564,20 +645,28 @@ export function InspectorDashboard() {
           {/* Connect Button */}
           <Button
             onClick={handleAddConnection}
-            disabled={!url.trim()}
+            disabled={!url.trim() || isConnecting}
             className="w-full bg-white text-black hover:bg-white/90 font-semibold mt-4"
           >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Connect
+            {isConnecting
+              ? (
+                  <>
+                    <svg className="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Connecting...
+                  </>
+                )
+              : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Connect
+                  </>
+                )}
           </Button>
 
-          {/* Status */}
-          <div className="flex items-center justify-center gap-2 text-white/60 text-sm">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-status-pulse-red"></div>
-            Disconnected
-          </div>
         </div>
         <RandomGradientBackground className="absolute inset-0" />
       </div>

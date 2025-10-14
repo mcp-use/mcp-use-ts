@@ -27,9 +27,18 @@
         <img src="https://dcbadge.limes.pink/api/server/XkNkSkMz3V?style=flat" /></a>
 </p>
 
-🌐 **MCP Client** is the open-source way to connect **any LLM to any MCP server** in TypeScript/Node.js, letting you build custom agents with tool access without closed-source dependencies.
+🌐 **MCP-Use** is a complete TypeScript framework for building and using MCP (Model Context Protocol) applications. It provides both a powerful **client library** for connecting LLMs to MCP servers and a **server framework** for building your own MCP servers with UI capabilities.
 
-💡 Let developers easily connect any LLM via LangChain.js to tools like web browsing, file operations, 3D modeling, and more.
+💡 Build custom AI agents, create MCP servers with React UI widgets, and debug everything with the built-in inspector - all in TypeScript.
+
+## 📦 MCP-Use Ecosystem
+
+| Package | Description | Version |
+|---------|-------------|---------|
+| **mcp-use** | Core framework for MCP clients and servers | [![npm](https://img.shields.io/npm/v/mcp-use.svg)](https://www.npmjs.com/package/mcp-use) |
+| [@mcp-use/cli](https://github.com/mcp-use/mcp-use-ts/tree/main/packages/cli) | Build tool for MCP apps with UI widgets | [![npm](https://img.shields.io/npm/v/@mcp-use/cli.svg)](https://www.npmjs.com/package/@mcp-use/cli) |
+| [@mcp-use/inspector](https://github.com/mcp-use/mcp-use-ts/tree/main/packages/inspector) | Web-based MCP server inspector and debugger | [![npm](https://img.shields.io/npm/v/@mcp-use/inspector.svg)](https://www.npmjs.com/package/@mcp-use/inspector) |
+| [create-mcp-use-app](https://github.com/mcp-use/mcp-use-ts/tree/main/packages/create-mcp-use-app) | Create MCP apps with one command | [![npm](https://img.shields.io/npm/v/create-mcp-use-app.svg)](https://www.npmjs.com/package/create-mcp-use-app) |
 
 ---
 
@@ -453,6 +462,185 @@ const agent = new MCPAgent({
   client,
   disallowedTools: ['file_system', 'network']
 })
+```
+
+---
+
+## 🖥️ MCP Server Framework
+
+Beyond being a powerful MCP client, mcp-use also provides a complete server framework for building your own MCP servers with built-in UI capabilities and automatic inspector integration.
+
+### Quick Server Setup
+
+```ts
+import { createMCPServer } from 'mcp-use/server'
+
+// Create your MCP server
+const server = createMCPServer('my-awesome-server', {
+  version: '1.0.0',
+  description: 'My MCP server with tools, resources, and prompts'
+})
+
+// Define tools
+server.tool('search_web', {
+  description: 'Search the web for information',
+  parameters: z.object({
+    query: z.string().describe('Search query')
+  }),
+  execute: async (args) => {
+    // Your tool implementation
+    return { results: await performSearch(args.query) }
+  }
+})
+
+// Define resources
+server.resource('config', {
+  description: 'Application configuration',
+  uri: 'config://settings',
+  mimeType: 'application/json',
+  fetch: async () => {
+    return JSON.stringify(await getConfig(), null, 2)
+  }
+})
+
+// Define prompts
+server.prompt('code_review', {
+  description: 'Review code for best practices',
+  arguments: [
+    { name: 'code', description: 'Code to review', required: true }
+  ],
+  render: async (args) => {
+    return `Please review this code:\n\n${args.code}`
+  }
+})
+
+// Start the server
+server.listen(3000)
+// 🎉 Inspector automatically available at http://localhost:3000/inspector
+// 🚀 MCP endpoint available at http://localhost:3000/mcp
+```
+
+### Key Server Features
+
+| Feature | Description |
+|---------|-------------|
+| **🔍 Auto Inspector** | Inspector UI automatically mounts at `/inspector` for debugging |
+| **🎨 UI Widgets** | Build custom React UI components served alongside your MCP tools |
+| **🔐 OAuth Support** | Built-in OAuth flow handling for secure authentication |
+| **📡 Multiple Transports** | HTTP/SSE and WebSocket support out of the box |
+| **🛠️ TypeScript First** | Full TypeScript support with type inference |
+| **♻️ Hot Reload** | Development mode with automatic reloading |
+| **📊 Observability** | Built-in logging and monitoring capabilities |
+
+### Building UI Widgets
+
+MCP-Use supports building custom UI widgets for your MCP tools using React:
+
+```tsx
+// resources/task-manager.tsx
+import React, { useState } from 'react'
+import { useMcp } from 'mcp-use/react'
+
+export default function TaskManager() {
+  const { callTool } = useMcp()
+  const [tasks, setTasks] = useState<Task[]>([])
+
+  const addTask = async (title: string) => {
+    const result = await callTool('create_task', { title })
+    setTasks([...tasks, result])
+  }
+
+  return (
+    <div>
+      <h1>Task Manager</h1>
+      {/* Your UI implementation */}
+    </div>
+  )
+}
+```
+
+Build and serve widgets using the MCP-Use CLI:
+
+```bash
+# Development with hot reload and auto-open inspector
+npx @mcp-use/cli dev
+
+# Production build
+npx @mcp-use/cli build
+
+# Start production server
+npx @mcp-use/cli start
+```
+
+### Advanced Server Configuration
+
+```ts
+const server = createMCPServer('advanced-server', {
+  version: '1.0.0',
+  description: 'Advanced MCP server with custom configuration',
+  // Custom inspector path (default: /inspector)
+  inspectorPath: '/debug',
+  // Custom MCP endpoint (default: /mcp)
+  mcpPath: '/api/mcp',
+  // Enable CORS for browser access
+  cors: {
+    origin: ['http://localhost:3000', 'https://myapp.com'],
+    credentials: true
+  },
+  // OAuth configuration
+  oauth: {
+    clientId: process.env.OAUTH_CLIENT_ID,
+    clientSecret: process.env.OAUTH_CLIENT_SECRET,
+    authorizationUrl: 'https://api.example.com/oauth/authorize',
+    tokenUrl: 'https://api.example.com/oauth/token',
+    scopes: ['read', 'write']
+  },
+  // Custom middleware
+  middleware: [
+    authenticationMiddleware,
+    rateLimitingMiddleware
+  ]
+})
+```
+
+### Server Deployment
+
+Deploy your MCP server to any Node.js hosting platform:
+
+```bash
+# Build for production
+npm run build
+
+# Start with PM2
+pm2 start dist/index.js --name mcp-server
+
+# Docker deployment
+docker build -t my-mcp-server .
+docker run -p 3000:3000 my-mcp-server
+```
+
+### Integration with Express
+
+You can also integrate MCP server into existing Express applications:
+
+```ts
+import express from 'express'
+import { mountMCPServer } from 'mcp-use/server'
+
+const app = express()
+
+// Your existing routes
+app.get('/api/health', (req, res) => res.send('OK'))
+
+// Mount MCP server
+const mcpServer = createMCPServer('integrated-server', { /* ... */ })
+mountMCPServer(app, mcpServer, {
+  basePath: '/mcp-service'  // Optional custom base path
+})
+
+app.listen(3000)
+// Inspector at: http://localhost:3000/mcp-service/inspector
+// MCP endpoint: http://localhost:3000/mcp-service/mcp
 ```
 
 ## 👥 Contributors
