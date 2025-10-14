@@ -338,7 +338,7 @@ const resource = await client.readResource('ui://widget/kanban-board')
 - Complex objects must be JSON-stringified
 
 ### Type Errors
-- Import types: `import type { UIResourceDefinition } from 'mcp-use'`
+- Import types: `import type { UIResourceDefinition } from 'mcp-use/server'`
 - Ensure mcp-use is updated to latest version
 
 ## Migration from Old Pattern

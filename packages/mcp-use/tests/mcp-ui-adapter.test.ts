@@ -22,7 +22,7 @@ import type {
   ExternalUrlUIResource,
   RawHtmlUIResource,
   RemoteDomUIResource
-} from '../src/server/types/resource.js'
+} from 'mcp-use/server'
 
 describe('MCP-UI Adapter', () => {
   const urlConfig: UrlConfig = {

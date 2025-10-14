@@ -3,7 +3,7 @@ import type {
   ExternalUrlUIResource,
   RawHtmlUIResource,
   RemoteDomUIResource
-} from 'mcp-use'
+} from 'mcp-use/server'
 
 // Create an MCP server with UIResource support
 const server = createMCPServer('uiresource-mcp-server', {

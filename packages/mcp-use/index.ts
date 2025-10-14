@@ -20,28 +20,6 @@ export * from './src/managers/tools/index.js'
 // Export observability utilities
 export { type ObservabilityConfig, ObservabilityManager } from './src/observability/index.js'
 
-// Export server utilities
-export { createMCPServer } from './src/server/index.js'
-
-export type {
-  InputDefinition,
-  PromptDefinition,
-  PromptHandler,
-  ResourceDefinition,
-  ResourceHandler,
-  ServerConfig,
-  ToolDefinition,
-  ToolHandler,
-  // UIResource specific types
-  UIResourceDefinition,
-  ExternalUrlUIResource,
-  RawHtmlUIResource,
-  RemoteDomUIResource,
-  WidgetProps,
-  WidgetConfig,
-  WidgetManifest,
-  DiscoverWidgetsOptions,
-} from './src/server/types.js'
 // Export telemetry utilities
 export { setTelemetrySource, Telemetry } from './src/telemetry/index.js'
 
