@@ -1,5 +1,5 @@
 import type { CustomHeader } from './CustomHeadersEditor'
-import { CircleMinus, Cog, Copy, FileText, RotateCcw, Shield } from 'lucide-react'
+import { CircleMinus, Cog, Copy, FileText, Loader2, RotateCcw, Shield } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -12,14 +12,17 @@ import { Label } from '@/components/ui/label'
 import { NotFound } from '@/components/ui/not-found'
 import { RandomGradientBackground } from '@/components/ui/random-gradient-background'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useMcpContext } from '../context/McpContext'
 import { CustomHeadersEditor } from './CustomHeadersEditor'
 
 export function InspectorDashboard() {
   const mcpContext = useMcpContext()
-  const { connections, addConnection, removeConnection } = mcpContext
+  const { connections, addConnection, removeConnection, autoConnect, setAutoConnect, connectServer, disconnectServer: _disconnectServer } = mcpContext
   const navigate = useNavigate()
+  const [connectingServers, setConnectingServers] = useState<Set<string>>(new Set())
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
 
   // Log connections on every render to debug
   console.warn('[InspectorDashboard] Render - connections:', connections.map(c => ({ id: c.id, state: c.state })))
@@ -156,12 +159,57 @@ export function InspectorDashboard() {
   }
 
   const handleServerClick = (connection: any) => {
+    // If disconnected, connect the server
+    if (connection.state === 'disconnected') {
+      console.log('[InspectorDashboard] Connecting server and setting pending navigation:', connection.id)
+      setConnectingServers(prev => new Set(prev).add(connection.id))
+      setPendingNavigation(connection.id)
+      connectServer(connection.id)
+      return
+    }
+
     if (connection.state !== 'ready') {
       toast.error('Server is not connected and cannot be inspected')
       return
     }
     navigate(`/servers/${encodeURIComponent(connection.id)}`)
   }
+
+  // Monitor connecting servers and remove them from the set when they connect or fail
+  useEffect(() => {
+    connectingServers.forEach((serverId) => {
+      const connection = connections.find(c => c.id === serverId)
+      if (connection && (connection.state === 'ready' || connection.state === 'failed')) {
+        setConnectingServers((prev) => {
+          const next = new Set(prev)
+          next.delete(serverId)
+          return next
+        })
+      }
+    })
+  }, [connections, connectingServers])
+
+  // Monitor pending navigation and navigate when server becomes ready
+  useEffect(() => {
+    if (!pendingNavigation)
+      return
+
+    const connection = connections.find(c => c.id === pendingNavigation)
+    console.log('[InspectorDashboard] Pending navigation check:', {
+      pendingNavigation,
+      connectionState: connection?.state,
+    })
+
+    if (connection?.state === 'ready') {
+      console.log('[InspectorDashboard] Navigating to server:', connection.id)
+      setPendingNavigation(null)
+      navigate(`/servers/${encodeURIComponent(connection.id)}`)
+    }
+    else if (connection?.state === 'failed') {
+      console.log('[InspectorDashboard] Connection failed, canceling navigation')
+      setPendingNavigation(null)
+    }
+  }, [connections, pendingNavigation, navigate])
 
   const handleExportServerEntry = async () => {
     if (!url.trim()) {
@@ -243,7 +291,17 @@ export function InspectorDashboard() {
         <div className="space-y-4 mt-8">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-medium">Connected Servers</h3>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="auto-connect" className="text-sm cursor-pointer">
+                  Auto-connect
+                </Label>
+                <Switch
+                  id="auto-connect"
+                  checked={autoConnect}
+                  onCheckedChange={setAutoConnect}
+                />
+              </div>
               {connections.length > 0 && (
                 <Button
                   variant="ghost"
@@ -253,7 +311,6 @@ export function InspectorDashboard() {
                   Clear All
                 </Button>
               )}
-
             </div>
           </div>
           {connections.length === 0
@@ -273,36 +330,42 @@ export function InspectorDashboard() {
                           <div className="flex items-center gap-3">
                             <h4 className="font-semibold text-sm">{connection.name}</h4>
                             <div className="flex items-center gap-2">
-                              {connection.error && connection.state !== 'ready'
+                              {connectingServers.has(connection.id)
                                 ? (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleCopyError(connection.error!)
-                                          }}
-                                          className="w-2 h-2 rounded-full bg-rose-500 animate-status-pulse-red hover:bg-rose-600 transition-colors"
-                                          title="Click to copy error message"
-                                          aria-label="Copy error message to clipboard"
-                                        />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p className="max-w-xs">{connection.error}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
+                                    <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
                                   )
-                                : (
-                                    <div
-                                      className={`w-2 h-2 rounded-full ${
-                                        connection.state === 'ready'
-                                          ? 'bg-emerald-600 animate-status-pulse'
-                                          : connection.state === 'failed'
-                                            ? 'bg-rose-600 animate-status-pulse-red'
-                                            : 'bg-yellow-500 animate-status-pulse-yellow'
-                                      }`}
-                                    />
-                                  )}
+                                : connection.error && connection.state !== 'ready'
+                                  ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleCopyError(connection.error!)
+                                            }}
+                                            className="w-2 h-2 rounded-full bg-rose-500 animate-status-pulse-red hover:bg-rose-600 transition-colors"
+                                            title="Click to copy error message"
+                                            aria-label="Copy error message to clipboard"
+                                          />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="max-w-xs">{connection.error}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )
+                                  : (
+                                      <div
+                                        className={`w-2 h-2 rounded-full ${
+                                          connection.state === 'disconnected'
+                                            ? 'bg-gray-400 dark:bg-gray-600'
+                                            : connection.state === 'ready'
+                                              ? 'bg-emerald-600 animate-status-pulse'
+                                              : connection.state === 'failed'
+                                                ? 'bg-rose-600 animate-status-pulse-red'
+                                                : 'bg-yellow-500 animate-status-pulse-yellow'
+                                        }`}
+                                      />
+                                    )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
@@ -345,21 +408,23 @@ export function InspectorDashboard() {
                               <p>Remove connection</p>
                             </TooltipContent>
                           </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={e => handleActionClick(e, connection.retry)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Resync connection</p>
-                            </TooltipContent>
-                          </Tooltip>
+                          {connection.state !== 'disconnected' && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={e => handleActionClick(e, connection.retry)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Resync connection</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
                         </div>
                       </div>
                       {connection.state === 'pending_auth' && connection.authUrl && (
