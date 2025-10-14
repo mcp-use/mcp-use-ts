@@ -1,4 +1,4 @@
-import { createMCPServer } from 'mcp-use'
+import { createMCPServer } from 'mcp-use/server'
 import { createUIResource } from '@mcp-ui/server';
 
 // Create an MCP server (which is also an Express app)

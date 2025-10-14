@@ -1,5 +1,28 @@
 # mcp-use
 
+## 1.0.4
+
+### Patch Changes
+
+- fix: support multiple clients per server
+- Updated dependencies
+  - @mcp-use/inspector@0.3.8
+
+## 1.0.3
+
+### Patch Changes
+
+- fix: export server from mcp-use/server due to edge runtime
+- Updated dependencies
+  - @mcp-use/inspector@0.3.7
+
+## 1.0.2
+
+### Patch Changes
+
+- 3bd613e: Non blocking structured output process
+  - @mcp-use/inspector@0.3.6
+
 ## 1.0.1
 
 ### Patch Changes

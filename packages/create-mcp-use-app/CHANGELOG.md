@@ -1,5 +1,11 @@
 # create-mcp-use-app
 
+## 0.3.3
+
+### Patch Changes
+
+- fix: export server from mcp-use/server due to edge runtime
+
 ## 0.3.2
 
 ### Patch Changes

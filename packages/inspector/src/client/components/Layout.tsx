@@ -233,7 +233,7 @@ export function Layout({ children }: LayoutProps) {
       const existing = connections.find(c => c.url === autoConnectUrl)
       if (!existing) {
         setIsAutoConnecting(true)
-        addConnection(autoConnectUrl, 'Local MCP Server')
+        addConnection(autoConnectUrl, 'Local MCP Server', undefined, 'http')
         // Navigate immediately but keep loading screen visible a bit longer to avoid flash
         navigate(`/servers/${encodeURIComponent(autoConnectUrl)}`)
         setTimeout(() => {
@@ -254,7 +254,7 @@ export function Layout({ children }: LayoutProps) {
           const existing = connections.find(c => c.url === config.autoConnectUrl)
           if (!existing) {
             // Auto-connect to the local server
-            addConnection(config.autoConnectUrl, 'Local MCP Server')
+            addConnection(config.autoConnectUrl, 'Local MCP Server', undefined, 'http')
           }
         }
       })
@@ -383,7 +383,7 @@ export function Layout({ children }: LayoutProps) {
                         </span>
                         {selectedServer && (
                           <div className="flex items-center gap-2">
-                            {selectedServer.error
+                            {selectedServer.error && selectedServer.state !== 'ready'
                               ? (
                                   <Tooltip>
                                     <TooltipTrigger asChild>

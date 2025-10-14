@@ -5,7 +5,7 @@
 
 import { ChatOpenAI } from '@langchain/openai'
 import { config } from 'dotenv'
-import { Logger, MCPAgent, MCPClient } from '../index.js'
+import { Logger, MCPAgent, MCPClient } from '../../index.js'
 
 // Load environment variables from .env file
 config()

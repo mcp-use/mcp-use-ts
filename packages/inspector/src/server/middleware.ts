@@ -13,7 +13,7 @@ import { checkClientFiles, getClientDistPath, getContentType, handleChatRequest 
  *
  * @example
  * ```typescript
- * import { createMCPServer } from 'mcp-use'
+ * import { createMCPServer } from 'mcp-use/server'
  * import { mountInspector } from '@mcp-use/inspector'
  *
  * const server = createMCPServer('my-server')

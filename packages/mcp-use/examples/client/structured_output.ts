@@ -9,7 +9,7 @@
 import { ChatOpenAI } from '@langchain/openai'
 import { config } from 'dotenv'
 import { z } from 'zod'
-import { MCPAgent, MCPClient } from '../index.js'
+import { MCPAgent, MCPClient } from '../../index.js'
 
 // Load environment variables from .env file
 config()
