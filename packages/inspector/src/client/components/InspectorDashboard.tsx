@@ -1,6 +1,7 @@
 import type { CustomHeader } from './CustomHeadersEditor'
 import { CircleMinus, Cog, Copy, FileText, Loader2, RotateCcw, Shield } from 'lucide-react'
-import React, { useEffect, useRef, useState } from 'react'
+import { useMcp } from 'mcp-use/react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,71 @@ import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useMcpContext } from '../context/McpContext'
 import { CustomHeadersEditor } from './CustomHeadersEditor'
+
+// Temporary connection tester component
+function ConnectionTester({ config, onSuccess, onFailure }: {
+  config: {
+    url: string
+    name: string
+    proxyConfig?: { proxyAddress?: string, proxyToken?: string, customHeaders?: Record<string, string> }
+    transportType?: 'http' | 'sse'
+  }
+  onSuccess: () => void
+  onFailure: (error: string) => void
+}) {
+  const callbackUrl = typeof window !== 'undefined'
+    ? new URL('/oauth/callback', window.location.origin).toString()
+    : '/oauth/callback'
+
+  // Apply proxy configuration
+  let finalUrl = config.url
+  let customHeaders: Record<string, string> = {}
+
+  if (config.proxyConfig?.proxyAddress) {
+    const proxyUrl = new URL(config.proxyConfig.proxyAddress)
+    const originalUrl = new URL(config.url)
+    finalUrl = `${proxyUrl.origin}${proxyUrl.pathname}${originalUrl.pathname}${originalUrl.search}`
+
+    if (config.proxyConfig.proxyToken) {
+      customHeaders['X-Proxy-Token'] = config.proxyConfig.proxyToken
+    }
+    customHeaders['X-Target-URL'] = config.url
+  }
+
+  if (config.proxyConfig?.customHeaders) {
+    customHeaders = { ...customHeaders, ...config.proxyConfig.customHeaders }
+  }
+
+  const mcpHook = useMcp({
+    url: finalUrl,
+    callbackUrl,
+    customHeaders: Object.keys(customHeaders).length > 0 ? customHeaders : undefined,
+    transportType: config.transportType || 'http',
+  })
+
+  const hasCalledRef = useRef(false)
+
+  useEffect(() => {
+    if (hasCalledRef.current)
+      return
+
+    if (mcpHook.state === 'ready') {
+      hasCalledRef.current = true
+      // Don't clear storage on success - we want to keep the connection alive
+      // The real McpConnectionWrapper will take over
+      onSuccess()
+    }
+    else if (mcpHook.state === 'failed' || mcpHook.error) {
+      hasCalledRef.current = true
+      const errorMessage = mcpHook.error || 'Failed to connect to server'
+      // Clear storage on failure to clean up the failed connection attempt
+      mcpHook.clearStorage()
+      onFailure(errorMessage)
+    }
+  }, [mcpHook.state, mcpHook.error, onSuccess, onFailure, mcpHook])
+
+  return null
+}
 
 export function InspectorDashboard() {
   const mcpContext = useMcpContext()
@@ -52,59 +118,31 @@ export function InspectorDashboard() {
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const [configDialogOpen, setConfigDialogOpen] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
-  const [pendingConnectionUrl, setPendingConnectionUrl] = useState<string | null>(null)
+  const [autoSwitch, setAutoSwitch] = useState(true)
   const hasShownToastRef = useRef(false)
+  const [hasTriedBothConnectionTypes, setHasTriedBothConnectionTypes] = useState(false)
+  const [pendingConnectionConfig, setPendingConnectionConfig] = useState<{
+    url: string
+    name: string
+    proxyConfig?: { proxyAddress?: string, proxyToken?: string, customHeaders?: Record<string, string> }
+    transportType?: 'http' | 'sse'
+  } | null>(null)
 
-  // Monitor the pending connection state
+  // Load auto-switch setting from localStorage on mount
   useEffect(() => {
-    if (!pendingConnectionUrl)
-      return
-
-    const connection = connections.find(c => c.id === pendingConnectionUrl)
-    if (!connection) {
-      console.warn('[InspectorDashboard] Pending connection not found yet:', pendingConnectionUrl)
-      return
+    const autoSwitchSetting = localStorage.getItem('mcp-inspector-auto-switch')
+    if (autoSwitchSetting !== null) {
+      setAutoSwitch(autoSwitchSetting === 'true')
     }
+  }, [])
 
-    console.warn('[InspectorDashboard] Connection state:', connection.state, 'for', pendingConnectionUrl)
-
-    // Skip if we've already shown a toast for this connection
-    if (hasShownToastRef.current)
-      return
-
-    // Connection succeeded
-    if (connection.state === 'ready') {
-      console.warn('[InspectorDashboard] Connection ready!')
-      hasShownToastRef.current = true
-      setIsConnecting(false)
-      setPendingConnectionUrl(null)
-      toast.success('Connection established successfully')
-
-      // Reset form
-      setUrl('')
-      setCustomHeaders([])
-      setClientId('')
-      setScope('')
-    }
-    // Connection failed
-    else if (connection.state === 'failed' || connection.error) {
-      console.warn('[InspectorDashboard] Connection failed:', connection.error)
-      hasShownToastRef.current = true
-      setIsConnecting(false)
-      setPendingConnectionUrl(null)
-      const errorMessage = connection.error || 'Failed to connect to server'
-      toast.error(errorMessage)
-      // Don't remove the connection - let user see it in the list and manually remove if needed
-    }
-  }, [connections, pendingConnectionUrl])
-
-  const handleAddConnection = () => {
+  const handleAddConnection = useCallback(() => {
     if (!url.trim())
       return
 
     setIsConnecting(true)
     hasShownToastRef.current = false
-    setPendingConnectionUrl(url)
+    setHasTriedBothConnectionTypes(false)
 
     // Prepare proxy configuration if "Via Proxy" is selected
     const proxyConfig = connectionType === 'Via Proxy' && proxyAddress.trim()
@@ -132,9 +170,82 @@ export function InspectorDashboard() {
     // "WebSocket" in UI means "WebSocket" which uses 'sse' transport
     const actualTransportType = transportType === 'SSE' ? 'http' : 'sse'
 
-    // For now, use URL as both ID and name - this will need proper implementation
-    addConnection(url, url, proxyConfig, actualTransportType)
-  }
+    // Store pending connection config - don't add to saved connections yet
+    setPendingConnectionConfig({
+      url,
+      name: url,
+      proxyConfig,
+      transportType: actualTransportType,
+    })
+  }, [url, connectionType, proxyAddress, proxyToken, customHeaders, transportType])
+
+  // Handle successful connection
+  const handleConnectionSuccess = useCallback(() => {
+    if (!pendingConnectionConfig)
+      return
+
+    console.warn('[InspectorDashboard] Connection ready! Saving to list...')
+    setIsConnecting(false)
+
+    // Add to saved connections now that it's successful
+    addConnection(
+      pendingConnectionConfig.url,
+      pendingConnectionConfig.name,
+      pendingConnectionConfig.proxyConfig,
+      pendingConnectionConfig.transportType,
+    )
+
+    setPendingConnectionConfig(null)
+    toast.success('Connection established successfully')
+
+    // Reset form
+    setUrl('')
+    setCustomHeaders([])
+    setClientId('')
+    setScope('')
+  }, [pendingConnectionConfig, addConnection])
+
+  // Handle failed connection
+  const handleConnectionFailure = useCallback((errorMessage: string) => {
+    console.warn('[InspectorDashboard] Connection failed:', errorMessage)
+
+    // Try auto-switch if enabled and we haven't tried both connection types yet
+    if (autoSwitch && !hasTriedBothConnectionTypes) {
+      const shouldTryProxy = connectionType === 'Direct'
+      const shouldTryDirect = connectionType === 'Via Proxy'
+
+      if (shouldTryProxy) {
+        toast.error('Direct connection failed, trying with proxy...')
+        setHasTriedBothConnectionTypes(true)
+        // Clear pending config first to unmount the old ConnectionTester
+        setPendingConnectionConfig(null)
+        // Switch to proxy and retry after a brief delay
+        setConnectionType('Via Proxy')
+        setTimeout(() => {
+          setIsConnecting(true)
+          handleAddConnection()
+        }, 1000) // Small delay to show the toast
+      }
+      else if (shouldTryDirect) {
+        toast.error('Proxy connection failed, trying direct...')
+        setHasTriedBothConnectionTypes(true)
+        // Clear pending config first to unmount the old ConnectionTester
+        setPendingConnectionConfig(null)
+        // Switch to direct and retry after a brief delay
+        setConnectionType('Direct')
+        setTimeout(() => {
+          setIsConnecting(true)
+          handleAddConnection()
+        }, 1000) // Small delay to show the toast
+      }
+    }
+    else {
+      toast.error(errorMessage)
+      // Clear pending config on final failure
+      setPendingConnectionConfig(null)
+      setIsConnecting(false)
+    }
+  }, [autoSwitch, hasTriedBothConnectionTypes, connectionType, handleAddConnection])
 
   const handleClearAllConnections = () => {
     // Remove all connections
@@ -347,6 +458,7 @@ export function InspectorDashboard() {
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <button
+                                            type="button"
                                             onClick={(e) => {
                                               e.stopPropagation()
                                               handleCopyError(connection.error!)
@@ -383,6 +495,7 @@ export function InspectorDashboard() {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button
+                                  type="button"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     navigator.clipboard.writeText(connection.url)
@@ -495,7 +608,23 @@ export function InspectorDashboard() {
 
           {/* Connection Type */}
           <div className="space-y-2">
-            <Label className="text-white/90">Connection Type</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-white/90">Connection Type</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="auto-switch" className="text-xs text-white/70 cursor-pointer">
+                  Auto-switch
+                </Label>
+                <Switch
+                  id="auto-switch"
+                  checked={autoSwitch}
+                  onCheckedChange={(value) => {
+                    setAutoSwitch(value)
+                    localStorage.setItem('mcp-inspector-auto-switch', String(value))
+                  }}
+                  className="scale-75"
+                />
+              </div>
+            </div>
             <Select value={connectionType} onValueChange={setConnectionType}>
               <SelectTrigger className="w-full bg-white/10 border-white/20 text-white">
                 <SelectValue />
@@ -748,6 +877,16 @@ export function InspectorDashboard() {
         </div>
         <RandomGradientBackground className="absolute inset-0" />
       </div>
+
+      {/* Temporary connection tester - only rendered when testing a new connection */}
+      {pendingConnectionConfig && (
+        <ConnectionTester
+          key={`${pendingConnectionConfig.url}-${pendingConnectionConfig.transportType}-${connectionType}`}
+          config={pendingConnectionConfig}
+          onSuccess={handleConnectionSuccess}
+          onFailure={handleConnectionFailure}
+        />
+      )}
 
     </div>
   )
