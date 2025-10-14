@@ -17,6 +17,7 @@
     { "path": "./packages/mcp-use" },
     { "path": "./packages/inspector" },
     { "path": "./packages/cli" },
-    { "path": "./packages/create-mcp-use-app" }
+    { "path": "./packages/create-mcp-use-app" },
+    { "path": "./test_app" }
   ]
 }
