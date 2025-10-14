@@ -96,7 +96,7 @@
     "@langchain/openai": "^0.6.9",
     "@radix-ui/react-slot": "^1.2.3",
     "@types/express": "^4.17.0",
-    "@types/node": "^24.7.0",
+    "@types/node": "^24.7.2",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",
     "@vitejs/plugin-react": "^5.0.4",
