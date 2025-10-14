@@ -1,7 +1,0 @@
-diff --git a/dist/index.d.ts b/dist/index.d.ts
-index 3091b7219d0bdeb6202cf88862928c5029d9cb51..a48cb664e9c3db9fa58d3ea234fcc6e5f9a665fb 100644
---- a/dist/index.d.ts
-+++ b/dist/index.d.ts
-@@ -1 +1 @@
--export * from './src/index'
-+export * from './src/index.js'

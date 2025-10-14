@@ -1,3 +1,14 @@
+/**
+ * Main package exports for MCP client and MCP agent functionality
+ * 
+ * This file serves as the primary entry point for consuming MCP (Model Context Protocol)
+ * functionality in client applications and agent implementations. It exports all necessary
+ * classes, utilities, and types for building MCP-based applications.
+ * 
+ * @important Server functionality is exported from ./src/server/index.js - 
+ * do NOT export server-related modules from this file.
+ */
+
 import { MCPAgent } from './src/agents/mcp_agent.js'
 import { RemoteAgent } from './src/agents/remote.js'
 import { MCPClient } from './src/client.js'
@@ -41,3 +52,4 @@ export { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from
 export type { StreamEvent } from '@langchain/core/tracers/log_stream'
 
 export { BaseConnector, HttpConnector, loadConfigFile, Logger, logger, MCPAgent, MCPClient, MCPSession, RemoteAgent, StdioConnector, WebSocketConnector }
+
