@@ -1,4 +1,4 @@
-import { createMCPServer } from 'mcp-use'
+import { createMCPServer } from 'mcp-use/server'
 import type {
   ExternalUrlUIResource,
   RawHtmlUIResource,

@@ -416,7 +416,7 @@ private convertPropsToInputs(props?: WidgetProps): InputDefinition[] {
 **File**: `packages/create-mcp-use-app/src/templates/ui/src/server.ts`
 
 ```typescript
-import { createMCPServer } from 'mcp-use'
+import { createMCPServer } from 'mcp-use/server'
 
 const server = createMCPServer('ui-mcp-server', {
   version: '1.0.0',

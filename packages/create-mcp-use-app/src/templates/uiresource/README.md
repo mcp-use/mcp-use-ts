@@ -68,7 +68,7 @@ npm start
 ### Simple Widget Registration
 
 ```typescript
-import { createMCPServer } from 'mcp-use'
+import { createMCPServer } from 'mcp-use/server'
 
 const server = createMCPServer('my-server', {
   version: '1.0.0',
