@@ -1,5 +1,12 @@
 # mcp-use
 
+## 1.0.2
+
+### Patch Changes
+
+- 3bd613e: Non blocking structured output process
+  - @mcp-use/inspector@0.3.6
+
 ## 1.0.1
 
 ### Patch Changes
