@@ -49,11 +49,6 @@ server.uiResource({
       description: 'Column configuration for the board',
       required: false,
     }
-  },
-  size: ['900px', '600px'],
-  annotations: {
-    audience: ['user', 'assistant'],
-    priority: 0.8
   }
 } satisfies ExternalUrlUIResource)
 
