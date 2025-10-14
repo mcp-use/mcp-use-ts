@@ -46,7 +46,7 @@ export class McpServer {
     this.app.use((req, res, next) => {
       res.header('Access-Control-Allow-Origin', '*')
       res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-      res.header('Access-Control-Allow-Headers', 'Content-Type')
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, mcp-protocol-version, mcp-session-id, X-Proxy-Token, X-Target-URL')
       next()
     })
 
@@ -316,9 +316,13 @@ export class McpServer {
     const { StreamableHTTPServerTransport } = await import('@modelcontextprotocol/sdk/server/streamableHttp.js')
     
     // Create StreamableHTTPServerTransport in stateless mode
+    // Note: Stateless mode means one active connection at a time
+    // For multiple concurrent inspectors, use the built-in proxy or same-origin connections
     const httpTransport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined // Stateless mode
+      sessionIdGenerator: undefined, // Stateless mode
+      enableJsonResponse: true
     })
+
 
     // Connect the MCP server to the transport
     await this.server.connect(httpTransport)
