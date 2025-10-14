@@ -124,8 +124,13 @@ export function InspectorDashboard() {
           }, {} as Record<string, string>),
         }
 
+    // Map UI transport type to actual transport type
+    // "SSE" in UI means "Streamable HTTP" which uses 'http' transport
+    // "WebSocket" in UI means "WebSocket" which uses 'sse' transport
+    const actualTransportType = transportType === 'SSE' ? 'http' : 'sse'
+
     // For now, use URL as both ID and name - this will need proper implementation
-    addConnection(url, url, proxyConfig)
+    addConnection(url, url, proxyConfig, actualTransportType)
   }
 
   const handleClearAllConnections = () => {
@@ -222,7 +227,7 @@ export function InspectorDashboard() {
               >
                 <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors">
                   v
-                  {typeof window !== 'undefined' && (window as any).__INSPECTOR_VERSION__ || '1.0.0'}
+                  {(typeof window !== 'undefined' && (window as any).__INSPECTOR_VERSION__) || '1.0.0'}
                 </Badge>
               </a>
             </TooltipTrigger>
@@ -268,7 +273,7 @@ export function InspectorDashboard() {
                           <div className="flex items-center gap-3">
                             <h4 className="font-semibold text-sm">{connection.name}</h4>
                             <div className="flex items-center gap-2">
-                              {connection.error
+                              {connection.error && connection.state !== 'ready'
                                 ? (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
@@ -399,7 +404,7 @@ export function InspectorDashboard() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="SSE">Streamable HTTP</SelectItem>
-                <SelectItem value="WebSocket">WebSocket</SelectItem>
+                <SelectItem value="WebSocket">Server-Sent Events (SSE)</SelectItem>
               </SelectContent>
             </Select>
           </div>
