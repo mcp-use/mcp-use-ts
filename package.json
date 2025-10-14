@@ -42,7 +42,6 @@
   "packageManager": "pnpm@10.6.1",
   "pnpm": {
     "patchedDependencies": {
-      "@mcp-ui/server@5.12.0": "patches/@mcp-ui__server@5.12.0.patch"
     },
     "overrides": {
       "mcp-use": "workspace:*",
