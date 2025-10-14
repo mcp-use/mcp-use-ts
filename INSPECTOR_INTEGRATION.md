@@ -33,7 +33,7 @@ The MCP Inspector is now automatically mounted at `/inspector` for all MCP serve
 When developers create a new MCP server:
 
 ```typescript
-import { createMCPServer } from 'mcp-use'
+import { createMCPServer } from 'mcp-use/server'
 
 const server = createMCPServer('my-server', {
   version: '1.0.0',
