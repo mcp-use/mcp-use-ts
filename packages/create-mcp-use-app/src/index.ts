@@ -208,8 +208,22 @@ async function copyTemplate(projectPath: string, template: string, versions: Rec
 
   if (!existsSync(templatePath)) {
     console.error(`❌ Template "${template}" not found!`)
-    console.log('Available templates: basic, filesystem, api, ui')
+    
+    // Dynamically list available templates
+    const templatesDir = join(__dirname, 'templates')
+    if (existsSync(templatesDir)) {
+      const availableTemplates = readdirSync(templatesDir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name)
+        .sort()
+      
+      console.log(`Available templates: ${availableTemplates.join(', ')}`)
+    } else {
+      console.log('No templates directory found')
+    }
+    
     console.log('💡 Tip: Use "ui" template for React components and modern UI features')
+    console.log('💡 Tip: Use "uiresource" template for UI resources and advanced server examples')
     process.exit(1)
   }
 
