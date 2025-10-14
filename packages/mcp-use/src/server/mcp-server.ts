@@ -7,6 +7,7 @@ import type {
   UIResourceDefinition,
   WidgetProps,
   InputDefinition,
+  UIResourceContent,
 } from './types/index.js'
 import { McpServer as OfficialMcpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
@@ -14,8 +15,7 @@ import express, { type Express } from 'express'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { requestLogger } from './logging.js'
-import type { createMcpUiAdapter } from './adapters/mcp-ui-adapter.js'
-import type { McpUiAdapter } from './adapters/mcp-ui-adapter.js'
+import { createUIResourceFromDefinition, type UrlConfig } from './adapters/mcp-ui-adapter.js'
 
 export class McpServer {
   private server: OfficialMcpServer
@@ -24,7 +24,6 @@ export class McpServer {
   private mcpMounted = false
   private inspectorMounted = false
   private serverPort?: number
-  private uiAdapter?: McpUiAdapter
 
   /**
    * Creates a new MCP server instance with Express integration
@@ -337,10 +336,57 @@ export class McpServer {
    * ```
    */
   uiResource(definition: UIResourceDefinition): this {
+    // Determine tool name based on resource type
+    const toolName = definition.type === 'externalUrl' ? `ui_${definition.widget}` : `ui_${definition.name}`
+    const displayName = definition.title || definition.name
+
+    // Determine resource URI and mimeType based on type
+    let resourceUri: string
+    let mimeType: string
+
+    switch (definition.type) {
+      case 'externalUrl':
+        resourceUri = `ui://widget/${definition.widget}`
+        mimeType = 'text/uri-list'
+        break
+      case 'rawHtml':
+        resourceUri = `ui://widget/${definition.name}`
+        mimeType = 'text/html'
+        break
+      case 'remoteDom':
+        resourceUri = `ui://widget/${definition.name}`
+        mimeType = 'application/vnd.mcp-ui.remote-dom+javascript'
+        break
+      default:
+        throw new Error(`Unsupported UI resource type. Must be one of: externalUrl, rawHtml, remoteDom`)
+    }
+
+    // Register the resource
+    this.resource({
+      name: definition.name,
+      uri: resourceUri,
+      title: definition.title,
+      description: definition.description,
+      mimeType,
+      annotations: definition.annotations,
+      fn: async () => {
+        // For externalUrl type, use default props. For others, use empty params
+        const params = definition.type === 'externalUrl'
+          ? this.applyDefaultProps(definition.props)
+          : {}
+
+        const uiResource = this.createWidgetUIResource(definition, params)
+
+        return {
+          contents: [uiResource.resource]
+        }
+      }
+    })
+
     // Register the tool - returns UIResource with parameters
     this.tool({
-      name: `ui_${definition.widget}`,
-      description: definition.description || `Display ${definition.widget} widget`,
+      name: toolName,
+      description: definition.description || `Display ${displayName}`,
       inputs: this.convertPropsToInputs(definition.props),
       fn: async (params) => {
         // Create the UIResource with user-provided params
@@ -350,35 +396,11 @@ export class McpServer {
           content: [
             {
               type: 'text',
-              text: `Displaying ${definition.title || definition.widget} widget`
+              text: `Displaying ${displayName}`,
+              description: `Show MCP-UI widget for ${displayName}`
             },
-            uiResource  // Reuse the same UIResource
+            uiResource
           ]
-        }
-      }
-    })
-
-    // Register the resource - returns widget URL for MCP clients
-    this.resource({
-      name: definition.name,
-      uri: `ui://widget/${definition.widget}`,
-      title: definition.title,
-      description: definition.description,
-      mimeType: 'text/uri-list',
-      annotations: definition.annotations,
-      fn: async () => {
-        // Build the widget URL with default props
-        const widgetUrl = this.buildWidgetUrl(
-          definition.widget,
-          this.applyDefaultProps(definition.props)
-        )
-
-        return {
-          contents: [{
-            uri: `ui://widget/${definition.widget}`,
-            mimeType: 'text/uri-list',
-            text: widgetUrl
-          }]
         }
       }
     })
@@ -401,17 +423,13 @@ export class McpServer {
   private createWidgetUIResource(
     definition: UIResourceDefinition,
     params: Record<string, any>
-  ): any {
-    // Initialize adapter if not already created
-    if (!this.uiAdapter) {
-      this.uiAdapter = createMcpUiAdapter({
-        baseUrl: `http://localhost`,
-        port: this.serverPort || 3001
-      })
+  ): UIResourceContent {
+    const urlConfig: UrlConfig = {
+      baseUrl: 'http://localhost',
+      port: this.serverPort || 3001
     }
 
-    // Use the adapter to create the UIResource
-    return this.uiAdapter.createWidgetUIResource(definition, params)
+    return createUIResourceFromDefinition(definition, params, urlConfig)
   }
 
   /**

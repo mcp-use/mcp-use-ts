@@ -1,193 +1,178 @@
 /**
- * MCP-UI Adapter
+ * MCP-UI Adapter Utilities
  *
- * Provides an adapter between mcp-use high-level UIResource definitions
- * and the low-level @mcp-ui/server resource format.
+ * Pure functions to convert mcp-use high-level UIResource definitions
+ * into @mcp-ui/server compatible resource objects.
+ *
  * Ref: https://mcpui.dev/guide/server/typescript/usage-examples
  */
 
 import { createUIResource } from '@mcp-ui/server'
-import type { UIResourceContent, UIResourceDefinition } from '../types/resource.js'
+import type {
+  UIResourceContent,
+  UIResourceDefinition,
+  UIEncoding
+} from '../types/resource.js'
 
 /**
- * Content type options for UI resources
+ * Configuration for building widget URLs
  */
-export type UIContentType =
-  | 'externalUrl'  // Default: iframe URL for serving widgets
-  | 'rawHtml'      // Direct HTML content
-  | 'remoteDom'    // Remote DOM scripting
-
-/**
- * Encoding options for UI resources
- */
-export type UIEncoding = 'text' | 'blob'
-
-/**
- * Framework options for Remote DOM resources
- */
-export type RemoteDomFramework = 'react' | 'webcomponents'
-
-/**
- * Extended UI resource definition with content type support
- */
-export interface ExtendedUIResourceDefinition extends UIResourceDefinition {
-  contentType?: UIContentType
-  encoding?: UIEncoding
-  htmlContent?: string
-  remoteDomScript?: string
-  remoteDomFramework?: RemoteDomFramework
-}
-
-/**
- * Configuration for the adapter
- */
-export interface AdapterConfig {
+export interface UrlConfig {
   baseUrl: string
   port: number | string
 }
 
 /**
- * MCP-UI Adapter class
+ * Build the full URL for a widget including query parameters
+ *
+ * @param widget - Widget identifier
+ * @param props - Parameters to pass as query params
+ * @param config - URL configuration (baseUrl and port)
+ * @returns Complete widget URL with encoded parameters
  */
-export class McpUiAdapter {
-  private config: AdapterConfig
+export function buildWidgetUrl(
+  widget: string,
+  props: Record<string, any> | undefined,
+  config: UrlConfig
+): string {
+  const url = new URL(
+    `/mcp-use/widgets/${widget}`,
+    `${config.baseUrl}:${config.port}`
+  )
 
-  constructor(config: AdapterConfig) {
-    this.config = config
+  if (props) {
+    Object.entries(props).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        const stringValue = typeof value === 'object'
+          ? JSON.stringify(value)
+          : String(value)
+        url.searchParams.set(key, stringValue)
+      }
+    })
   }
 
-  /**
-   * Build the full URL for a widget
-   */
-  private buildWidgetUrl(widget: string, props?: Record<string, any>): string {
-    const url = new URL(
-      `/mcp-use/widgets/${widget}`,
-      `http://localhost:${this.config.port}`
-    )
+  return url.toString()
+}
 
-    if (props) {
-      Object.entries(props).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          const stringValue = typeof value === 'object'
-            ? JSON.stringify(value)
-            : String(value)
-          url.searchParams.set(key, stringValue)
-        }
-      })
+/**
+ * Create a UIResource for an external URL (iframe)
+ *
+ * @param uri - Resource URI (must start with ui://)
+ * @param iframeUrl - URL to load in iframe
+ * @param encoding - Encoding type ('text' or 'blob')
+ * @returns UIResourceContent object
+ */
+export function createExternalUrlResource(
+  uri: string,
+  iframeUrl: string,
+  encoding: UIEncoding = 'text'
+): UIResourceContent {
+  return createUIResource({
+    uri: uri as `ui://${string}`,
+    content: { type: 'externalUrl', iframeUrl },
+    encoding
+  })
+}
+
+/**
+ * Create a UIResource for raw HTML content
+ *
+ * @param uri - Resource URI (must start with ui://)
+ * @param htmlString - HTML content to render
+ * @param encoding - Encoding type ('text' or 'blob')
+ * @returns UIResourceContent object
+ */
+export function createRawHtmlResource(
+  uri: string,
+  htmlString: string,
+  encoding: UIEncoding = 'text'
+): UIResourceContent {
+  return createUIResource({
+    uri: uri as `ui://${string}`,
+    content: { type: 'rawHtml', htmlString },
+    encoding
+  })
+}
+
+/**
+ * Create a UIResource for Remote DOM scripting
+ *
+ * @param uri - Resource URI (must start with ui://)
+ * @param script - JavaScript code for remote DOM manipulation
+ * @param framework - Framework for remote DOM ('react' or 'webcomponents')
+ * @param encoding - Encoding type ('text' or 'blob')
+ * @returns UIResourceContent object
+ */
+export function createRemoteDomResource(
+  uri: string,
+  script: string,
+  framework: 'react' | 'webcomponents' = 'react',
+  encoding: UIEncoding = 'text'
+): UIResourceContent {
+  return createUIResource({
+    uri: uri as `ui://${string}`,
+    content: { type: 'remoteDom', script, framework },
+    encoding
+  })
+}
+
+/**
+ * Create a UIResource from a high-level definition
+ *
+ * This is the main function that routes to the appropriate resource creator
+ * based on the discriminated union type.
+ *
+ * @param definition - UIResource definition (discriminated union)
+ * @param params - Runtime parameters for the widget (for externalUrl type)
+ * @param config - URL configuration for building widget URLs
+ * @returns UIResourceContent object
+ */
+export function createUIResourceFromDefinition(
+  definition: UIResourceDefinition,
+  params: Record<string, any>,
+  config: UrlConfig
+): UIResourceContent {
+  const uri = `ui://widget/${definition.name}` as `ui://${string}`
+  const encoding = definition.encoding || 'text'
+
+  switch (definition.type) {
+    case 'externalUrl': {
+      const widgetUrl = buildWidgetUrl(definition.widget, params, config)
+      return createExternalUrlResource(uri, widgetUrl, encoding)
     }
 
-    return url.toString()
-  }
+    case 'rawHtml': {
+      return createRawHtmlResource(uri, definition.htmlContent, encoding)
+    }
 
-  /**
-   * Create a UIResource for an external URL (default for widgets)
-   * @param uri - URI of the resource
-   * @param iframeUrl - URL of the iframe
-   * @param encoding - Encoding of the resource (text or blob (URL is Base64 encoded))
-   * @returns UIResourceContent
-   */
-  createExternalUrlResource(
-    uri: string,
-    iframeUrl: string,
-    encoding: UIEncoding = 'text'
-  ): UIResourceContent {
-    return createUIResource({
-      uri: uri as `ui://${string}`,
-      content: { type: 'externalUrl', iframeUrl },
-      encoding
-    })
-  }
+    case 'remoteDom': {
+      const framework = definition.framework || 'react'
+      return createRemoteDomResource(uri, definition.script, framework, encoding)
+    }
 
-  /**
-   * Create a UIResource for raw HTML content
-   * 
-   * @param uri - URI of the resource
-   * @param htmlString - HTML string to embed
-   * @param encoding - Encoding of the resource
-   * @returns UIResourceContent
-   */
-  createRawHtmlResource(
-    uri: string,
-    htmlString: string,
-    encoding: UIEncoding = 'text'
-  ): UIResourceContent {
-    return createUIResource({
-      uri: uri as `ui://${string}`,
-      content: { type: 'rawHtml', htmlString },
-      encoding
-    })
-  }
-
-  /**
-   * Create a UIResource for Remote DOM scripting
-   */
-  createRemoteDomResource(
-    uri: string,
-    script: string,
-    framework: RemoteDomFramework = 'react',
-    encoding: UIEncoding = 'text'
-  ): UIResourceContent {
-    return createUIResource({
-      uri: uri as `ui://${string}`,
-      content: { type: 'remoteDom', script, framework },
-      encoding
-    })
-  }
-
-  /**
-   * Create a UIResource from our high-level definition
-   */
-  createWidgetUIResource(
-    definition: ExtendedUIResourceDefinition,
-    props?: Record<string, any>
-  ): UIResourceContent {
-    const uri = `ui://widget/${definition.name}`
-    const contentType = definition.contentType || 'externalUrl'
-    const encoding = definition.encoding || 'text'
-
-    switch (contentType) {
-      case 'externalUrl': {
-        const widgetUrl = this.buildWidgetUrl(definition.widget, props)
-        return this.createExternalUrlResource(uri, widgetUrl, encoding)
-      }
-
-      case 'rawHtml': {
-        if (!definition.htmlContent) {
-          throw new Error(`HTML content required for rawHtml type in widget ${definition.name}`)
-        }
-        return this.createRawHtmlResource(uri, definition.htmlContent, encoding)
-      }
-
-      case 'remoteDom': {
-        if (!definition.remoteDomScript) {
-          throw new Error(`Remote DOM script required for remoteDom type in widget ${definition.name}`)
-        }
-        const framework = definition.remoteDomFramework || 'react'
-        return this.createRemoteDomResource(
-          uri,
-          definition.remoteDomScript,
-          framework,
-          encoding
-        )
-      }
-
-      default:
-        throw new Error(`Unknown content type: ${contentType}`)
+    default: {
+      // TypeScript exhaustiveness check
+      const _exhaustive: never = definition
+      throw new Error(`Unknown UI resource type: ${(_exhaustive as any).type}`)
     }
   }
+}
 
-  /**
-   * Generate HTML content for a widget (for rawHtml type)
-   */
-  generateWidgetHtml(
-    definition: UIResourceDefinition,
-    props?: Record<string, any>
-  ): string {
-    const [width = '100%', height = '400px'] = definition.size || []
-    const propsJson = props ? JSON.stringify(props) : '{}'
+/**
+ * Generate HTML content for a widget (utility function)
+ *
+ * @param definition - Base UI resource definition
+ * @param props - Widget properties to inject
+ * @returns Generated HTML string
+ */
+export function generateWidgetHtml(
+  definition: Pick<UIResourceDefinition, 'name' | 'title' | 'description' | 'size'>,
+  props?: Record<string, any>
+): string {
+  const [width = '100%', height = '400px'] = definition.size || []
+  const propsJson = props ? JSON.stringify(props) : '{}'
 
-    return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -246,16 +231,20 @@ export class McpUiAdapter {
   </script>
 </body>
 </html>`
-  }
+}
 
-  /**
-   * Generate a Remote DOM script for a widget
-   */
-  generateRemoteDomScript(
-    definition: UIResourceDefinition,
-    props?: Record<string, any>
-  ): string {
-    return `
+/**
+ * Generate a Remote DOM script for a widget (utility function)
+ *
+ * @param definition - Base UI resource definition
+ * @param props - Widget properties to inject
+ * @returns Generated JavaScript string
+ */
+export function generateRemoteDomScript(
+  definition: Pick<UIResourceDefinition, 'name' | 'title' | 'description'>,
+  props?: Record<string, any>
+): string {
+  return `
 // Remote DOM script for ${definition.name}
 const container = document.createElement('div');
 container.style.padding = '20px';
@@ -295,12 +284,4 @@ console.log('Remote DOM widget ${definition.name} initialized with props:', prop
 
 // Append to root
 root.appendChild(container);`
-  }
-}
-
-/**
- * Factory function to create an adapter instance
- */
-export function createMcpUiAdapter(config: AdapterConfig): McpUiAdapter {
-  return new McpUiAdapter(config)
 }

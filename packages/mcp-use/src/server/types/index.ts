@@ -19,10 +19,12 @@ export {
   // UIResource specific types
   UIResourceContent,
   WidgetProps,
-  UIContentType,
   UIEncoding,
   RemoteDomFramework,
   UIResourceDefinition,
+  ExternalUrlUIResource,
+  RawHtmlUIResource,
+  RemoteDomUIResource,
   WidgetConfig,
   WidgetManifest,
   DiscoverWidgetsOptions

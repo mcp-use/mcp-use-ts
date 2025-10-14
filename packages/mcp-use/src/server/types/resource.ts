@@ -70,14 +70,6 @@ export interface WidgetProps {
 }
 
 /**
- * UIResource content types
- */
-export type UIContentType =
-  | 'externalUrl'  // Default: iframe URL for serving widgets
-  | 'rawHtml'      // Direct HTML content
-  | 'remoteDom'    // Remote DOM scripting
-
-/**
  * Encoding options for UI resources
  */
 export type UIEncoding = 'text' | 'blob'
@@ -87,11 +79,12 @@ export type UIEncoding = 'text' | 'blob'
  */
 export type RemoteDomFramework = 'react' | 'webcomponents'
 
-export interface UIResourceDefinition {
+/**
+ * Base properties shared by all UI resource types
+ */
+interface BaseUIResourceDefinition {
   /** Unique identifier for the resource */
   name: string
-  /** Widget identifier (e.g., 'kanban-board', 'chart') */
-  widget: string
   /** Human-readable title */
   title?: string
   /** Description of what the widget does */
@@ -102,17 +95,46 @@ export interface UIResourceDefinition {
   size?: [string, string]
   /** Resource annotations for discovery and presentation */
   annotations?: ResourceAnnotations
-  /** Content type for the UIResource (defaults to 'externalUrl') */
-  contentType?: UIContentType
   /** Encoding for the resource content (defaults to 'text') */
   encoding?: UIEncoding
-  /** HTML content for rawHtml content type */
-  htmlContent?: string
-  /** Script for remoteDom content type */
-  remoteDomScript?: string
-  /** Framework for remoteDom content type */
-  remoteDomFramework?: RemoteDomFramework
 }
+
+/**
+ * External URL UI resource - serves widget via iframe
+ */
+export interface ExternalUrlUIResource extends BaseUIResourceDefinition {
+  type: 'externalUrl'
+  /** Widget identifier (e.g., 'kanban-board', 'chart') */
+  widget: string
+}
+
+/**
+ * Raw HTML UI resource - direct HTML content
+ */
+export interface RawHtmlUIResource extends BaseUIResourceDefinition {
+  type: 'rawHtml'
+  /** HTML content to render */
+  htmlContent: string
+}
+
+/**
+ * Remote DOM UI resource - scripted UI components
+ */
+export interface RemoteDomUIResource extends BaseUIResourceDefinition {
+  type: 'remoteDom'
+  /** JavaScript code for remote DOM manipulation */
+  script: string
+  /** Framework for remote DOM (defaults to 'react') */
+  framework?: RemoteDomFramework
+}
+
+/**
+ * Discriminated union of all UI resource types
+ */
+export type UIResourceDefinition =
+  | ExternalUrlUIResource
+  | RawHtmlUIResource
+  | RemoteDomUIResource
 
 export interface WidgetConfig {
   /** Widget directory name */
