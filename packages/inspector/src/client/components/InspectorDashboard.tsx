@@ -403,7 +403,7 @@ export function InspectorDashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="SSE">Streamable HTTP (Recommended)</SelectItem>
+                <SelectItem value="SSE">Streamable HTTP</SelectItem>
                 <SelectItem value="WebSocket">Server-Sent Events (SSE)</SelectItem>
               </SelectContent>
             </Select>
