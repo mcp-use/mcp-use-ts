@@ -1,5 +1,13 @@
 # @mcp-use/inspector
 
+## 0.3.3
+
+### Patch Changes
+
+- 5b470a3: fix: export server stuff from mcp-use/server instead of root
+- Updated dependencies [5b470a3]
+  - mcp-use@1.0.1
+
 ## 0.3.2
 
 ### Patch Changes

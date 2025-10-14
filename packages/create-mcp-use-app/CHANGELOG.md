@@ -1,5 +1,11 @@
 # create-mcp-use-app
 
+## 0.3.2
+
+### Patch Changes
+
+- 5b470a3: fix: export server stuff from mcp-use/server instead of root
+
 ## 0.3.1
 
 ### Patch Changes
