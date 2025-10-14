@@ -46,7 +46,7 @@ export class McpServer {
     this.app.use((req, res, next) => {
       res.header('Access-Control-Allow-Origin', '*')
       res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-      res.header('Access-Control-Allow-Headers', 'Content-Type')
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, mcp-protocol-version, mcp-session-id, X-Proxy-Token, X-Target-URL')
       next()
     })
 
@@ -296,7 +296,8 @@ export class McpServer {
    * 
    * Sets up the HTTP transport layer for the MCP server, creating endpoints for
    * Server-Sent Events (SSE) streaming, POST message handling, and DELETE session cleanup.
-   * Uses stateless mode for session management, making it suitable for stateless deployments.
+   * Each request gets its own transport instance to prevent state conflicts between
+   * concurrent client connections.
    * 
    * This method is called automatically when the server starts listening and ensures
    * that MCP clients can communicate with the server over HTTP.
@@ -314,30 +315,53 @@ export class McpServer {
     if (this.mcpMounted) return
     
     const { StreamableHTTPServerTransport } = await import('@modelcontextprotocol/sdk/server/streamableHttp.js')
-    
-    // Create StreamableHTTPServerTransport in stateless mode
-    const httpTransport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined // Stateless mode
-    })
-
-    // Connect the MCP server to the transport
-    await this.server.connect(httpTransport)
 
     const endpoint = '/mcp'
 
-    // GET endpoint for SSE streaming
-    this.app.get(endpoint, async (req, res) => {
-      await httpTransport.handleRequest(req, res)
+    // POST endpoint for messages
+    // Create a new transport for each request to support multiple concurrent clients
+    this.app.post(endpoint, express.json(), async (req, res) => {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true
+      })
+
+      res.on('close', () => {
+        transport.close()
+      })
+
+      await this.server.connect(transport)
+      await transport.handleRequest(req, res, req.body)
     })
 
-    // POST endpoint for messages
-    this.app.post(endpoint, express.json(), async (req, res) => {
-      await httpTransport.handleRequest(req, res, req.body)
+    // GET endpoint for SSE streaming
+    this.app.get(endpoint, async (req, res) => {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true
+      })
+
+      res.on('close', () => {
+        transport.close()
+      })
+
+      await this.server.connect(transport)
+      await transport.handleRequest(req, res)
     })
 
     // DELETE endpoint for session cleanup
     this.app.delete(endpoint, async (req, res) => {
-      await httpTransport.handleRequest(req, res)
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true
+      })
+
+      res.on('close', () => {
+        transport.close()
+      })
+
+      await this.server.connect(transport)
+      await transport.handleRequest(req, res)
     })
 
     this.mcpMounted = true

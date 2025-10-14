@@ -21,7 +21,7 @@ interface MCPConnection {
 
 interface McpContextType {
   connections: MCPConnection[]
-  addConnection: (url: string, name?: string, proxyConfig?: { proxyAddress?: string, proxyToken?: string, customHeaders?: Record<string, string> }) => void
+  addConnection: (url: string, name?: string, proxyConfig?: { proxyAddress?: string, proxyToken?: string, customHeaders?: Record<string, string> }, transportType?: 'http' | 'sse') => void
   removeConnection: (id: string) => void
   getConnection: (id: string) => MCPConnection | undefined
 }
@@ -33,12 +33,14 @@ interface SavedConnection {
   url: string
   name: string
   proxyConfig?: { proxyAddress?: string, proxyToken?: string, customHeaders?: Record<string, string> }
+  transportType?: 'http' | 'sse'
 }
 
-function McpConnectionWrapper({ url, name, proxyConfig, onUpdate, onRemove: _onRemove }: {
+function McpConnectionWrapper({ url, name, proxyConfig, transportType, onUpdate, onRemove: _onRemove }: {
   url: string
   name: string
   proxyConfig?: { proxyAddress?: string, proxyToken?: string, customHeaders?: Record<string, string> }
+  transportType?: 'http' | 'sse'
   onUpdate: (connection: MCPConnection) => void
   onRemove: () => void
 }) {
@@ -79,6 +81,7 @@ function McpConnectionWrapper({ url, name, proxyConfig, onUpdate, onRemove: _onR
     url: finalUrl,
     callbackUrl,
     customHeaders: Object.keys(customHeaders).length > 0 ? customHeaders : undefined,
+    transportType: transportType || 'http', // Default to 'http' for Streamable HTTP
   })
   const onUpdateRef = useRef(onUpdate)
   const prevConnectionRef = useRef<MCPConnection | null>(null)
@@ -194,12 +197,21 @@ export function McpProvider({ children }: { children: ReactNode }) {
                 && typeof conn.id === 'string'
                 && typeof conn.url === 'string'
                 && typeof conn.name === 'string'
+            }).map((conn: any) => {
+              // Migrate existing connections to include transportType
+              if (!conn.transportType) {
+                conn.transportType = 'http' // Default to 'http' for Streamable HTTP
+              }
+              return conn
             })
           : []
 
-        // If we filtered out any invalid connections, update localStorage
-        if (validConnections.length !== parsed.length) {
-          console.warn('Cleaned up invalid connections from localStorage')
+        // If we filtered out any invalid connections or migrated transport types, update localStorage
+        const hasChanges = validConnections.length !== parsed.length
+          || validConnections.some((conn: any) => conn.transportType === 'http' && !parsed.find((p: any) => p.id === conn.id && p.transportType))
+
+        if (hasChanges) {
+          console.warn('Updated connections in localStorage with transport type migration')
           localStorage.setItem('mcp-inspector-connections', JSON.stringify(validConnections))
         }
 
@@ -218,13 +230,14 @@ export function McpProvider({ children }: { children: ReactNode }) {
     setConnectionVersion(v => v + 1)
   }, [])
 
-  const addConnection = useCallback((url: string, name?: string, proxyConfig?: { proxyAddress?: string, proxyToken?: string, customHeaders?: Record<string, string> }) => {
+  const addConnection = useCallback((url: string, name?: string, proxyConfig?: { proxyAddress?: string, proxyToken?: string, customHeaders?: Record<string, string> }, transportType?: 'http' | 'sse') => {
     const connectionName = name || url
     const newConnection: SavedConnection = {
       id: url,
       url,
       name: connectionName,
       proxyConfig,
+      transportType: transportType || 'http', // Default to 'http' for Streamable HTTP
     }
 
     setSavedConnections((prev) => {
@@ -289,6 +302,7 @@ export function McpProvider({ children }: { children: ReactNode }) {
           url={saved.url}
           name={saved.name}
           proxyConfig={saved.proxyConfig}
+          transportType={saved.transportType}
           onUpdate={updateConnection}
           onRemove={() => removeConnection(saved.id)}
         />
