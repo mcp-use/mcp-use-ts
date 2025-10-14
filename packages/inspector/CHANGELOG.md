@@ -1,5 +1,13 @@
 # @mcp-use/inspector
 
+## 0.3.8
+
+### Patch Changes
+
+- fix: support multiple clients per server
+- Updated dependencies
+  - mcp-use@1.0.4
+
 ## 0.3.7
 
 ### Patch Changes
