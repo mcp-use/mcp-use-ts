@@ -532,7 +532,104 @@ server.listen(3000)
 | **♻️ Hot Reload** | Development mode with automatic reloading |
 | **📊 Observability** | Built-in logging and monitoring capabilities |
 
-### Building UI Widgets
+### MCP-UI Resources
+
+MCP-Use provides a unified `uiResource()` method for registering interactive UI widgets that are compatible with MCP-UI clients. This automatically creates both a tool (for dynamic parameters) and a resource (for static access).
+
+#### Quick Start
+
+```ts
+import { createMCPServer } from 'mcp-use/server'
+
+const server = createMCPServer('my-server', { version: '1.0.0' })
+
+// Register a widget - creates both tool and resource automatically
+server.uiResource({
+  type: 'externalUrl',
+  name: 'kanban-board',
+  widget: 'kanban-board',
+  title: 'Kanban Board',
+  description: 'Interactive task management board',
+  props: {
+    initialTasks: { 
+      type: 'array', 
+      description: 'Initial tasks',
+      required: false 
+    },
+    theme: { 
+      type: 'string', 
+      default: 'light' 
+    }
+  },
+  size: ['900px', '600px']
+})
+
+server.listen(3000)
+```
+
+This automatically creates:
+- **Tool**: `ui_kanban-board` - Accepts parameters and returns UIResource
+- **Resource**: `ui://widget/kanban-board` - Static access with defaults
+
+#### Three Resource Types
+
+**1. External URL (Iframe)**
+Serve widgets from your filesystem via iframe:
+
+```ts
+server.uiResource({
+  type: 'externalUrl',
+  name: 'dashboard',
+  widget: 'dashboard',
+  props: { userId: { type: 'string', required: true } }
+})
+```
+
+**2. Raw HTML**
+Direct HTML content rendering:
+
+```ts
+server.uiResource({
+  type: 'rawHtml',
+  name: 'welcome-card',
+  htmlContent: `
+    <!DOCTYPE html>
+    <html>
+      <body><h1>Welcome!</h1></body>
+    </html>
+  `
+})
+```
+
+**3. Remote DOM**
+Interactive components using MCP-UI React components:
+
+```ts
+server.uiResource({
+  type: 'remoteDom',
+  name: 'quick-poll',
+  script: `
+    const button = document.createElement('ui-button');
+    button.setAttribute('label', 'Vote');
+    root.appendChild(button);
+  `,
+  framework: 'react'
+})
+```
+
+#### Get Started with Templates
+
+```bash
+# Create a new project with UIResource examples
+npx create-mcp-use-app my-app
+# Select: "MCP Server with UIResource widgets"
+
+cd my-app
+npm install
+npm run dev
+```
+
+### Building Custom UI Widgets
 
 MCP-Use supports building custom UI widgets for your MCP tools using React:
 
