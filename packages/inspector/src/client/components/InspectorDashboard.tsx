@@ -161,7 +161,7 @@ export function InspectorDashboard() {
   const handleServerClick = (connection: any) => {
     // If disconnected, connect the server
     if (connection.state === 'disconnected') {
-      console.log('[InspectorDashboard] Connecting server and setting pending navigation:', connection.id)
+      console.warn('[InspectorDashboard] Connecting server and setting pending navigation:', connection.id)
       setConnectingServers(prev => new Set(prev).add(connection.id))
       setPendingNavigation(connection.id)
       connectServer(connection.id)
@@ -195,18 +195,26 @@ export function InspectorDashboard() {
       return
 
     const connection = connections.find(c => c.id === pendingNavigation)
-    console.log('[InspectorDashboard] Pending navigation check:', {
+    const hasData = (connection?.tools?.length || 0) > 0
+      || (connection?.resources?.length || 0) > 0
+      || (connection?.prompts?.length || 0) > 0
+
+    console.warn('[InspectorDashboard] Pending navigation check:', {
       pendingNavigation,
       connectionState: connection?.state,
+      hasData,
+      toolsCount: connection?.tools?.length || 0,
     })
 
-    if (connection?.state === 'ready') {
-      console.log('[InspectorDashboard] Navigating to server:', connection.id)
+    // Navigate if connection is ready OR if it has loaded some data (partial success)
+    if (connection && (connection.state === 'ready' || (hasData && connection.state !== 'connecting'))) {
+      console.warn('[InspectorDashboard] Navigating to server:', connection.id)
       setPendingNavigation(null)
       navigate(`/servers/${encodeURIComponent(connection.id)}`)
     }
-    else if (connection?.state === 'failed') {
-      console.log('[InspectorDashboard] Connection failed, canceling navigation')
+    // Only cancel navigation if connection truly failed with no data loaded
+    else if (connection && connection.state === 'failed' && !hasData && connection.error) {
+      console.warn('[InspectorDashboard] Connection failed with no data, canceling navigation')
       setPendingNavigation(null)
     }
   }, [connections, pendingNavigation, navigate])

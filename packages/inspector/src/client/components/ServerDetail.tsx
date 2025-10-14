@@ -21,7 +21,7 @@ export function ServerDetail() {
   // This ensures the server connects even if auto-connect is disabled globally
   useEffect(() => {
     if (decodedServerId && connection?.state === 'disconnected') {
-      console.log('[ServerDetail] Auto-connecting server for details page:', decodedServerId)
+      console.warn('[ServerDetail] Auto-connecting server for details page:', decodedServerId)
       connectServer(decodedServerId)
     }
   }, [decodedServerId, connection?.state, connectServer])
