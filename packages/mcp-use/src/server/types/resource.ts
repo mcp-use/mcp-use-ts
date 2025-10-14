@@ -1,6 +1,18 @@
 import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import type { ResourceAnnotations } from './common.js'
 
+// UIResourceContent type from MCP-UI
+export type UIResourceContent = {
+  type: 'resource'
+  resource: {
+    uri: string
+    mimeType: string
+  } & (
+    | { text: string; blob?: never }
+    | { blob: string; text?: never }
+  )
+}
+
 // Handler types
 export type ResourceHandler = () => Promise<ReadResourceResult>
 export type ResourceTemplateHandler = (uri: URL, params: Record<string, any>) => Promise<ReadResourceResult>
@@ -57,6 +69,24 @@ export interface WidgetProps {
   }
 }
 
+/**
+ * UIResource content types
+ */
+export type UIContentType =
+  | 'externalUrl'  // Default: iframe URL for serving widgets
+  | 'rawHtml'      // Direct HTML content
+  | 'remoteDom'    // Remote DOM scripting
+
+/**
+ * Encoding options for UI resources
+ */
+export type UIEncoding = 'text' | 'blob'
+
+/**
+ * Framework options for Remote DOM resources
+ */
+export type RemoteDomFramework = 'react' | 'webcomponents'
+
 export interface UIResourceDefinition {
   /** Unique identifier for the resource */
   name: string
@@ -72,6 +102,16 @@ export interface UIResourceDefinition {
   size?: [string, string]
   /** Resource annotations for discovery and presentation */
   annotations?: ResourceAnnotations
+  /** Content type for the UIResource (defaults to 'externalUrl') */
+  contentType?: UIContentType
+  /** Encoding for the resource content (defaults to 'text') */
+  encoding?: UIEncoding
+  /** HTML content for rawHtml content type */
+  htmlContent?: string
+  /** Script for remoteDom content type */
+  remoteDomScript?: string
+  /** Framework for remoteDom content type */
+  remoteDomFramework?: RemoteDomFramework
 }
 
 export interface WidgetConfig {

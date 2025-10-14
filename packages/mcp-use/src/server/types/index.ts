@@ -17,7 +17,11 @@ export {
   ResourceTemplateDefinition,
   ResourceDefinition,
   // UIResource specific types
+  UIResourceContent,
   WidgetProps,
+  UIContentType,
+  UIEncoding,
+  RemoteDomFramework,
   UIResourceDefinition,
   WidgetConfig,
   WidgetManifest,

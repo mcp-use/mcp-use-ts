@@ -14,7 +14,8 @@ import express, { type Express } from 'express'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { requestLogger } from './logging.js'
-import { createUIResource } from '@mcp-ui/server'
+import type { createMcpUiAdapter } from './adapters/mcp-ui-adapter.js'
+import type { McpUiAdapter } from './adapters/mcp-ui-adapter.js'
 
 export class McpServer {
   private server: OfficialMcpServer
@@ -23,6 +24,7 @@ export class McpServer {
   private mcpMounted = false
   private inspectorMounted = false
   private serverPort?: number
+  private uiAdapter?: McpUiAdapter
 
   /**
    * Creates a new MCP server instance with Express integration
@@ -342,11 +344,7 @@ export class McpServer {
       inputs: this.convertPropsToInputs(definition.props),
       fn: async (params) => {
         // Create the UIResource with user-provided params
-        const uiResource = this.createWidgetUIResource(
-          definition.widget,
-          params,
-          definition.size
-        )
+        const uiResource = this.createWidgetUIResource(definition, params)
 
         return {
           content: [
@@ -396,29 +394,24 @@ export class McpServer {
    * compatible clients.
    *
    * @private
-   * @param widget - Widget name/identifier
+   * @param definition - UIResource definition
    * @param params - Parameters to pass to the widget via URL
-   * @param size - Optional preferred frame size [width, height]
    * @returns UIResource object compatible with MCP-UI
    */
   private createWidgetUIResource(
-    widget: string,
-    params: Record<string, any>,
-    size?: [string, string]
+    definition: UIResourceDefinition,
+    params: Record<string, any>
   ): any {
-    const iframeUrl = this.buildWidgetUrl(widget, params)
+    // Initialize adapter if not already created
+    if (!this.uiAdapter) {
+      this.uiAdapter = createMcpUiAdapter({
+        baseUrl: `http://localhost`,
+        port: this.serverPort || 3001
+      })
+    }
 
-    return createUIResource({
-      uri: `ui://widget/${widget}` as any,
-      content: {
-        type: 'externalUrl',
-        iframeUrl
-      },
-      encoding: 'text',
-      uiMetadata: size ? {
-        'preferred-frame-size': size
-      } : undefined
-    })
+    // Use the adapter to create the UIResource
+    return this.uiAdapter.createWidgetUIResource(definition, params)
   }
 
   /**
