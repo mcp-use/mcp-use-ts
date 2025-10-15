@@ -59,8 +59,12 @@ function getCurrentPackageVersions() {
     )
     versions['@mcp-use/inspector'] = inspectorPackage.version
   } catch (error) {
-    console.warn('⚠️  Could not read workspace package versions, using defaults')
-    console.warn(`   Error: ${error}`)
+    // Silently use defaults when not in workspace (normal for published package)
+    // Only log in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️  Could not read workspace package versions, using defaults')
+      console.warn(`   Error: ${error}`)
+    }
   }
   
   return versions
