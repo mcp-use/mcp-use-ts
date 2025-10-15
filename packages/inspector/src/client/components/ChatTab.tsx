@@ -1,7 +1,5 @@
 import { ArrowUp, Check, Copy, Key, Loader2, MessageCircle, Send, Settings, Trash2, User } from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { usePrismTheme } from '@/client/hooks/usePrismTheme'
 
 import { AuroraBackground } from '@/components/ui/aurora-background'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +13,11 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { UserMessage } from './chat/UserMessage'
+import { AssistantMessage } from './chat/AssistantMessage'
+import { ToolCallDisplay } from './chat/ToolCallDisplay'
+import { MCPUIResource } from './chat/MCPUIResource'
+import { extractMCPResources } from '@/client/utils/mcpResourceUtils'
 
 interface ChatTabProps {
   mcpServerUrl: string
@@ -72,14 +75,12 @@ function hashString(str: string): string {
 }
 
 export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: ChatTabProps) {
-  const { prismStyle } = usePrismTheme()
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [llmConfig, setLLMConfig] = useState<LLMConfig | null>(null)
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null)
   const [configDialogOpen, setConfigDialogOpen] = useState(false)
-  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
 
   // LLM Config form state
   const [tempProvider, setTempProvider] = useState<'openai' | 'anthropic' | 'google'>('openai')
@@ -306,24 +307,6 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
       sendMessage()
     }
   }, [sendMessage])
-
-  const copyMessage = useCallback(async (messageId: string, content: any) => {
-    try {
-      // Handle different content formats
-      const textContent = typeof content === 'string'
-        ? content
-        : Array.isArray(content)
-          ? content.map(item => typeof item === 'string' ? item : item.text || JSON.stringify(item)).join('')
-          : JSON.stringify(content)
-
-      await navigator.clipboard.writeText(textContent)
-      setCopiedMessageId(messageId)
-      setTimeout(() => setCopiedMessageId(null), 2000)
-    }
-    catch (err) {
-      console.error('Failed to copy:', err)
-    }
-  }, [])
 
   const clearChat = useCallback(() => {
     setMessages([])
@@ -710,7 +693,7 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {!llmConfig
           ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
@@ -727,107 +710,67 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
               </div>
             )
           : (
-              messages.map(message => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    'flex gap-3',
-                    message.role === 'user' ? 'justify-end' : 'justify-start',
-                  )}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                      <MessageCircle className="h-4 w-4 text-white" />
-                    </div>
-                  )}
-                  <div
-                    className={cn(
-                      'max-w-[80%] rounded-lg p-3',
-                      message.role === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-zinc-100 dark:bg-zinc-800',
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
-                        {typeof message.content === 'string'
-                          ? message.content
-                          : Array.isArray(message.content)
-                            ? message.content.map(item =>
-                                typeof item === 'string'
-                                  ? item
-                                  : item.text || JSON.stringify(item),
-                              ).join('')
-                            : JSON.stringify(message.content)}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyMessage(message.id, message.content)}
-                        className={cn(
-                          'h-6 w-6 p-0 flex-shrink-0',
-                          message.role === 'user' ? 'hover:bg-blue-600' : '',
-                        )}
-                      >
-                        {copiedMessageId === message.id
-                          ? (
-                              <Check className="h-3 w-3" />
-                            )
-                          : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                      </Button>
-                    </div>
+              messages.map(message => {
+                const contentStr = typeof message.content === 'string'
+                  ? message.content
+                  : Array.isArray(message.content)
+                    ? message.content.map(item =>
+                        typeof item === 'string'
+                          ? item
+                          : item.text || JSON.stringify(item),
+                      ).join('')
+                    : JSON.stringify(message.content)
 
+                if (message.role === 'user') {
+                  return (
+                    <UserMessage
+                      key={message.id}
+                      content={contentStr}
+                      timestamp={message.timestamp}
+                    />
+                  )
+                }
+
+                return (
+                  <div key={message.id} className="space-y-4">
+                    <AssistantMessage
+                      content={contentStr}
+                      timestamp={message.timestamp}
+                    />
+                    
                     {/* Tool Calls */}
                     {message.toolCalls && message.toolCalls.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs font-semibold opacity-70">Tool Calls:</p>
-                        {message.toolCalls.map((toolCall, idx) => (
-                          <details key={`${toolCall.toolName}-${idx}`} className="text-xs">
-                            <summary className="cursor-pointer hover:opacity-80 font-mono">
-                              {toolCall.toolName}
-                              (
-                              {Object.keys(toolCall.args).length}
-                              {' '}
-                              args)
-                            </summary>
-                            <div className="mt-2 p-2 bg-black/10 dark:bg-white/10 rounded">
-                              <SyntaxHighlighter
-                                language="json"
-                                style={prismStyle}
-                                customStyle={{
-                                  margin: 0,
-                                  padding: 0,
-                                  background: 'transparent',
-                                  fontSize: '0.75rem',
-                                }}
-                              >
-                                {JSON.stringify({ args: toolCall.args, result: toolCall.result }, null, 2)}
-                              </SyntaxHighlighter>
+                      <div className="space-y-2">
+                        {message.toolCalls.map((toolCall, idx) => {
+                          // Extract MCP-UI resources from tool result
+                          const resources = extractMCPResources(toolCall.result)
+                          
+                          return (
+                            <div key={`${toolCall.toolName}-${idx}`}>
+                              <ToolCallDisplay
+                                toolName={toolCall.toolName}
+                                args={toolCall.args}
+                                result={toolCall.result}
+                                state={toolCall.result ? 'result' : 'call'}
+                              />
+                              {/* Render extracted MCP-UI resources */}
+                              {resources.map((resource, resourceIndex) => (
+                                <MCPUIResource
+                                  key={`${message.id}-tool-${idx}-resource-${resourceIndex}`}
+                                  resource={resource}
+                                />
+                              ))}
                             </div>
-                          </details>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
-
-                    <div className="text-xs opacity-50 mt-2">
-                      {new Date(message.timestamp).toLocaleTimeString()}
-                    </div>
                   </div>
-                  {message.role === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-zinc-300 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0">
-                      <User className="h-4 w-4" />
-                    </div>
-                  )}
-                </div>
-              ))
+                )
+              })
             )}
         {isLoading && (
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="h-4 w-4 text-white" />
-            </div>
             <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-3">
               <Spinner className="h-4 w-4" />
             </div>
