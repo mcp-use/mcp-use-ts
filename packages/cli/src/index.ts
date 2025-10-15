@@ -4,9 +4,39 @@ import { buildWidgets } from './build';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { access } from 'node:fs/promises';
+import { networkInterfaces } from 'node:os';
 import path from 'node:path';
 import open from 'open';
+
+// Handle ExitPromptError from Commander.js gracefully
+process.on('uncaughtException', (error) => {
+  if (error instanceof Error && error.name === 'ExitPromptError') {
+    console.log('\n👋 Until next time!');
+    process.exit(0);
+  } else {
+    // Rethrow unknown errors
+    throw error;
+  }
+});
+
 const program = new Command();
+
+// Get local network IP
+function getNetworkIP(): string {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    const netInterface = nets[name];
+    if (!netInterface) continue;
+    
+    for (const net of netInterface) {
+      // Skip internal and non-ipv4 addresses
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
 
 
 const packageContent = readFileSync(path.join(__dirname, '../package.json'), 'utf-8')
@@ -135,13 +165,28 @@ program
         cwd: projectPath,
         stdio: 'pipe',
         shell: false,
+        // Create a new process group on Unix to properly handle signals
+        detached: false,
       });
+      
+      // Filter out npm warnings from tsc output
       tscProc.stdout?.on('data', (data) => {
         const output = data.toString();
         if (output.includes('Watching for file changes')) {
           console.log('\x1b[32m✓\x1b[0m TypeScript compiler watching...');
         }
       });
+      
+      tscProc.stderr?.on('data', (data) => {
+        const output = data.toString();
+        // Filter out npm warnings and tsx cleanup messages
+        if (!output.includes('npm warn') && 
+            !output.includes('[tsx]') &&
+            !output.includes('Force killing')) {
+          process.stderr.write(output);
+        }
+      });
+      
       processes.push(tscProc);
 
       // 2. Widget builder watch - run in background
@@ -152,12 +197,70 @@ program
       // Wait a bit for initial builds
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // 3. Server with tsx
+      // 3. Server with tsx - pipe output to filter duplicates
       const serverProc = spawn('npx', ['tsx', 'watch', serverFile], {
         cwd: projectPath,
-        stdio: 'inherit',
+        stdio: 'pipe',
         shell: false,
         env: { ...process.env, PORT: String(port) },
+        // Create a new process group on Unix to properly handle signals
+        detached: false,
+      });
+      
+      // Track seen log lines to avoid duplicates and shutdown state
+      const seenLogs = new Set<string>();
+      const logTimeout = new Map<string, NodeJS.Timeout>();
+      let isShuttingDown = false;
+      
+      serverProc.stdout?.on('data', (data) => {
+        const lines = data.toString().split('\n');
+        lines.forEach((line: string) => {
+          if (!line.trim()) return;
+          
+          // Filter out server startup messages since CLI provides better formatted output
+          if (line.includes('[MCP] Server mounted') ||
+              line.includes('[SERVER] Listening') ||
+              line.includes('[MCP] Endpoints:') ||
+              line.includes('[INSPECTOR] UI available')) {
+            return;
+          }
+          
+          // Create a normalized key for the log line
+          const normalizedLine = line.replace(/\[\d{2}:\d{2}:\d{2}\.\d{3}\]/g, '[TIME]');
+          
+          // If we've seen this line recently, skip it
+          if (seenLogs.has(normalizedLine)) return;
+          
+          // Add to seen logs and set a timeout to remove it
+          seenLogs.add(normalizedLine);
+          
+          // Clear existing timeout if any
+          if (logTimeout.has(normalizedLine)) {
+            clearTimeout(logTimeout.get(normalizedLine)!);
+          }
+          
+          // Remove from seen logs after 1 second
+          logTimeout.set(normalizedLine, setTimeout(() => {
+            seenLogs.delete(normalizedLine);
+            logTimeout.delete(normalizedLine);
+          }, 1000));
+          
+          console.log(line);
+        });
+      });
+      
+      serverProc.stderr?.on('data', (data) => {
+        // Suppress all output during shutdown
+        if (isShuttingDown) return;
+        
+        const output = data.toString();
+        // Filter out npm warnings about pnpm/yarn config and tsx cleanup messages
+        if (!output.includes('npm warn') && 
+            !output.includes('[tsx]') &&
+            !output.includes('Force killing') &&
+            !output.includes('Previous process')) {
+          process.stderr.write(output);
+        }
       });
       
       processes.push(serverProc);
@@ -167,12 +270,13 @@ program
         const startTime = Date.now();
         const ready = await waitForServer(port);
         if (ready) {
+          const networkIP = getNetworkIP();
           const mcpUrl = `http://localhost:${port}/mcp`;
           const inspectorUrl = `http://localhost:${port}/inspector?autoConnect=${encodeURIComponent(mcpUrl)}`;
           const readyTime = Date.now() - startTime;
           console.log(`\n\x1b[32m✓\x1b[0m Ready in ${readyTime}ms`);
           console.log(`Local:    http://localhost:${port}`);
-          console.log(`Network:  http://localhost:${port}`);
+          console.log(`Network:  http://${networkIP}:${port}`);
           console.log(`MCP:      ${mcpUrl}`);
           console.log(`Inspector: ${inspectorUrl}\n`);
           await open(inspectorUrl);
@@ -180,14 +284,38 @@ program
       }
 
       // Handle cleanup
-      const cleanup = () => {
-        console.log('\n\nShutting down...');
-        processes.forEach(proc => proc.kill());
-        process.exit(0);
+      const cleanup = (signal?: string) => {
+        if (isShuttingDown) return;
+        isShuttingDown = true;
+        
+        console.log('\n\n👋 Shutting down...');
+        
+        // Kill all child processes
+        processes.forEach(proc => {
+          try {
+            if (!proc.killed) {
+              proc.kill('SIGTERM');
+              // Force kill after 1 second if still running
+              setTimeout(() => {
+                if (!proc.killed) {
+                  proc.kill('SIGKILL');
+                }
+              }, 1000);
+            }
+          } catch (error) {
+            // Ignore errors when killing processes
+          }
+        });
+        
+        // Exit after giving processes time to clean up
+        setTimeout(() => {
+          process.exit(0);
+        }, 1500);
       };
 
       process.on('SIGINT', cleanup);
       process.on('SIGTERM', cleanup);
+      process.on('SIGHUP', cleanup);
 
       // Keep the process running
       await new Promise(() => {});
@@ -225,17 +353,41 @@ program
       });
 
       // Handle cleanup
+      let isShuttingDown = false;
       const cleanup = () => {
-        console.log('\n\nShutting down...');
-        serverProc.kill();
-        process.exit(0);
+        if (isShuttingDown) return;
+        isShuttingDown = true;
+        
+        console.log('\n\n👋 Shutting down...');
+        
+        try {
+          if (!serverProc.killed) {
+            serverProc.kill('SIGTERM');
+            // Force kill after 1 second if still running
+            setTimeout(() => {
+              if (!serverProc.killed) {
+                serverProc.kill('SIGKILL');
+              }
+            }, 1000);
+          }
+        } catch (error) {
+          // Ignore errors when killing process
+        }
+        
+        // Exit after giving process time to clean up
+        setTimeout(() => {
+          process.exit(0);
+        }, 1500);
       };
 
       process.on('SIGINT', cleanup);
       process.on('SIGTERM', cleanup);
+      process.on('SIGHUP', cleanup);
 
       serverProc.on('exit', (code) => {
-        process.exit(code || 0);
+        if (!isShuttingDown) {
+          process.exit(code || 0);
+        }
       });
     } catch (error) {
       console.error('Start failed:', error);
