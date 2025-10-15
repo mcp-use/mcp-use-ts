@@ -70,15 +70,23 @@ export async function startDevServer(projectPath: string, port: number = 5173): 
       react(),
       {
         name: 'mcp-widget-html',
+        apply: 'serve',
         configureServer(server) {
           // Serve widget HTML pages
           server.middlewares.use(async (req, res, next) => {
+            // Early check before processing
             if (!req.url?.startsWith(ROUTE_PREFIX)) {
               return next()
             }
             
-            // Find matching widget
-            const widget = widgets.find(w => req.url === w.route)
+            // Find matching widget (strip query string for matching)
+            const urlWithoutQuery = req.url?.split('?')[0]
+            console.log('[DEBUG] Request URL:', req.url)
+            console.log('[DEBUG] URL without query:', urlWithoutQuery)
+            console.log('[DEBUG] Available routes:', widgets.map(w => w.route))
+            const widget = widgets.find(w => urlWithoutQuery === w.route)
+            console.log('[DEBUG] Found widget:', widget ? widget.name : 'NOT FOUND')
+            
             if (!widget) {
               return next()
             }
