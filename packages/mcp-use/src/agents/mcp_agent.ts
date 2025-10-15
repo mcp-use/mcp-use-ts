@@ -634,7 +634,8 @@ export class MCPAgent {
     const startTime = Date.now()
     const toolsUsedNames: string[] = []
     let stepsTaken = 0
-    let success = false
+    const structuredOutputSuccess = false
+    const structuredOutputSuccessRef = { value: structuredOutputSuccess }
 
     // Schema-aware setup for structured output
     let structuredLlm: BaseLanguageModelInterface | null = null
@@ -755,33 +756,28 @@ export class MCPAgent {
 
             // If structured output is requested, attempt to create it
             if (outputSchema && structuredLlm) {
-              try {
                 logger.info('🔧 Attempting structured output...')
-                const structuredResult = await this._attemptStructuredOutput<T>(
-                  result,
-                  structuredLlm,
+                const currentResult = result
+                this._attemptStructuredOutput<T>(
+                  currentResult,
+                  this.llm!,
                   outputSchema,
-                  schemaDescription,
-                )
-                logger.debug(`🔄 Structured result: ${JSON.stringify(structuredResult)}`)
-
-                // Add the final response to conversation history if memory is enabled
-                if (this.memoryEnabled) {
-                  this.addToHistory(new AIMessage(`Structured result: ${JSON.stringify(structuredResult)}`))
-                }
-
-                logger.info('✅ Structured output successful')
-                success = true
-                return structuredResult as string | T
-              }
-              catch (e) {
+                ).then(structuredResult => {
+                  if (this.memoryEnabled) {
+                    this.addToHistory(new AIMessage(`Structured result: ${JSON.stringify(structuredResult)}`))
+                  }
+  
+                  logger.info('✅ Structured output successful')
+                  structuredOutputSuccessRef.value = true
+                  return structuredResult as string | T
+                }).catch(e => {
                 logger.warn(`⚠️ Structured output failed: ${e}`)
                 // Continue execution to gather missing information
                 const failedStructuredOutputPrompt = `
                 The current result cannot be formatted into the required structure.
                 Error: ${String(e)}
                 
-                Current information: ${result}
+                Current information: ${currentResult}
                 
                 If information is missing, please continue working to gather the missing information needed for:
                 ${schemaDescription}
@@ -796,19 +792,16 @@ export class MCPAgent {
                 }
 
                 logger.info('🔄 Continuing execution to gather missing information...')
-                continue
-              }
-            }
-            else {
-              // Regular execution without structured output
-              break
+              })  
             }
           }
 
-          const stepArray = nextStepOutput as AgentStep[]
-          intermediateSteps.push(...stepArray)
+          // Check if it's an array of steps or a finish result
+          if (Array.isArray(nextStepOutput)) {
+            const stepArray = nextStepOutput as AgentStep[]
+            intermediateSteps.push(...stepArray)
 
-          for (const step of stepArray) {
+            for (const step of stepArray) {
             yield step
             const { action, observation } = step
             const toolName = action.tool
@@ -827,14 +820,15 @@ export class MCPAgent {
             logger.info(`📄 Tool result: ${outputStr}`)
           }
 
-          // Detect direct return
-          if (stepArray.length) {
-            const lastStep = stepArray[stepArray.length - 1]
-            const toolReturn: AgentFinish | null = await this._agentExecutor._getToolReturn(lastStep)
-            if (toolReturn) {
-              logger.info(`🏆 Tool returned directly at step ${stepNum + 1}`)
-              result = toolReturn.returnValues?.output ?? 'No output generated'
-              break
+            // Detect direct return
+            if (stepArray.length) {
+              const lastStep = stepArray[stepArray.length - 1]
+              const toolReturn: AgentFinish | null = await this._agentExecutor._getToolReturn(lastStep)
+              if (toolReturn) {
+                logger.info(`🏆 Tool returned directly at step ${stepNum + 1}`)
+                result = toolReturn.returnValues?.output ?? 'No output generated'
+                break
+              }
             }
           }
         }
@@ -861,7 +855,7 @@ export class MCPAgent {
       }
 
       logger.info('🎉 Agent execution complete')
-      success = true
+      structuredOutputSuccessRef.value = true
 
       // Return regular result
       return result as string | T
@@ -891,7 +885,7 @@ export class MCPAgent {
       await this.telemetry.trackAgentExecution({
         executionMethod: 'stream',
         query,
-        success,
+        success: structuredOutputSuccess,
         modelProvider: this.modelProvider,
         modelName: this.modelName,
         serverCount,
@@ -909,7 +903,7 @@ export class MCPAgent {
         toolsUsedNames,
         response: result,
         executionTimeMs,
-        errorType: success ? null : 'execution_error',
+        errorType: structuredOutputSuccess ? null : 'execution_error',
         conversationHistoryLength,
       })
 
@@ -959,11 +953,12 @@ export class MCPAgent {
    * Yields LangChain StreamEvent objects from the underlying streamEvents() method.
    * This provides token-level streaming and fine-grained event updates.
    */
-  public async* streamEvents(
+  public async* streamEvents<T = string>(
     query: string,
     maxSteps?: number,
     manageConnector = true,
     externalHistory?: BaseMessage[],
+    outputSchema?: ZodSchema<T>,
   ): AsyncGenerator<StreamEvent, void, void> {
     let initializedHere = false
     const startTime = Date.now()
@@ -971,6 +966,11 @@ export class MCPAgent {
     let eventCount = 0
     let totalResponseLength = 0
     let finalResponse = ''
+
+    // Enhance query with schema information if structured output is requested
+    if (outputSchema) {
+      query = this._enhanceQueryWithSchema(query, outputSchema)
+    }
 
     try {
       // Initialize if needed
@@ -1050,11 +1050,87 @@ export class MCPAgent {
           if (Array.isArray(output) && output.length > 0 && output[0]?.text) {
             finalResponse = output[0].text
           }
+          else if (typeof output === 'string') {
+            finalResponse = output
+          }
+          else if (output && typeof output === 'object' && 'output' in output) {
+            finalResponse = output.output
+          }
         }
       }
 
-      // Add the final AI response to conversation history if memory is enabled
-      if (this.memoryEnabled && finalResponse) {
+      // Convert to structured output if requested
+      if (outputSchema && finalResponse) {
+        logger.info('🔧 Attempting structured output conversion...')
+        
+        try {
+          // Start the conversion (non-blocking)
+          let conversionCompleted = false
+          let conversionResult: T | null = null
+          let conversionError: Error | null = null
+          
+          const _conversionPromise = this._attemptStructuredOutput<T>(
+            finalResponse,
+            this.llm!,
+            outputSchema,
+          ).then(result => {
+            conversionCompleted = true
+            conversionResult = result
+            return result
+          }).catch(error => {
+            conversionCompleted = true
+            conversionError = error
+            throw error
+          })
+          
+          // Yield progress events while conversion is running
+          let progressCount = 0
+          
+          while (!conversionCompleted) {
+            // Wait 2 seconds
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            
+            if (!conversionCompleted) {
+              // Still running - yield progress event
+              progressCount++
+              yield {
+                event: 'on_structured_output_progress',
+                data: { 
+                  message: `Converting to structured output... (${progressCount * 2}s)`,
+                  elapsed: progressCount * 2 
+                },
+              } as unknown as StreamEvent
+            }
+          }
+          
+          // Check if conversion succeeded or failed
+          if (conversionError) {
+            throw conversionError
+          }
+          
+          if (conversionResult) {
+            // Yield structured result as a custom event
+            yield {
+              event: 'on_structured_output',
+              data: { output: conversionResult },
+            } as unknown as StreamEvent
+            
+            if (this.memoryEnabled) {
+              this.addToHistory(new AIMessage(`Structured result: ${JSON.stringify(conversionResult)}`))
+            }
+            
+            logger.info('✅ Structured output successful')
+          }
+        } catch (e) {
+          logger.warn(`⚠️ Structured output failed: ${e}`)
+          // Yield error event
+          yield {
+            event: 'on_structured_output_error',
+            data: { error: e instanceof Error ? e.message : String(e) },
+          } as unknown as StreamEvent
+        }
+      } else if (this.memoryEnabled && finalResponse) {
+        // Add the final AI response to conversation history if memory is enabled
         this.addToHistory(new AIMessage(finalResponse))
       }
 
@@ -1118,13 +1194,30 @@ export class MCPAgent {
    */
   private async _attemptStructuredOutput<T>(
     rawResult: string | any,
-    structuredLlm: BaseLanguageModelInterface,
+    llm: BaseLanguageModelInterface,
     outputSchema: ZodSchema<T>,
-    schemaDescription: string,
   ): Promise<T> {
     logger.info(`🔄 Attempting structured output with schema: ${outputSchema}`)
-    logger.info(`🔄 Schema description: ${schemaDescription}`)
     logger.info(`🔄 Raw result: ${JSON.stringify(rawResult, null, 2)}`)
+
+    // Schema-aware setup for structured output
+    let structuredLlm: BaseLanguageModelInterface | null = null
+    let schemaDescription = ''
+    
+    logger.debug(`🔄 Structured output requested, schema: ${JSON.stringify(zodToJsonSchema(outputSchema), null, 2)}`)
+    // Check if withStructuredOutput method exists
+    if (llm && 'withStructuredOutput' in llm && typeof (llm as any).withStructuredOutput === 'function') {
+      structuredLlm = (llm as any).withStructuredOutput(outputSchema)
+    }
+    else if (llm) {
+      // Fallback: use the same LLM but we'll handle structure in our helper method
+      structuredLlm = llm
+    }
+    else {
+      throw new Error('LLM is required for structured output')
+    }
+    schemaDescription = JSON.stringify(zodToJsonSchema(outputSchema), null, 2)
+    logger.info(`🔄 Schema description: ${schemaDescription}`)
 
     // Handle different input formats - rawResult might be an array or object from the agent
     let textContent: string = ''
@@ -1178,12 +1271,15 @@ export class MCPAgent {
         logger.info(`🔄 Structured output attempt ${attempt} - using streaming approach`)
         
         // Use streaming to avoid blocking the event loop
-        const stream = await structuredLlm.stream(formatPrompt)
+        const stream = await structuredLlm!.stream(formatPrompt)
         let structuredResult = null
         let chunkCount = 0
 
         for await (const chunk of stream) {
           chunkCount++
+          
+          // Print the chunk for debugging
+          logger.info(`Chunk ${chunkCount}: ${JSON.stringify(chunk, null, 2)}`)
           
           // Handle different chunk types
           if (typeof chunk === 'string') {
@@ -1205,12 +1301,6 @@ export class MCPAgent {
             }
           }
           
-          // Yield control to allow keepalive events during streaming
-          // This prevents the event loop from being blocked during long LLM processing,
-          // allowing keepalive events to fire and preventing inactivity timeouts
-          await new Promise(resolve => setTimeout(resolve, 0))
-          
-          // Log progress every 10 chunks
           if (chunkCount % 10 === 0) {
             logger.info(`🔄 Structured output streaming: ${chunkCount} chunks`)
           }

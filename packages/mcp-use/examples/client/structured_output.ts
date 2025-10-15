@@ -58,7 +58,7 @@ async function main() {
     // 2. Attempt structured output at finish points
     // 3. Continue execution if required information is missing
     // 4. Only finish when all required fields can be populated
-    const result: CityInfo = await agent.run(
+    const eventStream = agent.streamEvents(
       `
       Research comprehensive information about the city of Padova (also known as Padua) in Italy.
       
@@ -71,6 +71,26 @@ async function main() {
       [], // externalHistory
       CityInfoSchema, // outputSchema - this enables structured output
     )
+
+    let result: CityInfo | null = null
+
+    for await (const event of eventStream) {
+      // Look for structured output in the final result
+      if (event.event === 'on_chain_end' && event.data?.output) {
+        try {
+          // Try to parse the output as structured data
+          const parsed = CityInfoSchema.parse(event.data.output)
+          result = parsed
+          break
+        } catch (e) {
+          // If parsing fails, continue streaming
+          console.log('Waiting for structured output...')
+        }
+      }
+    }
+    if (!result) {
+      throw new Error('Failed to obtain structured output')
+    }
 
     // Now you have strongly-typed, validated data!
     console.log(`Name: ${result.name}`)
