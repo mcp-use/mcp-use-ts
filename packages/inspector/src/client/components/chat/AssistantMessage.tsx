@@ -1,6 +1,30 @@
+import { AnimatedMarkdown } from 'flowtoken';
 import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+
+const CopyButton = ({ text }: { text: string }) => {
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  return (
+    <button
+      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground text-xs flex items-center gap-1"
+      onClick={handleCopy}
+      title="Copy message content"
+    >
+      {isCopied ? (
+        <Check className="h-3.5 w-3.5" />
+      ) : (
+        <Copy className="h-3.5 w-3.5" />
+      )}
+    </button>
+  );
+};
 
 interface AssistantMessageProps {
   content: string;
@@ -13,14 +37,6 @@ export function AssistantMessage({
   timestamp,
   isStreaming = false,
 }: AssistantMessageProps) {
-  const [copied, setCopied] = useState(false);
-
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   if (!content || content.length === 0) {
     return null;
   }
@@ -30,7 +46,11 @@ export function AssistantMessage({
       <div className="flex-1 min-w-0">
         <div className="break-words">
           <div className="prose prose-sm max-w-none dark:prose-invert text-base leading-7 font-sans text-start break-words prose-pre:p-0 prose-pre:m-0 prose-pre:bg-transparent transition-all duration-300 ease-in-out">
-            <p className="whitespace-pre-wrap">{content}</p>
+            <AnimatedMarkdown
+              content={content}
+              animation={"fadeIn"}
+              animationDuration="0.5s"
+            />
           </div>
         </div>
 
@@ -40,18 +60,7 @@ export function AssistantMessage({
               {new Date(timestamp).toLocaleTimeString()}
             </span>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={copyToClipboard}
-              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              {copied ? (
-                <Check className="h-3 w-3" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
-            </Button>
+            <CopyButton text={content} />
           </div>
         )}
       </div>

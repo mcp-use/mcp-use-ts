@@ -18,6 +18,7 @@ import { AssistantMessage } from './chat/AssistantMessage'
 import { ToolCallDisplay } from './chat/ToolCallDisplay'
 import { MCPUIResource } from './chat/MCPUIResource'
 import { extractMCPResources } from '@/client/utils/mcpResourceUtils'
+import { TextShimmer } from '@/components/ui/text-shimmer'
 
 interface ChatTabProps {
   mcpServerUrl: string
@@ -693,90 +694,108 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {!llmConfig
-          ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <Key className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Configure Your LLM Provider</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-md">
-                  To start chatting with the MCP server, you need to configure your LLM provider and API key.
-                  Your credentials are stored locally and used only for this chat.
-                </p>
-                <Button onClick={() => setConfigDialogOpen(true)}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Configure API Key
-                </Button>
-              </div>
-            )
-          : (
-              messages.map(message => {
-                const contentStr = typeof message.content === 'string'
-                  ? message.content
-                  : Array.isArray(message.content)
-                    ? message.content.map(item =>
-                        typeof item === 'string'
-                          ? item
-                          : item.text || JSON.stringify(item),
-                      ).join('')
-                    : JSON.stringify(message.content)
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-6 max-w-3xl mx-auto px-2">
+          {!llmConfig
+            ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <Key className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Configure Your LLM Provider</h3>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                    To start chatting with the MCP server, you need to configure your LLM provider and API key.
+                    Your credentials are stored locally and used only for this chat.
+                  </p>
+                  <Button onClick={() => setConfigDialogOpen(true)}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configure API Key
+                  </Button>
+                </div>
+              )
+            : (
+                <>
+                  {messages.map((message, index) => {
+                    const contentStr = typeof message.content === 'string'
+                      ? message.content
+                      : Array.isArray(message.content)
+                        ? message.content.map(item =>
+                            typeof item === 'string'
+                              ? item
+                              : item.text || JSON.stringify(item),
+                          ).join('')
+                        : JSON.stringify(message.content)
 
-                if (message.role === 'user') {
-                  return (
-                    <UserMessage
-                      key={message.id}
-                      content={contentStr}
-                      timestamp={message.timestamp}
-                    />
-                  )
-                }
+                    const isLastMessage = index === messages.length - 1
+                    const isMessageStreaming = isLoading && isLastMessage && message.role === 'assistant'
 
-                return (
-                  <div key={message.id} className="space-y-4">
-                    <AssistantMessage
-                      content={contentStr}
-                      timestamp={message.timestamp}
-                    />
-                    
-                    {/* Tool Calls */}
-                    {message.toolCalls && message.toolCalls.length > 0 && (
-                      <div className="space-y-2">
-                        {message.toolCalls.map((toolCall, idx) => {
-                          // Extract MCP-UI resources from tool result
-                          const resources = extractMCPResources(toolCall.result)
-                          
-                          return (
-                            <div key={`${toolCall.toolName}-${idx}`}>
-                              <ToolCallDisplay
-                                toolName={toolCall.toolName}
-                                args={toolCall.args}
-                                result={toolCall.result}
-                                state={toolCall.result ? 'result' : 'call'}
-                              />
-                              {/* Render extracted MCP-UI resources */}
-                              {resources.map((resource, resourceIndex) => (
-                                <MCPUIResource
-                                  key={`${message.id}-tool-${idx}-resource-${resourceIndex}`}
-                                  resource={resource}
-                                />
-                              ))}
-                            </div>
-                          )
-                        })}
+                    if (message.role === 'user') {
+                      return (
+                        <UserMessage
+                          key={message.id}
+                          content={contentStr}
+                          timestamp={message.timestamp}
+                        />
+                      )
+                    }
+
+                    return (
+                      <div key={message.id} className="space-y-4">
+                        <AssistantMessage
+                          content={contentStr}
+                          timestamp={message.timestamp}
+                          isStreaming={isMessageStreaming}
+                        />
+                        
+                        {/* Tool Calls */}
+                        {message.toolCalls && message.toolCalls.length > 0 && (
+                          <div className="space-y-2">
+                            {message.toolCalls.map((toolCall, idx) => {
+                              // Extract MCP-UI resources from tool result
+                              const resources = extractMCPResources(toolCall.result)
+                              
+                              return (
+                                <div key={`${toolCall.toolName}-${idx}`}>
+                                  <ToolCallDisplay
+                                    toolName={toolCall.toolName}
+                                    args={toolCall.args}
+                                    result={toolCall.result}
+                                    state={toolCall.result ? 'result' : 'call'}
+                                  />
+                                  {/* Render extracted MCP-UI resources */}
+                                  {resources.map((resource, resourceIndex) => (
+                                    <MCPUIResource
+                                      key={`${message.id}-tool-${idx}-resource-${resourceIndex}`}
+                                      resource={resource}
+                                    />
+                                  ))}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-        {isLoading && (
-          <div className="flex gap-3">
-            <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-3">
-              <Spinner className="h-4 w-4" />
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+                    )
+                  })}
+
+                  {/* Thinking indicator - only show when loading and last message is from user */}
+                  {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1">
+                        <div className="rounded-lg p-4 max-w-fit">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">
+                              <TextShimmer duration={2} spread={1}>
+                                Thinking...
+                              </TextShimmer>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Area */}
