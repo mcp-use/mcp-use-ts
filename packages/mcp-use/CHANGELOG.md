@@ -1,5 +1,12 @@
 # mcp-use
 
+## 1.0.6
+
+### Patch Changes
+
+- 36722a4: Introduced structured output in MCPAgent.streamEvents method, with polling status updates on structured output progress
+  - @mcp-use/inspector@0.3.10
+
 ## 1.0.5
 
 ### Patch Changes
