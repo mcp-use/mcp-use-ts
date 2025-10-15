@@ -357,7 +357,7 @@ export default defineConfig({
 - [React Documentation](https://react.dev/)
 - [Vite Documentation](https://vitejs.dev/)
 - [MCP Documentation](https://modelcontextprotocol.io)
-- [mcp-use Documentation](https://docs.mcp-use.io)
+- [mcp-use Documentation](https://docs.mcp-use.com)
 
 ## Examples
 

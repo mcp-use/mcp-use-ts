@@ -1,16 +1,28 @@
 #!/usr/bin/env node
 
-import { execSync } from 'node:child_process'
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createInterface } from 'node:readline'
 import { Command } from 'commander'
+import chalk from 'chalk'
+import ora from 'ora'
+import inquirer from 'inquirer'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+const execAsync = promisify(exec)
+
 const program = new Command()
+
+// Render logo as ASCII art
+function renderLogo(): void {
+  console.log(chalk.cyan('▛▛▌▛▘▛▌▄▖▌▌▛▘█▌'))
+  console.log(chalk.cyan('▌▌▌▙▖▙▌  ▙▌▄▌▙▖'))
+  console.log(chalk.cyan('     ▌         '))
+}
 
 const packageJson = JSON.parse(
   readFileSync(join(__dirname, '../package.json'), 'utf-8')
@@ -103,27 +115,29 @@ program
   .description('Create a new MCP server project')
   .version(packageJson.version)
   .argument('[project-name]', 'Name of the MCP server project')
-  .option('-t, --template <template>', 'Template to use', 'ui')
+  .option('-t, --template <template>', 'Template to use', 'simple')
   .option('--no-install', 'Skip installing dependencies')
   .option('--dev', 'Use workspace dependencies for development')
   .action(async (projectName: string | undefined, options: { template: string, install: boolean, dev: boolean }) => {
     try {
+      let selectedTemplate = options.template
+      
       // If no project name provided, prompt for it
       if (!projectName) {
-        console.log('🎯 Welcome to create-mcp-use-app!')
+        console.log('')
+        renderLogo()
+        console.log('')
+        console.log(chalk.bold('Welcome to create-mcp-use-app!'))
         console.log('')
         
-        const promptedName = await promptForProjectName()
+        projectName = await promptForProjectName()
+        console.log('')
         
-        if (!promptedName) {
-          console.log('❌ Project creation cancelled.')
-          process.exit(0)
-        }
-        
-        projectName = promptedName
+        // Prompt for template selection in interactive mode
+        selectedTemplate = await promptForTemplate()
       }
 
-      console.log(`🚀 Creating MCP server "${projectName}"...`)
+      console.log(chalk.cyan(`🚀 Creating MCP server "${projectName}"...`))
 
       const projectPath = resolve(process.cwd(), projectName!)
 
@@ -140,66 +154,67 @@ program
       const versions = getCurrentPackageVersions()
       
       // Copy template files
-      await copyTemplate(projectPath, options.template, versions, options.dev)
+      await copyTemplate(projectPath, selectedTemplate, versions, options.dev)
 
       // Update package.json with project name
       updatePackageJson(projectPath, projectName!)
 
       // Install dependencies if requested
       if (options.install) {
-        console.log('📦 Installing dependencies...')
+        const spinner = ora('Installing packages...').start()
         try {
-          execSync('pnpm install', { cwd: projectPath, stdio: 'inherit' })
+          await execAsync('pnpm install', { cwd: projectPath })
+          spinner.succeed('Packages installed successfully')
         }
         catch {
-          console.log('⚠️  pnpm not found, trying npm...')
+          spinner.text = 'pnpm not found, trying npm...'
           try {
-            execSync('npm install', { cwd: projectPath, stdio: 'inherit' })
+            await execAsync('npm install', { cwd: projectPath })
+            spinner.succeed('Packages installed successfully')
           }
-          catch {
-            console.log('⚠️  npm install failed, please run "npm install" manually')
+          catch (error) {
+            spinner.fail('Package installation failed')
+            console.log('⚠️  Please run "npm install" or "pnpm install" manually')
           }
         }
       }
 
-      console.log('✅ MCP server created successfully!')
+      console.log('')
+      console.log(chalk.green('✅ MCP server created successfully!'))
       if (options.dev) {
-        console.log('🔧 Development mode: Using workspace dependencies')
+        console.log(chalk.yellow('🔧 Development mode: Using workspace dependencies'))
       }
       console.log('')
-      console.log('📁 Project structure:')
+      console.log(chalk.bold('📁 Project structure:'))
       console.log(`   ${projectName}/`)
-      if (options.template === 'ui') {
-        console.log('   ├── src/')
-        console.log('   │   └── server.ts')
+      console.log('   ├── src/')
+      console.log('   │   └── server.ts')
+      if (selectedTemplate === 'ui') {
         console.log('   ├── resources/')
         console.log('   │   ├── data-visualization.tsx')
         console.log('   │   ├── kanban-board.tsx')
         console.log('   │   └── todo-list.tsx')
-        console.log('   ├── index.ts')
-        console.log('   ├── package.json')
-        console.log('   ├── tsconfig.json')
-        console.log('   └── README.md')
-      } else {
-        console.log('   ├── src/')
-        console.log('   │   └── server.ts')
-        console.log('   ├── package.json')
-        console.log('   ├── tsconfig.json')
-        console.log('   └── README.md')
       }
+      console.log('   ├── index.ts')
+      console.log('   ├── package.json')
+      console.log('   ├── tsconfig.json')
+      console.log('   └── README.md')
       console.log('')
-      console.log('🚀 To get started:')
-      console.log(`   cd ${projectName!}`)
+      console.log(chalk.bold('🚀 To get started:'))
+      console.log(chalk.cyan(`   cd ${projectName!}`))
       if (!options.install) {
-        console.log('   npm install')
+        console.log(chalk.cyan('   npm install'))
       }
-      console.log('   npm run dev')
+      console.log(chalk.cyan('   npm run dev'))
       console.log('')
       if (options.dev) {
-        console.log('💡 Development mode: Your project uses workspace dependencies')
-        console.log('   Make sure you\'re in the mcp-use workspace root for development')
+        console.log(chalk.yellow('💡 Development mode: Your project uses workspace dependencies'))
+        console.log(chalk.yellow('   Make sure you\'re in the mcp-use workspace root for development'))
+        console.log('')
       }
-      console.log('📚 Learn more: https://docs.mcp-use.io')
+      console.log(chalk.blue('📚 Learn more: https://docs.mcp-use.com'))
+      console.log(chalk.gray('💬 For feedback and bug reporting visit:'))
+      console.log(chalk.gray('   https://github.com/mcp-use/mcp-use or https://mcp-use.com'))
     }
     catch (error) {
       console.error('❌ Error creating MCP server:', error)
@@ -268,42 +283,60 @@ function updatePackageJson(projectPath: string, projectName: string) {
   writeFileSync(packageJsonPath, JSON.stringify(packageJsonContent, null, 2))
 }
 
-function promptForProjectName(): Promise<string | null> {
-  return new Promise((resolvePromise) => {
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout
-    })
-
-    const askForName = () => {
-      rl.question('What is your project name? ', (answer) => {
-        const trimmed = answer.trim()
-        
+async function promptForProjectName(): Promise<string> {
+  const { projectName } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'projectName',
+      message: 'What is your project name?',
+      validate: (input: string) => {
+        const trimmed = input.trim()
         if (!trimmed) {
-          console.log('❌ Project name is required')
-          askForName()
-          return
+          return 'Project name is required'
         }
-        
         if (!/^[a-zA-Z0-9-_]+$/.test(trimmed)) {
-          console.log('❌ Project name can only contain letters, numbers, hyphens, and underscores')
-          askForName()
-          return
+          return 'Project name can only contain letters, numbers, hyphens, and underscores'
         }
-        
         if (existsSync(join(process.cwd(), trimmed))) {
-          console.log(`❌ Directory "${trimmed}" already exists! Please choose a different name.`)
-          askForName()
-          return
+          return `Directory "${trimmed}" already exists! Please choose a different name.`
         }
-        
-        rl.close()
-        resolvePromise(trimmed)
-      })
+        return true
+      }
     }
-    
-    askForName()
-  })
+  ])
+  return projectName
+}
+
+async function promptForTemplate(): Promise<string> {
+  // Get available templates
+  const templatesDir = join(__dirname, 'templates')
+  const availableTemplates = existsSync(templatesDir) 
+    ? readdirSync(templatesDir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name)
+        .sort()
+    : ['simple', 'ui', 'uiresource']
+
+  const templateDescriptions: Record<string, string> = {
+    'simple': 'Simple MCP server with a basic calculator tool (add numbers)',
+    'ui': 'MCP Server with mcp-ui resources returned from tools',
+    'uiresource': 'MCP Server with mcp-ui resources',
+  }
+
+  const { template } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'template',
+      message: 'Select a template:',
+      default: 'simple',
+      choices: availableTemplates.map(template => ({
+        name: `${template} - ${templateDescriptions[template] || 'MCP server template'}`,
+        value: template
+      }))
+    }
+  ])
+  
+  return template
 }
 
 program.parse()
