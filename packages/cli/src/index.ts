@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { buildWidgets } from './build';
+import { buildWidgets } from './build.js';
+import { startDevServer } from './dev-server.js';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { access } from 'node:fs/promises';
 import { networkInterfaces } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import open from 'open';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Handle ExitPromptError from Commander.js gracefully
 process.on('uncaughtException', (error) => {
@@ -121,7 +126,7 @@ program
       console.log('\x1b[32m✓\x1b[0m TypeScript build complete!');
       
       // Then build widgets
-      await buildWidgets(projectPath, false);
+      await buildWidgets(projectPath);
     } catch (error) {
       console.error('Build failed:', error);
       process.exit(1);
@@ -189,20 +194,31 @@ program
       
       processes.push(tscProc);
 
-      // 2. Widget builder watch - run in background
-      buildWidgets(projectPath, true).catch((error) => {
-        console.error('Widget builder failed:', error);
-      });
+      // 2. Start Vite dev server for widgets with HMR
+      const vitePort = 5173;
+      let viteServer: any;
+      try {
+        const result = await startDevServer(projectPath, vitePort);
+        viteServer = result.server;
+      } catch (error) {
+        console.error('Failed to start Vite dev server:', error);
+        process.exit(1);
+      }
 
       // Wait a bit for initial builds
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // 3. Server with tsx - pipe output to filter duplicates
       const serverProc = spawn('npx', ['tsx', 'watch', serverFile], {
         cwd: projectPath,
         stdio: 'pipe',
         shell: false,
-        env: { ...process.env, PORT: String(port) },
+        env: { 
+          ...process.env, 
+          PORT: String(port),
+          VITE_DEV_SERVER: `http://localhost:${vitePort}`,
+          MCP_USE_DEV_MODE: 'true',
+        },
         // Create a new process group on Unix to properly handle signals
         detached: false,
       });
@@ -284,11 +300,20 @@ program
       }
 
       // Handle cleanup
-      const cleanup = (signal?: string) => {
+      const cleanup = async (signal?: string) => {
         if (isShuttingDown) return;
         isShuttingDown = true;
         
         console.log('\n\n👋 Shutting down...');
+        
+        // Close Vite server
+        if (viteServer) {
+          try {
+            await viteServer.close();
+          } catch (error) {
+            // Ignore errors when closing Vite
+          }
+        }
         
         // Kill all child processes
         processes.forEach(proc => {

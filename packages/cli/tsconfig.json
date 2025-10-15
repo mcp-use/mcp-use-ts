@@ -2,7 +2,8 @@
   "compilerOptions": {
     "composite": true,
     "target": "ES2022",
-    "module": "commonjs",
+    "module": "node16",
+    "moduleResolution": "node16",
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "./src",

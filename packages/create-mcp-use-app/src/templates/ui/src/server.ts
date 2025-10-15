@@ -1,5 +1,4 @@
 import { createMCPServer } from 'mcp-use/server'
-import { createUIResource } from '@mcp-ui/server';
 
 // Create an MCP server (which is also an Express app)
 // The MCP Inspector is automatically mounted at /inspector
@@ -23,14 +22,10 @@ server.tool({
     },
   ],
   fn: async () => {
-    const uiResource = createUIResource({
-      uri: 'ui://widget/kanban-board',
-      content: {
-        type: 'externalUrl',
-        iframeUrl: `http://localhost:${PORT}/mcp-use/widgets/kanban-board`
-      },
-      encoding: 'text',
-    })
+    // Automatically uses Vite dev server (localhost:5173) in dev mode
+    // and built files (localhost:PORT) in production
+    const uiResource = server.createWidgetUIResource('kanban-board')
+    
     return {
       content: [uiResource]
     }
@@ -38,27 +33,14 @@ server.tool({
 })
 
 
-// MCP Resource for Kanban Board widget
-server.resource({
-  name: 'Kanban Board Widget',
-  uri: 'ui://widget/kanban-board',
-  title: 'Kanban Board Widget',
-  mimeType: 'text/html+skybridge',
-  description: 'Interactive Kanban board widget',
+// MCP Resource for Kanban Board widget (simplified!)
+server.widgetResource('kanban-board', {
+  title: 'Kanban Board',
+  description: 'Interactive task management board with drag-and-drop',
   annotations: {
     audience: ['user', 'assistant'],
     priority: 0.7
-  },
-  fn: async () => {
-    const widgetUrl = `http://localhost:${PORT}/mcp-use/widgets/kanban-board`
-    return {
-      contents: [{
-        uri: 'ui://widget/kanban-board',
-        mimeType: 'text/uri-list',
-        text: widgetUrl
-      }]
-    }
-  },
+  }
 })
 
 

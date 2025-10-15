@@ -1,9 +1,11 @@
-import { Check, Copy, Key, MessageCircle, Send, Settings, Trash2, User } from 'lucide-react'
+import { ArrowUp, Check, Copy, Key, Loader2, MessageCircle, Send, Settings, Trash2, User } from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { usePrismTheme } from '@/client/hooks/usePrismTheme'
 
+import { AuroraBackground } from '@/components/ui/aurora-background'
 import { Badge } from '@/components/ui/badge'
+import { BlurFade } from '@/components/ui/blur-fade'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -98,6 +100,13 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Focus the textarea when landing form is shown
+  useEffect(() => {
+    if (llmConfig && messages.length === 0 && textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }, [llmConfig, messages.length])
+
   // Load saved LLM config from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('mcp-inspector-llm-config')
@@ -146,7 +155,6 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
           const defaultAuthConfig: AuthConfig = { type: 'oauth' }
           setAuthConfig(defaultAuthConfig)
           setTempAuthType('oauth')
-          console.log('Auto-detected OAuth tokens for this MCP server')
         }
       }
       catch (error) {
@@ -235,7 +243,6 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
               ...authConfig,
               oauthTokens: tokens,
             }
-            console.log('Retrieved OAuth tokens from localStorage')
           }
           else {
             console.warn('No OAuth tokens found in localStorage for key:', storageKey)
@@ -244,17 +251,6 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
         catch (error) {
           console.warn('Failed to retrieve OAuth tokens:', error)
         }
-      }
-
-      // Log auth config for debugging
-      if (authConfigWithTokens) {
-        console.log('Sending chat request with auth type:', authConfigWithTokens.type)
-        if (authConfigWithTokens.type === 'oauth' && authConfigWithTokens.oauthTokens) {
-          console.log('OAuth token present:', !!authConfigWithTokens.oauthTokens.access_token)
-        }
-      }
-      else {
-        console.log('No auth config - attempting connection without authentication')
       }
 
       // Call the chat API endpoint
@@ -332,6 +328,212 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
   const clearChat = useCallback(() => {
     setMessages([])
   }, [])
+
+  // Show landing form when there are no messages and LLM is configured
+  if (llmConfig && messages.length === 0) {
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header with config dialog */}
+        <div className="absolute top-4 right-4 z-10">
+          <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Change API Key
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>LLM Provider Configuration</DialogTitle>
+                <DialogDescription>
+                  Configure your LLM provider and API key to start chatting with the MCP server
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Provider</Label>
+                  <Select value={tempProvider} onValueChange={(v: any) => setTempProvider(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="anthropic">Anthropic</SelectItem>
+                      <SelectItem value="google">Google</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Model</Label>
+                  <Input
+                    value={tempModel}
+                    onChange={e => setTempModel(e.target.value)}
+                    placeholder="e.g., gpt-4o"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      value={tempApiKey}
+                      onChange={e => setTempApiKey(e.target.value)}
+                      placeholder="Enter your API key"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Your API key is stored locally and never sent to our servers
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>MCP Server Authentication (Optional)</Label>
+                  <Select value={tempAuthType} onValueChange={(v: any) => setTempAuthType(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Authentication</SelectItem>
+                      <SelectItem value="oauth">OAuth (Use Inspector's OAuth)</SelectItem>
+                      <SelectItem value="basic">Basic Auth (Username/Password)</SelectItem>
+                      <SelectItem value="bearer">Bearer Token</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {tempAuthType === 'basic' && (
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Username"
+                        value={tempUsername}
+                        onChange={e => setTempUsername(e.target.value)}
+                      />
+                      <Input
+                        type="password"
+                        placeholder="Password"
+                        value={tempPassword}
+                        onChange={e => setTempPassword(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {tempAuthType === 'bearer' && (
+                    <Input
+                      type="password"
+                      placeholder="Bearer token"
+                      value={tempToken}
+                      onChange={e => setTempToken(e.target.value)}
+                    />
+                  )}
+
+                  {tempAuthType === 'oauth' && (
+                    <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
+                      <p className="font-medium">OAuth Authentication</p>
+                      <p className="text-xs mt-1">
+                        This will use the same OAuth flow as the Inspector's main connection.
+                        If the MCP server requires OAuth, the Inspector will handle the authentication automatically.
+                      </p>
+                      {oauthState === 'authenticating' && (
+                        <div className="mt-2 flex items-center gap-2 text-blue-600">
+                          <Spinner className="h-3 w-3" />
+                          <span className="text-xs">Authenticating...</span>
+                        </div>
+                      )}
+                      {oauthState === 'failed' && oauthError && (
+                        <div className="mt-2 text-xs text-destructive">
+                          Auth failed:
+                          {' '}
+                          {oauthError}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={clearConfig}
+                  >
+                    Clear Config
+                  </Button>
+                  <Button
+                    onClick={saveLLMConfig}
+                    disabled={!tempApiKey.trim()}
+                    className="ml-auto"
+                  >
+                    <Key className="h-4 w-4 mr-2" />
+                    Save Configuration
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Landing Form */}
+        <AuroraBackground>
+          <BlurFade className="w-full max-w-4xl mx-auto px-4">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-light mb-2 dark:text-white">
+                Chat with MCP Agent
+              </h1>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 font-light">
+                {llmConfig.provider}
+                {' / '}
+                {llmConfig.model}
+                {' - '}
+                Ask questions or request actions
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                sendMessage()
+              }}
+              className="space-y-6"
+            >
+              <div className="flex justify-center">
+                <div className="relative w-full max-w-2xl">
+                  <Textarea
+                    ref={textareaRef}
+                    value={inputValue}
+                    onChange={e => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={isConnected ? 'Ask a question or request an action...' : 'Server not connected'}
+                    className="p-4 min-h-[150px] rounded-xl bg-white/80 dark:text-white dark:bg-black backdrop-blur-sm border-gray-200 dark:border-zinc-800"
+                    disabled={!isConnected || isLoading}
+                  />
+                  <div className="absolute left-0 p-3 bottom-0 w-full flex justify-end items-end">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className={cn(
+                        'h-10 w-10 rounded-full',
+                        (isLoading) && 'animate-spin',
+                        !inputValue.trim() && 'bg-zinc-400',
+                      )}
+                      disabled={isLoading || !inputValue.trim() || !isConnected}
+                    >
+                      {isLoading
+                        ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          )
+                        : (
+                            <ArrowUp className="h-4 w-4" />
+                          )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </BlurFade>
+        </AuroraBackground>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -509,124 +711,118 @@ export function ChatTab({ mcpServerUrl, isConnected, oauthState, oauthError }: C
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {!llmConfig ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <Key className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Configure Your LLM Provider</h3>
-            <p className="text-sm text-muted-foreground mb-4 max-w-md">
-              To start chatting with the MCP server, you need to configure your LLM provider and API key.
-              Your credentials are stored locally and used only for this chat.
-            </p>
-            <Button onClick={() => setConfigDialogOpen(true)}>
-              <Settings className="h-4 w-4 mr-2" />
-              Configure API Key
-            </Button>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Start a Conversation</h3>
-            <p className="text-sm text-muted-foreground max-w-md">
-              Ask questions or request actions. The MCP agent will use the available tools, prompts, and resources to help you.
-            </p>
-          </div>
-        ) : (
-          messages.map(message => (
-            <div
-              key={message.id}
-              className={cn(
-                'flex gap-3',
-                message.role === 'user' ? 'justify-end' : 'justify-start',
-              )}
-            >
-              {message.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                  <MessageCircle className="h-4 w-4 text-white" />
-                </div>
-              )}
-              <div
-                className={cn(
-                  'max-w-[80%] rounded-lg p-3',
-                  message.role === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-zinc-100 dark:bg-zinc-800',
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
-                    {typeof message.content === 'string'
-                      ? message.content
-                      : Array.isArray(message.content)
-                        ? message.content.map((item, idx) =>
-                            typeof item === 'string'
-                              ? item
-                              : item.text || JSON.stringify(item),
-                          ).join('')
-                        : JSON.stringify(message.content)}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyMessage(message.id, message.content)}
+        {!llmConfig
+          ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <Key className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Configure Your LLM Provider</h3>
+                <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                  To start chatting with the MCP server, you need to configure your LLM provider and API key.
+                  Your credentials are stored locally and used only for this chat.
+                </p>
+                <Button onClick={() => setConfigDialogOpen(true)}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configure API Key
+                </Button>
+              </div>
+            )
+          : (
+              messages.map(message => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    'flex gap-3',
+                    message.role === 'user' ? 'justify-end' : 'justify-start',
+                  )}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                      <MessageCircle className="h-4 w-4 text-white" />
+                    </div>
+                  )}
+                  <div
                     className={cn(
-                      'h-6 w-6 p-0 flex-shrink-0',
-                      message.role === 'user' ? 'hover:bg-blue-600' : '',
+                      'max-w-[80%] rounded-lg p-3',
+                      message.role === 'user'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800',
                     )}
                   >
-                    {copiedMessageId === message.id
-                      ? (
-                          <Check className="h-3 w-3" />
-                        )
-                      : (
-                          <Copy className="h-3 w-3" />
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
+                        {typeof message.content === 'string'
+                          ? message.content
+                          : Array.isArray(message.content)
+                            ? message.content.map(item =>
+                                typeof item === 'string'
+                                  ? item
+                                  : item.text || JSON.stringify(item),
+                              ).join('')
+                            : JSON.stringify(message.content)}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyMessage(message.id, message.content)}
+                        className={cn(
+                          'h-6 w-6 p-0 flex-shrink-0',
+                          message.role === 'user' ? 'hover:bg-blue-600' : '',
                         )}
-                  </Button>
-                </div>
+                      >
+                        {copiedMessageId === message.id
+                          ? (
+                              <Check className="h-3 w-3" />
+                            )
+                          : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                      </Button>
+                    </div>
 
-                {/* Tool Calls */}
-                {message.toolCalls && message.toolCalls.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-semibold opacity-70">Tool Calls:</p>
-                    {message.toolCalls.map((toolCall, idx) => (
-                      <details key={idx} className="text-xs">
-                        <summary className="cursor-pointer hover:opacity-80 font-mono">
-                          {toolCall.toolName}
-                          (
-                          {Object.keys(toolCall.args).length}
-                          {' '}
-                          args)
-                        </summary>
-                        <div className="mt-2 p-2 bg-black/10 dark:bg-white/10 rounded">
-                          <SyntaxHighlighter
-                            language="json"
-                            style={prismStyle}
-                            customStyle={{
-                              margin: 0,
-                              padding: 0,
-                              background: 'transparent',
-                              fontSize: '0.75rem',
-                            }}
-                          >
-                            {JSON.stringify({ args: toolCall.args, result: toolCall.result }, null, 2)}
-                          </SyntaxHighlighter>
-                        </div>
-                      </details>
-                    ))}
+                    {/* Tool Calls */}
+                    {message.toolCalls && message.toolCalls.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs font-semibold opacity-70">Tool Calls:</p>
+                        {message.toolCalls.map((toolCall, idx) => (
+                          <details key={`${toolCall.toolName}-${idx}`} className="text-xs">
+                            <summary className="cursor-pointer hover:opacity-80 font-mono">
+                              {toolCall.toolName}
+                              (
+                              {Object.keys(toolCall.args).length}
+                              {' '}
+                              args)
+                            </summary>
+                            <div className="mt-2 p-2 bg-black/10 dark:bg-white/10 rounded">
+                              <SyntaxHighlighter
+                                language="json"
+                                style={prismStyle}
+                                customStyle={{
+                                  margin: 0,
+                                  padding: 0,
+                                  background: 'transparent',
+                                  fontSize: '0.75rem',
+                                }}
+                              >
+                                {JSON.stringify({ args: toolCall.args, result: toolCall.result }, null, 2)}
+                              </SyntaxHighlighter>
+                            </div>
+                          </details>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="text-xs opacity-50 mt-2">
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                    </div>
                   </div>
-                )}
-
-                <div className="text-xs opacity-50 mt-2">
-                  {new Date(message.timestamp).toLocaleTimeString()}
+                  {message.role === 'user' && (
+                    <div className="w-8 h-8 rounded-full bg-zinc-300 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4" />
+                    </div>
+                  )}
                 </div>
-              </div>
-              {message.role === 'user' && (
-                <div className="w-8 h-8 rounded-full bg-zinc-300 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4" />
-                </div>
-              )}
-            </div>
-          ))
-        )}
+              ))
+            )}
         {isLoading && (
           <div className="flex gap-3">
             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">

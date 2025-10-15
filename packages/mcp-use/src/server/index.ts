@@ -8,6 +8,7 @@ export * from './types/index.js'
 // MCP-UI adapter utility functions
 export {
   buildWidgetUrl,
+  createWidgetUIResource,
   createExternalUrlResource,
   createRawHtmlResource,
   createRemoteDomResource,

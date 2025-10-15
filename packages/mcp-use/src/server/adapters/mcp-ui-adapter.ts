@@ -24,6 +24,7 @@ export interface UrlConfig {
 
 /**
  * Build the full URL for a widget including query parameters
+ * Automatically uses Vite dev server in development mode
  *
  * @param widget - Widget identifier
  * @param props - Parameters to pass as query params
@@ -35,10 +36,12 @@ export function buildWidgetUrl(
   props: Record<string, any> | undefined,
   config: UrlConfig
 ): string {
-  const url = new URL(
-    `/mcp-use/widgets/${widget}`,
-    `${config.baseUrl}:${config.port}`
-  )
+  // In dev mode, use Vite dev server directly for HMR
+  const isDevMode = process.env.MCP_USE_DEV_MODE === 'true'
+  const viteDevServer = process.env.VITE_DEV_SERVER || 'http://localhost:5173'
+  
+  const baseUrl = isDevMode ? viteDevServer : `${config.baseUrl}:${config.port}`
+  const url = new URL(`/mcp-use/widgets/${widget}`, baseUrl)
 
   if (props) {
     Object.entries(props).forEach(([key, value]) => {
@@ -52,6 +55,38 @@ export function buildWidgetUrl(
   }
 
   return url.toString()
+}
+
+/**
+ * Create a widget UI resource that automatically uses the correct URL for dev/prod
+ * 
+ * @param widgetName - Name of the widget file (without .tsx extension)
+ * @param serverPort - Port the MCP server is running on
+ * @param props - Optional props to pass to the widget
+ * @returns UIResourceContent object
+ * 
+ * @example
+ * ```typescript
+ * const resource = createWidgetUIResource('kanban-board', 3000)
+ * // In dev mode: uses http://localhost:5173/mcp-use/widgets/kanban-board
+ * // In prod mode: uses http://localhost:3000/mcp-use/widgets/kanban-board
+ * ```
+ */
+export function createWidgetUIResource(
+  widgetName: string,
+  serverPort: number | string,
+  props?: Record<string, any>
+): UIResourceContent {
+  const widgetUrl = buildWidgetUrl(widgetName, props, {
+    baseUrl: 'http://localhost',
+    port: serverPort
+  })
+  
+  return createExternalUrlResource(
+    `ui://widget/${widgetName}`,
+    widgetUrl,
+    'text'
+  )
 }
 
 /**

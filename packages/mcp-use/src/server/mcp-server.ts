@@ -15,7 +15,8 @@ import express, { type Express } from 'express'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { requestLogger } from './logging.js'
-import { createUIResourceFromDefinition, type UrlConfig } from './adapters/mcp-ui-adapter.js'
+import { createUIResourceFromDefinition, buildWidgetUrl, type UrlConfig } from './adapters/mcp-ui-adapter.js'
+import { createUIResource } from '@mcp-ui/server'
 
 export class McpServer {
   private server: OfficialMcpServer
@@ -375,10 +376,45 @@ export class McpServer {
           ? this.applyDefaultProps(definition.props)
           : {}
 
-        const uiResource = this.createWidgetUIResource(definition, params)
-
-        return {
-          contents: [uiResource.resource]
+        // Resources must return plain MCP format
+        switch (definition.type) {
+          case 'externalUrl': {
+            // Build widget URL with HMR support
+            const widgetUrl = buildWidgetUrl(definition.widget, params, {
+              baseUrl: 'http://localhost',
+              port: this.serverPort || 3000
+            })
+            return {
+              contents: [{
+                uri: resourceUri,
+                mimeType: 'text/uri-list',
+                text: widgetUrl
+              }]
+            }
+          }
+          
+          case 'rawHtml': {
+            return {
+              contents: [{
+                uri: resourceUri,
+                mimeType: 'text/html',
+                text: definition.htmlContent
+              }]
+            }
+          }
+          
+          case 'remoteDom': {
+            return {
+              contents: [{
+                uri: resourceUri,
+                mimeType: 'application/vnd.mcp-ui.remote-dom+javascript',
+                text: definition.script
+              }]
+            }
+          }
+          
+          default:
+            throw new Error(`Unsupported UI resource type`)
         }
       }
     })
@@ -390,7 +426,7 @@ export class McpServer {
       inputs: this.convertPropsToInputs(definition.props),
       fn: async (params) => {
         // Create the UIResource with user-provided params
-        const uiResource = this.createWidgetUIResource(definition, params)
+        const uiResource = this.createUIResourceFromDefinitionInternal(definition, params)
 
         return {
           content: [
@@ -420,7 +456,7 @@ export class McpServer {
    * @param params - Parameters to pass to the widget via URL
    * @returns UIResource object compatible with MCP-UI
    */
-  private createWidgetUIResource(
+  private createUIResourceFromDefinitionInternal(
     definition: UIResourceDefinition,
     params: Record<string, any>
   ): UIResourceContent {
@@ -618,6 +654,101 @@ export class McpServer {
     this.app.listen(this.serverPort, () => {
       console.log(`[SERVER] Listening on http://localhost:${this.serverPort}`)
       console.log(`[MCP] Endpoints: http://localhost:${this.serverPort}/mcp`)
+    })
+  }
+
+  /**
+   * Create a widget UI resource that automatically uses the correct URL for dev/prod
+   * 
+   * @param widgetName - Name of the widget file (without .tsx extension)
+   * @param props - Optional props to pass to the widget
+   * @returns UIResourceContent object
+   * 
+   * @example
+   * ```typescript
+   * server.tool({
+   *   name: 'show-kanban',
+   *   fn: async () => {
+   *     const resource = server.createWidgetUIResource('kanban-board')
+   *     return { content: [resource] }
+   *   }
+   * })
+   * ```
+   */
+  createWidgetUIResource(widgetName: string, props?: Record<string, any>): any {
+    const widgetUrl = buildWidgetUrl(widgetName, props, {
+      baseUrl: 'http://localhost',
+      port: this.serverPort || 3000
+    })
+    
+    return createUIResource({
+      uri: `ui://widget/${widgetName}` as `ui://${string}`,
+      content: { type: 'externalUrl', iframeUrl: widgetUrl },
+      encoding: 'text'
+    })
+  }
+
+  /**
+   * Register a widget as an MCP resource with sensible defaults
+   * 
+   * Simplifies widget resource registration by automatically handling the boilerplate.
+   * The widget will be available as a resource that can be read by MCP clients.
+   * 
+   * @param widgetName - Name of the widget file (without .tsx extension)
+   * @param options - Optional configuration for the resource
+   * @returns The server instance for method chaining
+   * 
+   * @example
+   * ```typescript
+   * server.widgetResource('kanban-board', {
+   *   title: 'Kanban Board',
+   *   description: 'Interactive task management board',
+   *   annotations: {
+   *     audience: ['user', 'assistant'],
+   *     priority: 0.8
+   *   }
+   * })
+   * ```
+   */
+  widgetResource(
+    widgetName: string,
+    options?: {
+      name?: string
+      title?: string
+      description?: string
+      annotations?: {
+        audience?: ('user' | 'assistant')[]
+        priority?: number
+      }
+    }
+  ): this {
+    const name = options?.name || `${widgetName} Widget`
+    const uri = `ui://widget/${widgetName}`
+    const title = options?.title || name
+    
+    return this.resource({
+      name,
+      uri,
+      title,
+      mimeType: 'text/html+skybridge',
+      description: options?.description || `${title} widget`,
+      annotations: options?.annotations,
+      fn: async () => {
+        // Build the widget URL for the current environment (dev/prod)
+        const widgetUrl = buildWidgetUrl(widgetName, undefined, {
+          baseUrl: 'http://localhost',
+          port: this.serverPort || 3000
+        })
+        
+        // Resources must return plain objects with uri, text, and mimeType
+        return {
+          contents: [{
+            uri,
+            mimeType: 'text/uri-list',
+            text: widgetUrl
+          }]
+        }
+      },
     })
   }
 
