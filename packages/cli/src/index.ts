@@ -9,6 +9,7 @@ import { networkInterfaces } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import open from 'open';
+import terminalLink from 'terminal-link';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,13 @@ process.on('uncaughtException', (error) => {
 });
 
 const program = new Command();
+
+// Render logo as ASCII art
+function renderLogo(): void {
+  console.log('\x1b[36m▛▛▌▛▘▛▌▄▖▌▌▛▘█▌\x1b[0m');
+  console.log('\x1b[36m▌▌▌▙▖▙▌  ▙▌▄▌▙▖\x1b[0m');
+  console.log('\x1b[36m     ▌         \x1b[0m');
+}
 
 // Get local network IP
 function getNetworkIP(): string {
@@ -118,7 +126,9 @@ program
     try {
       const projectPath = path.resolve(options.path);
       
-      console.log(`\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
+      console.log('');
+      renderLogo();
+      console.log(`\x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
       
       // Run tsc first
       console.log('Building TypeScript...');
@@ -144,7 +154,9 @@ program
       const projectPath = path.resolve(options.path);
       let port = parseInt(options.port, 10);
       
-      console.log(`\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
+      console.log('');
+      renderLogo();
+      console.log(`\x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
 
       // Check if port is available, find alternative if needed
       if (!(await isPortAvailable(port))) {
@@ -290,11 +302,28 @@ program
           const mcpUrl = `http://localhost:${port}/mcp`;
           const inspectorUrl = `http://localhost:${port}/inspector?autoConnect=${encodeURIComponent(mcpUrl)}`;
           const readyTime = Date.now() - startTime;
-          console.log(`\n\x1b[32m✓\x1b[0m Ready in ${readyTime}ms`);
-          console.log(`Local:    http://localhost:${port}`);
-          console.log(`Network:  http://${networkIP}:${port}`);
-          console.log(`MCP:      ${mcpUrl}`);
-          console.log(`Inspector: ${inspectorUrl}\n`);
+          const networkMcpUrl = `http://${networkIP}:${port}/mcp`;
+          console.log(`\n\x1b[32m✓\x1b[0m \x1b[1mReady in ${readyTime}ms\x1b[0m\n`);
+          console.log(`\x1b[1m🌐 MCP Endpoints:\x1b[0m`);
+          console.log(`   Local:     \x1b[36m${mcpUrl}\x1b[0m`);
+          console.log(`   Network:   \x1b[36m${networkMcpUrl}\x1b[0m`);
+          console.log(`   Inspector: \x1b[36m${inspectorUrl}\x1b[0m`);
+          console.log('');
+          
+          // Create clickable links with fallback
+          const docsLink = terminalLink('\x1b[1mhttps://docs.mcp-use.com\x1b[0m', 'https://docs.mcp-use.com', {
+            fallback: (text, url) => `${text} \x1b[90m${url}\x1b[0m`
+          });
+          const githubLink = terminalLink('\x1b[1mhttps://github.com/mcp-use/mcp-use\x1b[0m', 'https://github.com/mcp-use/mcp-use', {
+            fallback: (text, url) => `${text} \x1b[90m${url}\x1b[0m`
+          });
+          const websiteLink = terminalLink('https://mcp-use.com', 'https://mcp-use.com', {
+            fallback: (text, url) => `${text} \x1b[90m${url}\x1b[0m`
+          });
+          
+          console.log(`📚 ${docsLink}`);
+          console.log(`💬 Feedback & bug reports: ${githubLink} or ${websiteLink}`);
+          console.log('');
           await open(inspectorUrl);
         }
       }
@@ -306,7 +335,20 @@ program
         
         console.log('\n\n👋 Shutting down...');
         
-        // Close Vite server
+        // Immediately suppress all stderr to prevent tsx cleanup messages
+        process.stderr.write = (() => true) as any;
+        
+        // Remove all listeners from child process streams to prevent any buffered output
+        processes.forEach(proc => {
+          try {
+            proc.stdout?.removeAllListeners();
+            proc.stderr?.removeAllListeners();
+          } catch (error) {
+            // Ignore errors when removing listeners
+          }
+        });
+        
+        // Close Vite server and await it to ensure proper cleanup
         if (viteServer) {
           try {
             await viteServer.close();
@@ -315,27 +357,21 @@ program
           }
         }
         
-        // Kill all child processes
+        // Kill all child processes with SIGKILL for immediate termination
         processes.forEach(proc => {
           try {
             if (!proc.killed) {
-              proc.kill('SIGTERM');
-              // Force kill after 1 second if still running
-              setTimeout(() => {
-                if (!proc.killed) {
-                  proc.kill('SIGKILL');
-                }
-              }, 1000);
+              proc.kill('SIGKILL');
             }
           } catch (error) {
             // Ignore errors when killing processes
           }
         });
         
-        // Exit after giving processes time to clean up
+        // Give a bit more time for processes to clean up, then force exit
         setTimeout(() => {
           process.exit(0);
-        }, 1500);
+        }, 200);
       };
 
       process.on('SIGINT', cleanup);
@@ -360,7 +396,9 @@ program
       const projectPath = path.resolve(options.path);
       const port = parseInt(options.port, 10);
 
-      console.log(`\x1b[36m\x1b[1mmcp-use\x1b[0m \x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
+      console.log('');
+      renderLogo();
+      console.log(`\x1b[90mVersion: ${packageJson.version}\x1b[0m\n`);
 
       // Find the built server file
       let serverFile = 'dist/index.js';

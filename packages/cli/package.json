@@ -43,6 +43,7 @@
     "globby": "^14.0.0",
     "mcp-use": "workspace:*",
     "open": "^10.0.0",
+    "terminal-link": "^5.0.0",
     "tsx": "^4.0.0"
   },
   "devDependencies": {
