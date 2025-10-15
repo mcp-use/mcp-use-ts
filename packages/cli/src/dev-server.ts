@@ -81,11 +81,7 @@ export async function startDevServer(projectPath: string, port: number = 5173): 
             
             // Find matching widget (strip query string for matching)
             const urlWithoutQuery = req.url?.split('?')[0]
-            console.log('[DEBUG] Request URL:', req.url)
-            console.log('[DEBUG] URL without query:', urlWithoutQuery)
-            console.log('[DEBUG] Available routes:', widgets.map(w => w.route))
             const widget = widgets.find(w => urlWithoutQuery === w.route)
-            console.log('[DEBUG] Found widget:', widget ? widget.name : 'NOT FOUND')
             
             if (!widget) {
               return next()
