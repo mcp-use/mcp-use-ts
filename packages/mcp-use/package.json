@@ -133,7 +133,7 @@
     "winston": "^3.17.0",
     "winston-transport-browserconsole": "^1.0.5",
     "ws": "^8.18.2",
-    "zod": "^3.25.48",
+    "zod": "^4.1.12",
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
