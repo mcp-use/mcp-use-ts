@@ -125,7 +125,7 @@
     "dotenv": "^16.5.0",
     "langchain": "^0.3.27",
     "lodash-es": "^4.17.21",
-    "posthog-node": "^5.1.1",
+    "posthog-node": "^5.10.3",
     "strict-url-sanitise": "^0.0.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
