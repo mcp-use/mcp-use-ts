@@ -966,6 +966,7 @@ export class MCPAgent {
     let eventCount = 0
     let totalResponseLength = 0
     let finalResponse = ''
+    const capturedToolCalls: Array<{ name: string; args: Record<string, unknown>; id?: string }> = []
 
     // Enhance query with schema information if structured output is requested
     if (outputSchema) {
@@ -1040,6 +1041,16 @@ export class MCPAgent {
         // Track response length for telemetry
         if (event.event === 'on_chat_model_stream' && event.data?.chunk?.content) {
           totalResponseLength += event.data.chunk.content.length
+        }
+
+        // Capture tool calls as they are invoked, for inclusion in conversation history
+        if (event.event === 'on_tool_start') {
+          const toolInput = event.data?.input
+          capturedToolCalls.push({
+            name: event.name,
+            args: toolInput && typeof toolInput === 'object' ? toolInput as Record<string, unknown> : { input: toolInput },
+            id: event.run_id,
+          })
         }
 
         yield event
@@ -1130,8 +1141,13 @@ export class MCPAgent {
           } as unknown as StreamEvent
         }
       } else if (this.memoryEnabled && finalResponse) {
-        // Add the final AI response to conversation history if memory is enabled
-        this.addToHistory(new AIMessage(finalResponse))
+        // Add the final AI response to conversation history if memory is enabled.
+        // Include any tool calls captured during execution so getConversationHistory()
+        // returns AIMessages with a populated tool_calls array.
+        this.addToHistory(new AIMessage({
+          content: finalResponse,
+          tool_calls: capturedToolCalls.length > 0 ? capturedToolCalls : undefined,
+        }))
       }
 
       logger.info(`🎉 StreamEvents complete - ${eventCount} events emitted`)
