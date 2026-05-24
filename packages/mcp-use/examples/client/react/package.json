@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
+    "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^4.0.0",
     "buffer": "^6.0.3",
     "events": "^3.3.0",
